@@ -1,0 +1,90 @@
+/* The show floor: a Show pill in the strip, a keypad along the bottom, a verdict across the top half. Solid fills
+   and heavy type: it has to read at arm's length in a bright hall. */
+:root { --v-want: #0B8A55; --v-want-ink: #FFFFFF; --v-need: #12151D; --v-need-ink: #F4F6FA; --v-have: #5B6270; --v-have-ink: #FFFFFF; --v-bad: #C8322B; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --v-want: #3BD597; --v-want-ink: #0A1A12; --v-need: #E8EBF1; --v-need-ink: #0F121A; --v-have: #3B4150; --v-have-ink: #E8EBF1; --v-bad: #FF7A70; } }
+:root[data-theme="dark"] { --v-want: #3BD597; --v-want-ink: #0A1A12; --v-need: #E8EBF1; --v-need-ink: #0F121A; --v-have: #3B4150; --v-have-ink: #E8EBF1; --v-bad: #FF7A70; }
+
+/* The Want it toggle on the card panel. */
+.panel.wantable .acts { grid-template-columns: 1fr 1fr 1fr; }
+.panel.wantable .act { font-size: 14.5px; padding: 0 4px; }
+.act.want[hidden] { display: none; }
+.act.want.on { border-color: var(--gold); color: var(--ink); background: color-mix(in srgb, var(--gold) 16%, transparent); }
+.panel .wantline { margin: 0; color: var(--gold); font-weight: 600; font-size: 14.5px; }
+.panel .wantline[hidden] { display: none; }
+
+/* The Show pill, next to the search. */
+.show { flex: none; height: 36px; margin: 0 2px; padding: 0 13px; border: 1px solid var(--line); border-radius: 10px; background: none; font: 700 14.5px var(--font); color: var(--ink); cursor: pointer; transition: background .15s, transform .18s; }
+.show:hover { background: var(--line); }
+.show:active { transform: scale(.95); }
+.show[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+body.listmode .show { display: none; }
+.fl-title { display: none; flex: 1; min-width: 0; text-align: center; font: 600 14px var(--font); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.floor .fl-title { display: block; }
+body.floor .search, body.floor .mark { display: none; }
+body.floor .panel, body.floor .caption { display: none; }
+body.floor .lens, body.floor .timebar, body.floor .markbar { transform: translate(-50%, 160%); opacity: 0; pointer-events: none; }
+body.floor .toast { top: auto; bottom: calc(env(safe-area-inset-bottom, 0px) + 146px); }
+body.floor canvas#wall { touch-action: none; }
+
+#floor[hidden] { display: none; }
+/* Top: the entry while you type; the verdict once it lands. */
+.fl-top { position: fixed; z-index: 4; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 68px); transform: translateX(-50%); width: min(620px, calc(100% - 20px)); height: 112px; border-radius: 16px;
+  background: var(--panel-solid); border: 1px solid var(--line); box-shadow: var(--shadow); overflow: hidden; display: grid; place-items: center;
+  transition: height .36s cubic-bezier(.2,.9,.25,1.02), background .25s, color .25s; }
+#floor.verdict .fl-top { height: calc(50vh - env(safe-area-inset-top, 0px) - 68px); border-color: transparent; }
+#floor.verdict .fl-top[data-kind="want"] { background: var(--v-want); color: var(--v-want-ink); }
+#floor.verdict .fl-top[data-kind="need"] { background: var(--v-need); color: var(--v-need-ink); }
+#floor.verdict .fl-top[data-kind="have"] { background: var(--v-have); color: var(--v-have-ink); }
+.fl-entry { display: grid; gap: 6px; justify-items: center; padding: 10px 16px; width: 100%; }
+#floor.verdict .fl-entry { display: none; }
+.fl-typed { display: flex; align-items: baseline; gap: 10px; font: 800 40px/1 var(--font); font-stretch: 82%; letter-spacing: -0.01em; }
+.fl-code { font-size: 22px; padding: 5px 9px; border-radius: 8px; background: var(--ink); color: var(--bg); align-self: center; letter-spacing: 0; }
+.fl-code.empty { background: var(--line); color: var(--muted); font-weight: 600; }
+.fl-caret { width: 3px; height: 34px; align-self: center; margin-left: -6px; background: var(--ink); border-radius: 2px; }
+@media (prefers-reduced-motion: no-preference) { .fl-caret { animation: fl-blink 1.1s steps(2, start) infinite; } }
+@keyframes fl-blink { to { visibility: hidden; } }
+.fl-hint { margin: 0; font: 500 14px var(--font); color: var(--muted); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.fl-hint.bad { color: var(--v-bad); font-weight: 700; }
+@media (prefers-reduced-motion: no-preference) { .fl-entry.shake { animation: fl-shake .4s cubic-bezier(.36,.07,.19,.97) both; } }
+@keyframes fl-shake { 10%, 90% { transform: translateX(-2px); } 20%, 80% { transform: translateX(4px); } 30%, 50%, 70% { transform: translateX(-7px); } 40%, 60% { transform: translateX(7px); } }
+.fl-verdict { display: none; width: 100%; padding: 12px 18px; text-align: center; }
+#floor.verdict .fl-verdict { display: grid; gap: 6px; justify-items: center; }
+.fl-word { font: 900 clamp(60px, 21vw, 118px)/.92 var(--font); font-stretch: 72%; text-transform: uppercase; letter-spacing: -0.015em; }
+.fl-pay { font: 800 clamp(26px, 8.5vw, 44px)/1.1 var(--font); letter-spacing: -0.01em; }
+.fl-card { margin-top: 4px; font: 600 15px/1.3 var(--font); opacity: .82; max-width: 100%; }
+
+/* Bottom: the keypad, or the two thumb buttons once a card has landed. */
+.fl-pad, .fl-acts { position: fixed; z-index: 4; left: 0; right: 0; bottom: 0; margin: 0 auto; width: min(480px, 100%); transition: transform .36s cubic-bezier(.2,.9,.25,1.02), opacity .25s; }
+.fl-pad { padding: 10px 10px calc(env(safe-area-inset-bottom, 0px) + 10px); border-radius: 18px 18px 0 0; background: var(--panel-solid); border: 1px solid var(--line); border-bottom: 0; box-shadow: var(--shadow); display: grid; gap: 8px; }
+#floor.verdict .fl-pad { transform: translateY(110%); opacity: 0; pointer-events: none; }
+.fl-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; touch-action: pan-x; }
+.chip { height: 40px; min-width: 56px; padding: 0 9px; border: 1px solid var(--line); border-radius: 10px; background: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; cursor: pointer; font: 700 15px var(--font); color: var(--ink); transition: background .15s, transform .15s; }
+.chip small { font: 700 11.5px var(--font); color: var(--gold); min-width: 0; }
+.chip small:empty { display: none; }
+.chip:active { transform: scale(.95); }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.chip[aria-pressed="true"] small { color: var(--gold); }
+.fl-keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.fl-keys button { height: 54px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); font: 800 26px var(--font); color: var(--ink); cursor: pointer; transition: transform .12s, background .12s; }
+.fl-keys button:active { transform: scale(.96); background: var(--line); }
+.fl-keys .del { font-size: 22px; font-weight: 600; }
+.fl-keys .go { background: var(--ink); color: var(--bg); border-color: var(--ink); font-size: 20px; }
+.fl-acts { padding: 8px 10px calc(env(safe-area-inset-bottom, 0px) + 12px); display: grid; gap: 8px; }
+#floor:not(.verdict) .fl-acts { transform: translateY(120%); opacity: 0; pointer-events: none; }
+.fl-got { height: 68px; border: 0; border-radius: 16px; background: var(--ink); color: var(--bg); font: 800 24px var(--font); cursor: pointer; box-shadow: var(--shadow); transition: transform .15s; }
+.fl-got:active { transform: scale(.97); }
+.fl-got[hidden] { display: none; }
+.fl-next { height: 46px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel-solid); font: 700 16px var(--font); color: var(--ink); cursor: pointer; box-shadow: var(--shadow); transition: transform .15s; }
+.fl-next:active { transform: scale(.97); }
+.fl-acts.have .fl-next { height: 60px; font-size: 20px; font-weight: 800; background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+/* The list: wants carry their price. */
+.lrow.lwant .lstate { color: var(--gold); font-weight: 700; }
+
+/* The strip holds Back, Mark, search, Show and About inside a set: on a narrow phone the count steps out of the
+   search box there (Back already does what tapping it does). */
+@media (max-width: 460px) { body.inset:not(.floor) .count { display: none; } body.inset:not(.floor) .search input { padding-right: 6px; } }
+/* Toasts clear the keypad while typing and the thumb buttons once a card has landed. */
+body.floor:has(#floor:not(.verdict)) .toast { bottom: calc(env(safe-area-inset-bottom, 0px) + 366px); }
+/* Short phones: a tighter keypad so the binder still shows between the entry and the keys. */
+@media (max-height: 700px) { .fl-keys button { height: 46px; font-size: 24px; } .chip { height: 36px; } .fl-pad { gap: 6px; } .fl-top { height: 100px; } .fl-typed { font-size: 36px; } body.floor:has(#floor:not(.verdict)) .toast { bottom: calc(env(safe-area-inset-bottom, 0px) + 330px); } }
