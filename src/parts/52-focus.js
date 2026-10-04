@@ -1,0 +1,65 @@
+// ---------- focus: the card is the screen ----------
+const panel = document.getElementById("panel");
+function panelH() { return Math.min(panel.offsetHeight || 230, vh * 0.5); }
+function focus(c, dir = 0) {
+  state.focus = c;
+  document.body.classList.add("focused");
+  fillPanel(c, dir);
+  const top = 70, avail = vh - panelH() - top - 12;
+  const ch = Math.min(avail * 0.92, (vw * 0.78) * TH / TW);
+  const S = TH * c.sz, s = Math.min(ch / S, maxS() * 1.4);
+  const cy = top + avail / 2;
+  flyTo({ s, x: c.x + TW * c.sz / 2 - vw / 2 / s, y: c.y + S / 2 - cy / s }, dir ? 360 : 520);
+  tick(6);
+}
+function unfocus() {
+  if (!state.focus) return;
+  state.focus = null;
+  document.body.classList.remove("focused");
+  // Back to where the card sits, at a comfortable size.
+  if (view === "set" && state.g) { const f = fitCam(state.g); if (cam.s > f.s * 2.2) { const s = f.s * 2.2, cx = cam.x + vw / 2 / cam.s, cy = cam.y + vh / 2 / cam.s; flyTo({ s, x: cx - vw / 2 / s, y: cy - vh / 2 / s }, 380); } }
+  kick();
+}
+function step(d) {
+  const c = state.focus; if (!c) return;
+  const n = groups[c.g].cards[c.k + d];
+  if (!n) { bump(d); return; }
+  tick(); focus(n, d);
+}
+function fillPanel(c, dir) {
+  const st = sets[c.si];
+  const swap = document.getElementById("swap");
+  const put = () => {
+    document.getElementById("p-name").textContent = c.name;
+    document.getElementById("p-meta").textContent = `${st.name}, ${st.code} ${c.num}/${st.printed}. ${c.rname}.${c.owned && c.got ? ` Yours since ${new Date(c.got).toLocaleDateString("en-US", { month: "short", year: "numeric" })}.` : ""}`;
+    document.getElementById("p-price").innerHTML = `${money(c.price)}<small>market</small>`;
+    const dl = document.getElementById("p-deal");
+    if (!c.owned && c.deal) { dl.hidden = false; dl.textContent = `A copy on eBay for ${money(c.deal)} right now, ${Math.round((1 - c.deal / c.price) * 100)}% under.`; } else dl.hidden = true;
+    const own = document.getElementById("p-own"), buy = document.getElementById("p-buy");
+    own.textContent = c.owned ? "In your collection ✓" : "I have it";
+    own.className = `act ${c.owned ? "owned" : "primary"}`;
+    own.setAttribute("aria-pressed", String(c.owned));
+    buy.textContent = c.owned ? "Back to the set" : c.deal ? `Buy for ${money(c.deal)}` : "Find a copy";
+  };
+  if (dir && !reduced) { swap.classList.add("out"); setTimeout(() => { put(); swap.classList.remove("out"); }, 140); } else put();
+}
+document.getElementById("p-own").onclick = () => { const c = state.focus; if (c) toggleWithUndo(c); };
+document.getElementById("p-buy").onclick = () => {
+  const c = state.focus; if (!c) return;
+  const st = sets[c.si];
+  if (c.owned) { unfocus(); return flyTo(fitCam(groups[c.g]), 460); }
+  window.open(`https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(`pokemon ${c.name} ${c.num}/${st.printed} ${st.name}`)}&_sop=15`, "_blank", "noopener");
+};
+function setOwned(c, on, { undo = null, quiet = false } = {}) {
+  const now = performance.now();
+  c.owned = on; c.got = on ? Date.now() : null; saved[c.id] = { on, at: c.got }; persist();
+  c.anim = { t0: now, to: on };
+  const g = groups[c.g];
+  g.ripple = { t0: now, col: c.col, row: c.row };
+  tick(on ? 14 : 6);
+  const st = sets[c.si], owned = ownedIn(st.cards);
+  if (on && owned === st.cards.length) { if (mode === "set") g.burst = now; tick(40); toast(`${st.name} complete. ${owned} of ${owned}.`, undo); }
+  else if (!quiet) toast(on ? `${c.name} added. ${owned} of ${st.cards.length} in ${st.name}.` : `${c.name} taken out.`, undo);
+  if (state.focus === c) fillPanel(c, 0);
+  updateCount(); drawList(); kick();
+}

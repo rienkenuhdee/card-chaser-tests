@@ -1,0 +1,14 @@
+# Netlify builds the wall and every variant, plus an index page linking them all.
+# Every pull request gets a deploy preview: one link to try a whole round on your phone.
+# If the repo only has the-wall.zip at the top (uploaded from a phone), it's unpacked first.
+[build]
+  publish = "dist"
+  command = """
+    if [ -f the-wall.zip ] && [ ! -d src ]; then unzip -q -o the-wall.zip -d . || exit 1; fi
+    node scripts/build.mjs --all && node scripts/index-page.mjs
+  """
+
+[build.environment]
+  NODE_VERSION = "22"
+  # The tests' browser isn't needed to build the site.
+  PUPPETEER_SKIP_DOWNLOAD = "true"

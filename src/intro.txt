@@ -1,0 +1,5 @@
+// ============ The Wall ============
+// Card Chaser's collection as one surface instead of screens. Three composed levels, and the interface moves the
+// camera between them: the mosaic (every set a panel, packed with its cards), a set (its binder, framed to the
+// screen), and a card (brought up close). Pinch drives the transitions under your fingers and snaps on release.
+// Built from ordered parts in src/parts (see scripts/build.mjs); they share one scope.

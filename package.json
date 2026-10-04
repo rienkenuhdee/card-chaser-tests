@@ -1,0 +1,18 @@
+{
+  "name": "the-wall",
+  "private": true,
+  "type": "module",
+  "description": "Card Chaser's experimental collection UI: one surface, three composed levels (mosaic, set, card).",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "node scripts/build.mjs",
+    "build:all": "node scripts/build.mjs --all && node scripts/index-page.mjs",
+    "test": "node tests/all.mjs",
+    "test:gestures": "node tests/gestures.mjs",
+    "test:smoke": "node tests/smoke.mjs",
+    "test:perf": "node tests/perf.mjs"
+  },
+  "devDependencies": {
+    "puppeteer": "^23.0.0"
+  }
+}
