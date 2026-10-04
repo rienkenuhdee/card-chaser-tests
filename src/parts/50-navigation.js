@@ -4,7 +4,10 @@ const backBtn = document.getElementById("back"), arrBtn0 = document.getElementBy
 function setChrome() {
   document.body.classList.toggle("inset", view === "set");
   backBtn.hidden = view !== "set"; arrBtn0.hidden = view === "set";
+  markBtn.hidden = view !== "set" || marking;
   document.getElementById("where").textContent = view === "set" && state.g ? state.g.name : "";
+  if (marking && view !== "set") leaveMark();
+  updateCount();
 }
 // Opening and closing a group are one transition with a position, q (0 is the mosaic, 1 the binder). A tap plays it;
 // a pinch holds it under your fingers; letting go settles it to whichever end is nearer.

@@ -1,5 +1,7 @@
 # r8-bold-pack-rip
 
+**Reserve.** Not harvested: we don't rip packs in the product. Kept for its animation (round 8).
+
 **Round:** 8. Marking a stack fast: what does opening a booster pack feel like?
 **Concept:** Inside a set, "Open a pack" raises a number pad; you type the number printed at the bottom of each card
 you pulled, and that card's tile flips out of the binder into a fanned hand above your thumb (holos flash and get a

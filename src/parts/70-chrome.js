@@ -59,6 +59,7 @@ function drawList() {
 }
 listEl.addEventListener("click", (e) => { const b = e.target.closest("[data-i]"); if (!b) return; const c = cards[Number(b.dataset.i)]; setOwned(c, !c.owned, { undo: () => setOwned(c, !c.owned, { quiet: true }) }); });
 function setListMode(on) {
+  if (on) leaveMark(); // the list has its own way to mark (tap a row)
   document.body.classList.toggle("listmode", on);
   try { localStorage.setItem("wall-list", on ? "1" : ""); } catch { /* fine */ }
   unfocus(); drawList();

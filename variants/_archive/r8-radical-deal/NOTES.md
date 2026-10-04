@@ -1,5 +1,7 @@
 # r8-radical-deal
 
+**Reserve.** Not harvested: we don't rip packs in the product. Kept for its animation (round 8).
+
 **Round:** 8. Marking a stack fast: what does opening a booster pack feel like?
 **Concept:** The pack is the gesture. Inside a set, pull down past the top of the binder (with resistance, like pull to
 refresh) and a sealed pack in the set's colour comes out from behind the top strip; pull past the line and let go (or

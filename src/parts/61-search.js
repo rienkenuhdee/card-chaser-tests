@@ -28,5 +28,6 @@ document.getElementById("clear").onclick = (e) => { e.preventDefault(); qIn.valu
 function updateCount() {
   const n = state.lens === "time" ? cards.filter((c) => c.owned && c.got && c.got <= state.t).length : cards.filter((c) => c.owned).length;
   document.getElementById("count").textContent = `${n.toLocaleString()} of ${TOTAL.toLocaleString()}`;
-  qIn.placeholder = vw < 420 ? "Search cards" : `Search ${TOTAL.toLocaleString()} cards`;
+  // A shorter placeholder where Mark shares the strip with the search box on a narrow screen.
+  qIn.placeholder = vw >= 420 ? `Search ${TOTAL.toLocaleString()} cards` : view === "set" && !marking ? "Search" : "Search cards";
 }

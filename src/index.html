@@ -17,6 +17,7 @@
   <div class="strip glass">
     <button class="ib" id="back" aria-label="Back to everything" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
     <button class="ib" id="arrange" aria-haspopup="menu" aria-expanded="false" aria-controls="arrange-menu" aria-label="Rearrange the wall"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg></button>
+    <button class="mark" id="mark" aria-label="Mark several cards" hidden>Mark</button>
     <label class="search" id="search"><span class="sr">Find a card</span>
       <input id="q" type="search" placeholder="Search cards" autocomplete="off" enterkeyhint="search">
       <button class="count" id="count" aria-label="Show the whole wall"></button>
@@ -30,6 +31,10 @@
   <div class="tl"><b id="t-when">Now</b><span id="t-count"></span></div>
   <div class="tr"><svg id="t-spark" viewBox="0 0 1000 40" preserveAspectRatio="none" aria-hidden="true"><path id="t-area"/><path id="t-line"/></svg>
   <input type="range" id="t-range" min="0" max="1000" value="1000" aria-label="When you got your cards"></div>
+</div>
+<div class="markbar glass" id="markbar" role="group" aria-label="Marking">
+  <div class="mtext" aria-live="polite"><b id="m-head">Mark cards</b><span id="m-sub">Tap a card, or drag across a row</span></div>
+  <button type="button" class="mbtn" id="m-undo" disabled>Undo</button><button type="button" class="mbtn primary" id="m-done">Done</button>
 </div>
 <div class="lens glass" role="group" aria-label="Lens">
   <span class="ink" aria-hidden="true"></span>
@@ -70,7 +75,7 @@
     <li><b>Tap a card</b> to bring it up close. Flick it sideways to move along the set.</li>
     <li><b>Lenses</b> at the bottom recolor the wall: what you need, live deals, what's worth the most, and <b>Time</b>: scrub or play through when you got each card.</li>
     <li><b>Search</b> flies you to the cards that match.</li>
-    <li><b>Press and hold</b> any card to mark it, with Undo. <b>Tap the count</b> to see everything again.</li>
+    <li><b>Press and hold</b> any card to mark it, then keep the finger down and sweep along the row. <b>Mark</b> (top, inside a set) does the same by tapping: a handful at once, Done sums it up. <b>Tap the count</b> to see everything again.</li>
     <li><b>Rearrange</b> (top left) lays the same cards out by set, by Pokémon or by value.</li>
   </ul>
   <p style="color:var(--muted);font-size:13.5px">1,327 real cards from 10 sets. Ownership, prices and deals are made up for the demo, and your taps are kept on this device only.</p>

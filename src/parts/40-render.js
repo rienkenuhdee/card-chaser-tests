@@ -402,6 +402,7 @@ function frame(now) {
   if (state.focus) { const c = state.focus, r = binderRect(c, cam); ctx.globalAlpha = 1; drawTile(c, r.x, r.y, r.w, r.h, now); if (c.anim) more = true; if (c.owned && c.tier >= 3 && !reduced) more = true; }
   ctx.globalAlpha = 1;
   for (const c of cards) if (c.anim) { more = true; break; }
+  drawMarks();
   if (frameFoil) more = true; // foil keeps shimmering while a foil card is on screen
   if (state.press) more = true;
   if (state.introT0 && now - state.introT0 < 3000 && !reduced) more = true;
