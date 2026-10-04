@@ -1,0 +1,80 @@
+/* Show mode: the wall as a one-thumb checklist of your wants. Solid surfaces (the show floor is bright), big type,
+   everything you tap along the bottom. */
+
+/* Want it on the card panel: a third action while the card isn't yours. */
+.panel .acts.three { grid-template-columns: 1fr 1fr 1fr; }
+.panel .acts.three .act { font-size: 14px; padding: 0 4px; letter-spacing: -0.01em; }
+.act.wanted { border-color: var(--gold); color: var(--ink); background: color-mix(in srgb, var(--gold) 16%, transparent); }
+#p-want[hidden] { display: none; }
+
+/* The Show button in the top strip, beside About. */
+.showbtn { flex: none; height: 36px; margin: 0 2px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; background: none; font: 600 14.5px var(--font); color: var(--ink); cursor: pointer; transition: background .15s, transform .18s; }
+.showbtn:hover { background: var(--line); }
+.showbtn:active { transform: scale(.95); }
+.showbtn[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+body.inset .count { display: none; } /* Back is right there; the box needs the room beside Mark and Show */
+
+/* The surface slides up over the wall and leaves it exactly as it was. */
+.sh { position: fixed; inset: 0; z-index: 4; display: flex; flex-direction: column; background: var(--bg); color: var(--ink);
+  padding-top: env(safe-area-inset-top, 0px); transform: translateY(100%); transition: transform .38s cubic-bezier(.2,.9,.25,1.04); }
+.sh[hidden] { display: none; }
+.sh.in { transform: none; }
+body.showing .top, body.showing .lens, body.showing .timebar, body.showing .markbar, body.showing .caption, body.showing .panel, body.showing .arrange-menu { opacity: 0 !important; pointer-events: none !important; transition: opacity .2s; }
+body.listmode.showing #list { display: none; }
+body.showing .toast { top: auto; bottom: calc(env(safe-area-inset-bottom, 0px) + 88px); transform: translate(-50%, 16px); }
+body.showing .toast.show { transform: translate(-50%, 0); }
+
+/* Header: glanceable, not tappable. */
+.sh-head { width: 100%; max-width: 640px; margin: 0 auto; padding: 18px 20px 8px; }
+.sh-eyebrow { margin: 0 0 8px; font: 700 13px var(--font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.sh-head h1 { margin: 0; font: 800 clamp(26px, 8.6vw, 34px)/1.05 var(--font); white-space: nowrap; font-stretch: 78%; letter-spacing: -0.01em; }
+.sh-sub { margin: 6px 0 0; font-size: 15px; line-height: 1.35; color: var(--muted); }
+
+/* The list: by set, oldest first. When it's short it sits low, near the thumb. */
+.sh-list { flex: 1; min-height: 0; overflow: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y; overscroll-behavior: contain; padding: 0 14px calc(env(safe-area-inset-bottom, 0px) + 96px); display: flex; flex-direction: column; }
+.sh-wrap { width: 100%; max-width: 640px; margin: auto auto 0; }
+.sh-wrap h2 { position: sticky; top: 0; z-index: 1; margin: 0; padding: 16px 2px 7px; background: var(--bg); display: flex; align-items: baseline; gap: 8px; font: 800 18px var(--font); font-stretch: 80%; border-bottom: 1px solid var(--line); }
+.sh-wrap h2 small { font: 600 13px var(--font); font-stretch: 100%; color: var(--muted); white-space: nowrap; }
+.sh-wrap h2 .side { margin-left: auto; font-variant-numeric: tabular-nums; }
+.sh-wrap ul { list-style: none; margin: 0; padding: 0; }
+.sh-row { display: grid; grid-template-columns: 48px 1fr auto; grid-template-areas: "check main pay" "more more more"; align-items: center; border-bottom: 1px solid var(--line); }
+.sh-check { grid-area: check; width: 48px; height: 68px; padding: 0; border: 0; background: none; display: grid; place-items: center; cursor: pointer; }
+.sh-check i { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--ink) 50%, transparent); transition: background .18s, border-color .18s, transform .18s; }
+.sh-check:active i { transform: scale(.9); }
+.sh-check svg { width: 18px; height: 18px; fill: none; stroke: var(--bg); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 24; stroke-dashoffset: 24; transition: stroke-dashoffset .2s ease-out; }
+.sh-row.have .sh-check i { background: var(--deal); border-color: var(--deal); }
+.sh-row.have .sh-check svg { stroke-dashoffset: 0; }
+.sh-main { grid-area: main; min-width: 0; display: grid; gap: 3px; padding: 12px 6px 12px 0; border: 0; background: none; text-align: left; cursor: pointer; }
+.sh-name { font: 700 20px/1.1 var(--font); font-stretch: 85%; letter-spacing: -0.005em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sh-meta { font-size: 14px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sh-row.have .sh-name { color: var(--muted); }
+.sh-pay { grid-area: pay; padding: 0 4px 0 10px; font: 700 20px/1 var(--font); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; text-align: right; white-space: nowrap; }
+.sh-pay.muted { color: var(--muted); font-weight: 600; font-size: 17px; }
+.sh-pay small { display: block; margin-top: 4px; font: 500 12px var(--font); color: var(--muted); letter-spacing: 0; }
+.sh-more { grid-area: more; display: none; gap: 10px; padding: 0 4px 14px 0; }
+.sh-row.open .sh-more { display: grid; }
+.sh-row.open { background: color-mix(in srgb, var(--ink) 4%, transparent); margin: 0 -14px; padding: 0 14px; }
+.sh-more p { margin: 0; font-size: 15px; line-height: 1.4; color: var(--muted); }
+.sh-more p b { color: var(--deal); font-weight: 600; }
+.sh-acts { display: flex; flex-wrap: wrap; gap: 8px; }
+.sh-act { height: 42px; padding: 0 14px; border-radius: 10px; border: 1px solid color-mix(in srgb, var(--ink) 25%, transparent); background: none; font: 700 14.5px var(--font); color: var(--ink); cursor: pointer; }
+.sh-act.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.sh-act:active { transform: scale(.97); }
+.sh-row.going { overflow: hidden; transition: transform .22s ease-in, opacity .22s ease-in, height .24s ease-in-out .18s, border-color .24s .18s; }
+.sh-row.gone { transform: translateX(-28%); opacity: 0; height: 0 !important; border-color: transparent; }
+.sh-empty { padding: 32px 8px; color: var(--muted); font-size: 16px; line-height: 1.4; text-align: center; }
+.sh-note { margin: 14px 2px 0; font-size: 14px; color: var(--muted); }
+
+/* The bar along the bottom: search within thumb reach, and Wall to go back. Solid, with a strong edge in daylight. */
+.sh-bar { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; display: flex; justify-content: center; padding: 8px 10px calc(env(safe-area-inset-bottom, 0px) + 10px); background: var(--bg); border-top: 1px solid var(--line); transition: transform .15s; }
+.sh-bar .in { display: flex; gap: 8px; width: min(620px, 100%); }
+.sh-search { flex: 1; min-width: 0; display: flex; align-items: center; height: 52px; padding: 0 6px 0 14px; border: 1.5px solid color-mix(in srgb, var(--ink) 28%, transparent); border-radius: 14px; background: var(--panel-solid); }
+.sh-search:focus-within { border-color: var(--ink); }
+.sh-search input { flex: 1; min-width: 0; height: 100%; border: 0; background: none; outline: none; font: 500 17px var(--font); color: var(--ink); }
+.sh-search input::placeholder { color: var(--muted); }
+.sh-search input::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
+.sh-clear { flex: none; width: 32px; height: 32px; border: 0; border-radius: 8px; background: var(--line); color: var(--ink); cursor: pointer; display: none; place-items: center; }
+.sh-search.has .sh-clear { display: grid; }
+.sh-wall { flex: none; height: 52px; padding: 0 20px; border-radius: 14px; border: 1.5px solid var(--ink); background: var(--ink); color: var(--bg); font: 700 16px var(--font); cursor: pointer; transition: transform .18s; }
+.sh-wall:active { transform: scale(.96); }
