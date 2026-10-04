@@ -13,7 +13,7 @@ function toast(t, action = null) {
 const about = document.getElementById("about");
 document.getElementById("info").onclick = () => about.showModal();
 document.getElementById("about-close").onclick = () => about.close();
-document.getElementById("reset").onclick = () => { saved = {}; persist(); location.reload(); };
+document.getElementById("reset").onclick = () => { saved = {}; persist(); try { for (const k of ["wall-wants", "wall-paid"]) localStorage.removeItem(k); } catch { /* fine */ } location.reload(); };
 
 // ---------- home: tap the count to see the whole wall ----------
 document.getElementById("count").addEventListener("click", (e) => { e.preventDefault(); if (view === "set") exitToMosaic(); });
@@ -47,16 +47,25 @@ function rearrange(m) {
 const listEl = document.getElementById("list");
 function drawList() {
   if (!document.body.classList.contains("listmode")) return;
-  const show = (c) => (state.matches ? state.matches.has(c) : state.lens === "need" ? !c.owned : state.lens === "deals" ? !c.owned && c.deal : true);
-  listEl.querySelector("#list-body").innerHTML = groups.map((g) => {
+  const show = (c) => (state.matches ? state.matches.has(c) : state.lens === "need" ? !c.owned : state.lens === "wants" ? isWant(c) : true);
+  let top = "";
+  if (state.lens === "wants") {
+    const ws = cards.filter((c) => isWant(c) && (!wl.q || matchQ(c, wl.q))).sort((a, b) => a.si - b.si || (b.deal ? 1 : 0) - (a.deal ? 1 : 0) || capOf(b) - capOf(a));
+    top = `<section><h2>Your want list</h2><p class="lsub">${ws.length} to find. Live deals first.</p><ul>${ws.map((c) => {
+      const st = sets[c.si];
+      return `<li class="lwrow"><div class="lrow"><span class="lname">${c.name}</span><span class="lmeta">${st.name} #${c.num}, ${c.rname}</span><span class="lprice">${c.deal ? `<b class="ldeal">Live ${money(c.deal)}</b>` : `Pay up to ${money(capOf(c))}`}</span><span class="lstate">Market ${money(c.price)}</span></div><button type="button" class="pill-btn lgot" data-got="${c.i}">Got it</button></li>`;
+    }).join("")}</ul>${ws.length ? "" : `<p class="lsub">Nothing to find yet.</p>`}</section>`;
+  }
+  listEl.querySelector("#list-body").innerHTML = top + groups.map((g) => {
     const items = g.cards.filter(show);
     if (!items.length) return "";
     return `<section><h2>${g.name}</h2><p class="lsub">${g.sub()}</p><ul>${items.map((c) => {
       const st = sets[c.si];
-      return `<li><button class="lrow" data-i="${c.i}" aria-pressed="${c.owned}"><span class="lname">${c.name}</span><span class="lmeta">${st.name} #${c.num}, ${c.rname}</span><span class="lprice">${!c.owned && c.deal ? `<b class="ldeal">Deal ${money(c.deal)}</b>` : money(c.price)}</span><span class="lstate">${c.owned ? "Have it" : "Need it"}</span></button></li>`;
+      return `<li><button class="lrow" data-i="${c.i}" aria-pressed="${c.owned}"><span class="lname">${c.name}</span><span class="lmeta">${st.name} #${c.num}, ${c.rname}</span><span class="lprice">${!c.owned && c.deal ? `<b class="ldeal">Deal ${money(c.deal)}</b>` : money(c.price)}</span><span class="lstate">${c.owned ? "Have it" : isWant(c) ? `Want it, up to ${money(capOf(c))}` : "Need it"}</span></button></li>`;
     }).join("")}</ul></section>`;
   }).join("") || `<p class="lsub">Nothing here with this lens.</p>`;
 }
+listEl.addEventListener("click", (e) => { const b = e.target.closest("[data-got]"); if (b) gotIt(cards[Number(b.dataset.got)]); });
 listEl.addEventListener("click", (e) => { const b = e.target.closest("[data-i]"); if (!b) return; const c = cards[Number(b.dataset.i)]; setOwned(c, !c.owned, { undo: () => setOwned(c, !c.owned, { quiet: true }) }); });
 function setListMode(on) {
   if (on) leaveMark(); // the list has its own way to mark (tap a row)

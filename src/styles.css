@@ -169,3 +169,31 @@ body.marking .lens { transform: translate(-50%, 160%); opacity: 0; pointer-event
 .mbtn:not(:disabled):hover { background: var(--line); }
 .mbtn.primary:not(:disabled):hover { background: var(--ink); }
 .mbtn:not(:disabled):active { transform: scale(.96); }
+
+/* Wants: the want list over the folded-back wall. Rearrange and Mark step aside; the keypad asks what you paid. */
+body.wants #arrange, body.wants #mark, body.wants .caption { display: none; }
+.pay-scrim { position: fixed; inset: 0; z-index: 6; background: rgb(8 10 16 / .34); opacity: 0; pointer-events: none; transition: opacity .25s; }
+body.paying .pay-scrim { opacity: 1; pointer-events: auto; }
+.pay { position: fixed; z-index: 7; left: 50%; bottom: 0; width: min(440px, 100%); transform: translate(-50%, 110%); padding: 14px 14px calc(env(safe-area-inset-bottom, 0px) + 14px);
+  border-radius: 18px 18px 0 0; border-bottom: 0; display: grid; gap: 10px; transition: transform .4s cubic-bezier(.2,.9,.25,1.02); pointer-events: none; }
+@media (min-width: 720px) { .pay { bottom: 16px; border-radius: 18px; border-bottom: 1px solid var(--line); } }
+body.paying .pay { transform: translate(-50%, 0); pointer-events: auto; }
+.pay-head { display: grid; gap: 2px; }
+.pay-head b { font: 800 21px/1.1 var(--font); font-stretch: 80%; }
+.pay-head span { font-size: 13.5px; color: var(--muted); line-height: 1.3; }
+.pay-amt { display: block; font: 800 44px/1 var(--font); letter-spacing: -0.02em; text-align: right; padding: 4px 6px 8px; font-variant-numeric: tabular-nums; }
+.pay-keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.pay-keys button { height: 56px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel-fill); font: 700 24px var(--font); color: var(--ink); cursor: pointer; transition: transform .12s, background .15s; }
+.pay-keys button:hover { background: var(--line); }
+.pay-keys button:active { transform: scale(.95); background: var(--line); }
+.pay-acts { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; }
+.pay-acts .mbtn { height: 54px; font-size: 16px; }
+/* Want it, next to I have it; Find a copy drops to its own row. */
+.panel .acts { grid-template-columns: 1fr 1fr; }
+.panel .acts #p-buy { grid-column: 1 / -1; }
+.panel .acts:has(#p-want[hidden]) #p-own { grid-column: 1 / -1; }
+.act.want.on { border-color: var(--gold); color: var(--ink); background: color-mix(in srgb, var(--gold) 16%, transparent); }
+/* The list view: the want list on top, Got it on each row. */
+.lwrow { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--line); }
+.lwrow .lrow { border-bottom: 0; flex: 1; min-width: 0; cursor: default; }
+.lwrow .lgot { margin-right: 2px; }

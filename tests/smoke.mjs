@@ -16,7 +16,7 @@ for (const [dark, width, height] of [[false, 390, 844], [true, 390, 844], [false
   const p = await phone(browser, file, { dark, motion: false, dpr: 2, width, height });
   for (const mode of ["set", "pokemon", "value"]) {
     await p.click("#arrange"); await wait(150); await p.click(`[data-mode="${mode}"]`); await wait(250);
-    for (const lens of ["all", "need", "deals", "value", "time"]) {
+    for (const lens of ["all", "need", "wants", "value", "time"]) {
       await p.click(`[data-lens="${lens}"]`); await wait(200);
       if (lens === "all" || width < 700) await p.screenshot({ path: path.join(out, `${tag}-${mode}-${lens}.png`) });
     }
