@@ -60,12 +60,14 @@ function onDown(pts) {
   samples = [{ x: p.x, y: p.y, t: now }];
   const h0 = hit(p.x, p.y);
   if (view === "mosaic" && h0?.block) { state.press = { g: h0.block, t0: now, timer: 0 }; kick(); }
-  // Press and hold a card in a set to mark it.
+  // Press and hold a card in a set to mark it; keep the finger down and sweep to mark the ones beside it.
   if (view === "set" && !state.focus && h0?.card && TW * h0.card.sz * cam.s >= 14) {
     const card = h0.card;
+    gesture.card = card;
     state.press = { c: card, t0: now, timer: setTimeout(() => {
       if (gesture?.kind !== "one" || gesture.moved || state.press?.c !== card) return;
-      gesture = null; cancelPress(); toggleWithUndo(card);
+      if (!marking) enterMark();
+      beginStroke(card, samples[samples.length - 1] || { x: gesture.x, y: gesture.y });
     }, 430) };
     kick();
   }
@@ -85,11 +87,14 @@ function onMove(pts) {
   if (gesture.kind === "two") { if (pts.length >= 2) pinchMove(pts[0], pts[1]); return; }
   const p = pts[0]; if (!p) return;
   const g = gesture, now = performance.now();
+  if (g.stroke) { paintTo(p); return; }
   const dx = p.x - g.x, dy = p.y - g.y, dt = now - g.t;
   samples.push({ x: p.x, y: p.y, t: now }); if (samples.length > 8) samples.shift();
   if (!g.moved && Math.hypot(dx, dy) < 8) return;
   cancelPress();
   if (view === "mosaic") { g.moved = true; mScroll = clamp(g.my - dy, 0, mMax); kick(); return; }
+  // In mark mode a drag that sets off sideways from a card paints the cards it crosses; downward still scrolls.
+  if (marking && g.card && !g.moved && Math.abs(dx) > Math.abs(dy)) { beginStroke(g.card, { x: g.x, y: g.y }); paintTo(p); return; }
   if (g.held) {
     if (Math.abs(dx) > Math.abs(dy) && dt < 240) return;
     g.held = false; unfocus();
@@ -158,6 +163,7 @@ function onUp(remaining, end, cancelled = false) {
   if (g.kind === "rest") { if (!remaining.length) gesture = null; return; }
   if (remaining.length) return;
   gesture = null;
+  if (g.stroke) { kick(); return; } // the stroke is done; nothing else to do
   const p = end || samples[samples.length - 1];
   const dx = p.x - g.x, dy = p.y - g.y, dt = performance.now() - g.t;
   if (g.held) {
@@ -210,6 +216,7 @@ function tap(sx, sy) {
   if (view === "mosaic") { if (h?.block) enterGroup(h.block); return; }
   if (!h?.card) return;
   const w = TW * h.card.sz * cam.s;
+  if (marking && w >= 14) return markCard(h.card, !h.card.owned); // in mark mode a tap toggles the card
   if (w >= 34) return focus(h.card);
   tick(5);
   const s = Math.min(maxS(), cam.s * 2.4), p = toWorld(sx, sy);

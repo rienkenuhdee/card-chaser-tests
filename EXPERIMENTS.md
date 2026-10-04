@@ -19,8 +19,8 @@
   to its new place. The thing you tapped is the thing that grows.
 - **Gestures scrub, then snap.** A pinch holds a transition under your fingers; release snaps by speed first (a quick
   flick wins), position second. A small pinch never closes a set.
-- **Familiar on top of novel.** Back button, pull to scroll, tap to open, press and hold to mark. The mosaic is novel;
-  how you move through it shouldn't be.
+- **Familiar on top of novel.** Back button, pull to scroll, tap to open, press and hold to mark, Mark to select a
+  handful like Photos. The mosaic is novel; how you move through it shouldn't be.
 - **A collector's archive, not a toy.** Archivo (condensed for names, tabular figures for prices), hairlines, small
   radii, color from the cards themselves. Rounded, bouncy type read as "comic sans".
 - **Lenses over pages.** Need, Deals, Value and Time recolor what you're looking at instead of navigating away. A lens
@@ -60,10 +60,19 @@ colour and still feel like a lens, because nothing is navigated away from. A dea
 (the data now drops at-market copies). The sheet was a page in disguise, and the tray's up and down swipes had no
 precedent, though its arrival flight is worth revisiting as the notification.
 
+**Round 8: Opening a booster pack.** Three answers to marking a stack fast: a Select mode inside a set like Photos
+(tap to toggle, sweep along a row to paint, a bar with the count, Undo and Done); "Open a pack", a number pad where
+each typed number flips the card out of the binder into a fanned hand and Done deals it in; and the pack as a gesture
+(pull down past the top of a binder for a sealed pack, tear it, swipe through the set's missing cards). Kept: the Select
+mode, with press and hold as the way in (hold, then keep the finger down and sweep). Learned: a numbered-ghost flight
+and a holo flash are lovely, but we don't rip packs in this product, so the two pack variants stay in the archive as a
+reserve of animation for later (the flip-out, the dealing-in wave, the sealed-pack reveal). Inside Select, a sideways
+drag paints instead of sliding to the next set; a drag from the title still slides.
+
 ## Open questions (next rounds)
 
 - A deal arriving: the tray's flight from panel to edge as the notification, landing in the lens reflow?
-- Marking a stack fast: what does opening a booster pack feel like?
+- Painting past the screen's edge: should a sweep scroll the binder as it goes?
 - The show floor: one-handed, glanceable, built around your wants (Sacramento, Nov 20 to 22).
 - Trading: your spares meeting someone else's wants.
 - The first 30 seconds: onboarding before anything is marked.
