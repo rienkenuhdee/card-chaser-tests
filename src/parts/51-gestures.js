@@ -3,7 +3,9 @@
 // never leave a ghost finger behind (which made scrolling hit or miss). The mouse uses pointer events.
 let gesture = null, vel = { x: 0, y: 0 }, samples = [], inertia = false, firstTouch = false;
 function stepInertia(dt) {
-  if (!inertia || state.trans) return false;
+  let moving = false;
+  if (shuffle) { if (performance.now() >= shuffle.end) shuffle = null; else moving = true; }
+  if (!inertia || state.trans) return moving;
   if (view === "mosaic") {
     mScroll = clamp(mScroll - vel.y * dt, 0, mMax);
     vel.y *= Math.pow(0.95, dt / 16);

@@ -21,44 +21,135 @@ const LABEL = 40, PG = 6;
 // The mosaic scrolls when it needs to: every card gets at least a small tile, so a big collection grows downward
 // rather than shrinking to dust. A collection that fits, fits the screen exactly.
 let mScroll = 0, mMax = 0;
-function mosaicLayout() {
-  const fitH = vh - topPad() - botPad();
-  const R = { x: 8, y: topPad(), w: vw - 16, h: Math.max(fitH, (cards.length * 340) / (vw - 16)) };
-  mMax = Math.max(0, R.y + R.h + botPad() - vh);
-  mScroll = clamp(mScroll, 0, mMax);
-  // Panel area follows card count, or, laid out by value, what the cards in the band are worth.
-  const items = groups.map((g) => ({ g, v: mode === "value" ? Math.pow(g.cards.reduce((t, c) => t + c.price, 0), 0.7) : Math.max(g.cards.length, 45) }));
-  const floor = items.reduce((t, i) => t + i.v, 0) * 0.06;
-  for (const i of items) i.v = Math.max(i.v, floor);
+function stripTreemap(items, R, tidy = false) {
   const total = items.reduce((a, i) => a + i.v, 0);
   const k = (R.w * R.h) / total;
   const worst = (strip) => { const area = strip.reduce((a, s) => a + s.v * k, 0), h = area / R.w; return Math.max(...strip.map((s) => { const w = (s.v * k) / h; return Math.max(w / h, h / w); })); };
-  let y = R.y, i = 0;
+  const strips = [];
+  let i = 0;
   while (i < items.length) {
     let strip = [items[i]], best = worst(strip), j = i + 1;
     while (j < items.length) { const cand = [...strip, items[j]], w = worst(cand); if (w <= best) { strip = cand; best = w; j++; } else break; }
+    strips.push(strip); i = j;
+  }
+  // A last panel left alone in a wide, short strip joins the row above, so its tiles stay readable.
+  if (tidy && strips.length > 1) { const last = strips[strips.length - 1]; if (worst(last) > 3.5) { strips.pop(); strips[strips.length - 1].push(...last); } }
+  let y = R.y;
+  for (const strip of strips) {
     const area = strip.reduce((a, s) => a + s.v * k, 0), h = area / R.w;
     let x = R.x;
     for (const s of strip) { const w = (s.v * k / area) * R.w; s.g.m = { x, y, w, h }; x += w; }
-    y += h; i = j;
-  }
-  // Pack each group's cards into its panel as big as they'll go.
-  for (const g of groups) {
-    const m = g.m, inner = { x: m.x + PG + 6, y: m.y + PG + LABEL, w: m.w - PG * 2 - 12, h: m.h - PG * 2 - LABEL - 6 };
-    const n = g.cards.length;
-    let best = { t: 0, cols: 1, rows: n };
-    for (let cols = 1; cols <= n; cols++) {
-      const rows = Math.ceil(n / cols);
-      const t = Math.min(inner.w / cols, (inner.h / rows) * (TW / TH));
-      if (t > best.t) best = { t, cols, rows };
-    }
-    const cw = best.t, ch = cw * TH / TW, tw = cw * 0.86, th = ch - (cw - tw) * TH / TW;
-    const gw = best.cols * cw, gh = best.rows * ch;
-    const ox = inner.x + (inner.w - gw) / 2, oy = inner.y + Math.max(0, (inner.h - gh) / 2) * 0.5;
-    g.cards.forEach((c, k) => { c.m = { x: ox + (k % best.cols) * cw, y: oy + Math.floor(k / best.cols) * ch, w: tw, h: th }; });
+    y += h;
   }
 }
-function layoutAll() { groups.forEach(binderLayout); mosaicLayout(); }
+const innerOf = (m) => ({ x: m.x + PG + 6, y: m.y + PG + LABEL, w: m.w - PG * 2 - 12, h: m.h - PG * 2 - LABEL - 6 });
+// Pack a group's cards into its panel as big as they'll go: a uniform grid.
+function packPanel(g) {
+  const inner = innerOf(g.m), n = g.cards.length;
+  let best = { t: 0, cols: 1, rows: n };
+  for (let cols = 1; cols <= n; cols++) {
+    const rows = Math.ceil(n / cols);
+    const t = Math.min(inner.w / cols, (inner.h / rows) * (TW / TH));
+    if (t > best.t) best = { t, cols, rows };
+  }
+  const cw = best.t, ch = cw * TH / TW, tw = cw * 0.86, th = ch - (cw - tw) * TH / TW;
+  const gw = best.cols * cw, gh = best.rows * ch;
+  const ox = inner.x + (inner.w - gw) / 2, oy = inner.y + Math.max(0, (inner.h - gh) / 2) * 0.5;
+  g.cards.forEach((c, k) => { c.m = { x: ox + (k % best.cols) * cw, y: oy + Math.floor(k / best.cols) * ch, w: tw, h: th }; });
+}
+
+// ---------- deals lead ----------
+// With the Deals lens on, the layout changes as well as the colour (round 7): every live deal flies to the top left
+// of its panel and grows with its discount, the rest of the set packs in around it, and a panel with nothing on offer
+// folds to one line below the live ones. Any other lens flies everything home.
+let lifted = false; // whether the current layout is the deals-first one
+let shuffle = null; // the in-set reorder flight when the lens changes inside a binder: { g, t0, dur, end }
+const FOLD = 54; // height of a folded panel ("Base Set   No deals")
+const isDeal = (c) => !c.owned && Boolean(c.deal);
+const discount = (c) => clamp(1 - c.deal / c.price, 0, 1);
+const liftSize = (c) => 5 + Math.round(clamp((discount(c) - 0.15) / 0.3, 0, 1) * 3); // 5 to 8 cells across
+// Deals first, best discount first; the rest keep the arrangement's own order.
+function orderGroup(g) {
+  g.base ||= g.cards;
+  const deals = lifted ? g.base.filter(isDeal).sort((a, b) => discount(b) - discount(a) || a.i - b.i) : [];
+  g.deals = deals;
+  g.cards = deals.length ? [...deals, ...g.base.filter((c) => !isDeal(c))] : g.base;
+  g.cards.forEach((c, k) => { c.k = k; c.lift = 0; });
+  for (const c of deals) c.lift = liftSize(c);
+}
+// Deal tiles take a square of cells each, first fit from the top left; the rest fill in around them.
+function placeCells(cols, deals, rest) {
+  const occ = [], row = (r) => occ[r] || (occ[r] = new Uint8Array(cols));
+  let rows = 0;
+  for (const d of deals) {
+    const s = Math.min(d.lift, cols);
+    for (let r = 0, done = false; !done; r++) for (let c = 0; c + s <= cols && !done; c++) {
+      let ok = true;
+      for (let i = 0; i < s && ok; i++) { const R = row(r + i); for (let j = 0; j < s; j++) if (R[c + j]) { ok = false; break; } }
+      if (!ok) continue;
+      for (let i = 0; i < s; i++) { const R = row(r + i); for (let j = 0; j < s; j++) R[c + j] = 1; }
+      d.cr = r; d.cc = c; d.cs = s; rows = Math.max(rows, r + s); done = true;
+    }
+  }
+  let r = 0, c = 0;
+  for (const x of rest) {
+    while (row(r)[c]) { if (++c >= cols) { c = 0; r++; } }
+    row(r)[c] = 1; x.cr = r; x.cc = c; x.cs = 1; rows = Math.max(rows, r + 1);
+    if (++c >= cols) { c = 0; r++; }
+  }
+  return Math.max(1, rows);
+}
+function packLifted(g) {
+  const inner = innerOf(g.m), deals = g.deals, rest = g.cards.slice(deals.length);
+  let best = { t: 0, cols: 1 };
+  const maxCols = clamp(Math.floor(inner.w / 5), 1, 72);
+  for (let cols = 1; cols <= maxCols; cols++) {
+    const rows = placeCells(cols, deals, rest);
+    const t = Math.min(inner.w / cols, (inner.h / rows) * (TW / TH));
+    if (t > best.t) best = { t, cols };
+  }
+  const rows = placeCells(best.cols, deals, rest);
+  const cw = best.t, ch = cw * TH / TW, gx = cw * 0.14, gy = gx * TH / TW;
+  const gh = rows * ch;
+  const ox = inner.x, oy = inner.y + Math.max(0, (inner.h - gh) / 2) * 0.5; // left-aligned: the deals sit in the corner
+  for (const c of g.cards) c.m = { x: ox + c.cc * cw, y: oy + c.cr * ch, w: c.cs * cw - gx, h: c.cs * ch - gy };
+}
+// A folded panel keeps its cards as a hairline under the title, so opening it still grows them into the binder.
+function packFolded(g) {
+  const m = g.m, x = m.x + PG + 10, w = m.w - PG * 2 - 20, n = g.cards.length;
+  g.cards.forEach((c, k) => { c.m = { x: x + (w * k) / n, y: m.y + PG + 30, w: Math.max(0.5, w / n), h: 2 }; });
+}
+function mosaicLayout() {
+  const fitH = vh - topPad() - botPad();
+  if (!lifted) {
+    const R = { x: 8, y: topPad(), w: vw - 16, h: Math.max(fitH, (cards.length * 340) / (vw - 16)) };
+    mMax = Math.max(0, R.y + R.h + botPad() - vh);
+    mScroll = clamp(mScroll, 0, mMax);
+    // Panel area follows card count, or, laid out by value, what the cards in the band are worth.
+    const items = groups.map((g) => ({ g, v: mode === "value" ? Math.pow(g.cards.reduce((t, c) => t + c.price, 0), 0.7) : Math.max(g.cards.length, 45) }));
+    const floor = items.reduce((t, i) => t + i.v, 0) * 0.06;
+    for (const i of items) i.v = Math.max(i.v, floor);
+    stripTreemap(items, R);
+    for (const g of groups) packPanel(g);
+    return;
+  }
+  // Deals lead: panel area follows how many cells it needs (every deal is a square of them), with a floor so a panel
+  // with one deal still shows it at a readable size. Panels without a deal fold to a line below the live ones.
+  const live = groups.filter((g) => g.deals.length), folded = groups.filter((g) => !g.deals.length);
+  for (const g of live) g.v = g.cards.length - g.deals.length + g.deals.reduce((t, c) => t + c.lift * c.lift, 0);
+  const floor = Math.max(40, live.reduce((t, g) => t + g.v, 0) * 0.1);
+  for (const g of live) g.v = Math.max(g.v, floor);
+  const total = live.reduce((t, g) => t + g.v, 0);
+  const liveH = Math.max(fitH - folded.length * FOLD, (total * 230) / (vw - 16));
+  const R = { x: 8, y: topPad(), w: vw - 16, h: liveH + folded.length * FOLD };
+  mMax = Math.max(0, R.y + R.h + botPad() - vh);
+  mScroll = clamp(mScroll, 0, mMax);
+  if (live.length) stripTreemap(live.map((g) => ({ g, v: g.v })), { x: R.x, y: R.y, w: R.w, h: liveH }, true);
+  let y = R.y + (live.length ? liveH : 0);
+  for (const g of folded) { g.m = { x: R.x, y, w: R.w, h: FOLD }; y += FOLD; }
+  for (const g of groups) if (g.deals.length) packLifted(g); else packFolded(g);
+}
+function layoutAll() { lifted = state.lens === "deals"; for (const g of groups) orderGroup(g); groups.forEach(binderLayout); mosaicLayout(); }
 
 // ---------- camera (inside a set) ----------
 const cam = { x: 0, y: 0, s: 1 };
