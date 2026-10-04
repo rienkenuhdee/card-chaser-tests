@@ -23,7 +23,8 @@
   how you move through it shouldn't be.
 - **A collector's archive, not a toy.** Archivo (condensed for names, tabular figures for prices), hairlines, small
   radii, color from the cards themselves. Rounded, bouncy type read as "comic sans".
-- **Lenses over pages.** Need, Deals, Value and Time recolor what you're looking at instead of navigating away.
+- **Lenses over pages.** Need, Deals, Value and Time recolor what you're looking at instead of navigating away. A lens
+  may rearrange as well as recolor (Deals brings the deals out in front), as long as every other lens flies it all home.
 - **Frame budget is a feature.** A slow frame makes pinches lag and makes a flick read as a slow release, so snapping
   goes the wrong way. Keep the held-pinch frame under budget (see `npm run test:perf`).
 
@@ -51,9 +52,17 @@ touches ignored during animations (now they finish the animation and take over),
 position-only snapping (now speed first), and a 374ms held-pinch frame on GPU canvases from per-card font setting and
 text measuring (now 24ms). Gesture contract added as tests.
 
+**Round 7: Where deals live.** Three answers: a bottom sheet listing live deals (their own surface), the Deals lens
+rearranging every panel so deal cards fly to the corner and grow by discount, with no-deal panels folding to a line
+(inside the mosaic), and deals arriving as the card tile itself flying from its panel into a tray along the bottom
+edge (notifications). Kept: the lens reflow, and All flying it home. Learned: a lens can change layout as well as
+colour and still feel like a lens, because nothing is navigated away from. A deal must be under market or it's noise
+(the data now drops at-market copies). The sheet was a page in disguise, and the tray's up and down swipes had no
+precedent, though its arrival flight is worth revisiting as the notification.
+
 ## Open questions (next rounds)
 
-- Where do deals live: inside the mosaic, their own surface, or notifications?
+- A deal arriving: the tray's flight from panel to edge as the notification, landing in the lens reflow?
 - Marking a stack fast: what does opening a booster pack feel like?
 - The show floor: one-handed, glanceable, built around your wants (Sacramento, Nov 20 to 22).
 - Trading: your spares meeting someone else's wants.

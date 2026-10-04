@@ -44,7 +44,9 @@ sets.forEach((st, si) => {
       else { const from = Math.max(START, st.released || START); got = from + Math.pow(h32(id + "t"), 0.8) * Math.max(0, NOW - from - 86400e3); }
     }
     const dr = h32(id + "d");
-    const deal = !own0 && dr < 0.07 ? Math.max(0.25, Math.round(price * (0.55 + 0.3 * h32(id + "e")) * 100) / 100) : null;
+    // A deal is a live copy for less than the card's price; a floor-priced common at or over market isn't one.
+    let deal = !own0 && dr < 0.07 ? Math.max(0.25, Math.round(price * (0.55 + 0.3 * h32(id + "e")) * 100) / 100) : null;
+    if (deal !== null && deal >= price) deal = null;
     const c = { i: cards.length, si, k, id, name, num, rname, tier, type: t, dex: Number(dex) || 0, price, owned, got, deal, x: 0, y: 0, sz: 1, col: 0, row: 0, e: 1, anim: null, intro: 0 };
     cards.push(c); st.cards.push(c);
   });

@@ -68,7 +68,7 @@ try { const l = localStorage.getItem("wall-lens"); if (["all", "need", "deals", 
 function emphasis(c) {
   if (state.matches) return state.matches.has(c) ? 1 : 0.1;
   if (state.lens === "need") return c.owned ? 0.16 : 1;
-  if (state.lens === "deals") return !c.owned && c.deal ? 1 : 0.1;
+  if (state.lens === "deals") return !c.owned && c.deal ? 1 : 0.18; // the rest of the set stays readable around the deals
   if (state.lens === "value") return c.owned ? 1 : 0.22; // what yours is worth: the cards you own glow
   if (state.lens === "time") return 1;
   return 1;
@@ -145,9 +145,29 @@ function drawTile(c, sx, sy, w, h, now, mult = 1) {
 }
 
 // An empty pocket: a hairline outline, and once you can read it, what it is and what it costs to fill.
+let tintKey = "", tintVal = "";
+function dealTint() { const k = theme.slot + theme.deal; if (k !== tintKey) { tintKey = k; tintVal = mix(theme.slot, theme.deal, theme.dark ? 0.16 : 0.09); } return tintVal; }
 function emptyPocket(c, sx, sy, w, h, value) {
   const r = w * 0.045;
   const dealOn = c.deal && state.lens !== "need" && state.lens !== "time";
+  // A deal out in front: the asking price leads, how far under market it is, and the card's name.
+  if (lifted && c.lift && dealOn && !value) {
+    rr(sx, sy, w, h, r); ctx.fillStyle = dealTint(); ctx.fill();
+    ctx.lineWidth = Math.max(1, w * 0.014); ctx.strokeStyle = theme.deal;
+    rr(sx + 0.5, sy + 0.5, w - 1, h - 1, r); ctx.stroke();
+    if (w < 30) return;
+    const pad = w * 0.08, pct = Math.round(discount(c) * 100);
+    ctx.textBaseline = "alphabetic"; ctx.textAlign = "left"; ctx.fillStyle = theme.deal;
+    font(800, w * 0.16); ctx.fillText(short(c.deal), sx + pad, sy + pad + w * 0.14);
+    ctx.fillStyle = theme.muted; font(500, w * 0.072); ctx.fillText(`was ${short(c.price)}`, sx + pad, sy + pad + w * 0.23);
+    ctx.textAlign = "right"; ctx.fillStyle = theme.deal;
+    font(800, w * 0.22); ctx.fillText(`${pct}%`, sx + w - pad, sy + h * 0.62);
+    ctx.fillStyle = theme.muted; font(600, w * 0.07); ctx.fillText("under market", sx + w - pad, sy + h * 0.62 + w * 0.085);
+    ctx.textAlign = "left"; ctx.fillStyle = theme.ink;
+    font(700, w * 0.095, true); ctx.fillText(fitText(c.name, w - pad * 2), sx + pad, sy + h - pad - w * 0.08);
+    ctx.fillStyle = theme.muted; font(500, w * 0.064); ctx.fillText(`${sets[c.si].code} ${c.num}/${sets[c.si].printed}`, sx + pad, sy + h - pad);
+    return;
+  }
   rr(sx, sy, w, h, r); ctx.fillStyle = theme.slot; ctx.fill();
   ctx.lineWidth = Math.max(1, w * 0.008);
   ctx.strokeStyle = value ? heat(c.price) : dealOn ? theme.deal : theme["slot-line"];
@@ -249,7 +269,13 @@ function panelStat(g) {
 const mr = (r) => ({ x: r.x, y: r.y - mScroll, w: r.w, h: r.h });
 function drawPanel(g, now, alpha = 1, labelAlpha = 1) {
   if (!g.m) return;
-  const m = mr(g.m);
+  let m = mr(g.m);
+  // During a lens flight the panel travels too, from where it was to where it's going.
+  const T = state.trans;
+  if (T?.kind === "morph" && g.pm) {
+    const k = ease(clamp((now - T.t0 - 140) / (T.dur - 520), 0, 1)), a = mr(g.pm);
+    m = { x: a.x + (m.x - a.x) * k, y: a.y + (m.y - a.y) * k, w: a.w + (m.w - a.w) * k, h: a.h + (m.h - a.h) * k };
+  }
   if (m.y > vh || m.y + m.h < 0) return;
   ctx.globalAlpha = alpha;
   rr(m.x + PG, m.y + PG, m.w - PG * 2, m.h - PG * 2, 12);
@@ -263,7 +289,7 @@ function drawPanel(g, now, alpha = 1, labelAlpha = 1) {
   const stat = panelStat(g);
   font(600, size * 0.82); const sw = stat ? ctx.measureText(stat).width + 8 : 0;
   font(800, size, true); ctx.fillText(fitText(g.name, w - sw), x, m.y + PG + 22);
-  if (stat) { ctx.textAlign = "right"; font(600, size * 0.82); ctx.fillStyle = state.lens === "deals" && /deal/.test(stat) ? theme.deal : theme.muted; ctx.fillText(stat, x + w, m.y + PG + 22); }
+  if (stat) { ctx.textAlign = "right"; font(600, size * 0.82); ctx.fillStyle = state.lens === "deals" && /^\d/.test(stat) ? theme.deal : theme.muted; ctx.fillText(stat, x + w, m.y + PG + 22); }
   const owned = ownedNow(g.cards), n = g.cards.length;
   ctx.fillStyle = theme["slot-line"]; ctx.fillRect(x, m.y + PG + 30, w, 2);
   ctx.fillStyle = owned === n ? "#E2B33C" : g.ink; ctx.fillRect(x, m.y + PG + 30, w * owned / n, 2);
@@ -281,6 +307,18 @@ function drawMosaic(now, alpha = 1, except = null) {
 const binderRect = (c, C, ox = 0) => ({ x: (c.x - C.x) * C.s + ox, y: (c.y - C.y) * C.s, w: TW * c.sz * C.s, h: TH * c.sz * C.s });
 function drawSet(g, now, C = cam, ox = 0, alpha = 1) {
   drawHeader(g, now, C, ox, alpha);
+  // The lens changed inside this set: every card travels from its old slot to its new one.
+  if (shuffle && shuffle.g === g) {
+    for (const c of g.cards) {
+      if (c === state.focus) continue;
+      const k = ease(clamp((now - shuffle.t0 - c.delay) / shuffle.dur, 0, 1));
+      const x = c.px + (c.x - c.px) * k, y = c.py + (c.y - c.py) * k;
+      const r = { x: (x - C.x) * C.s + ox, y: (y - C.y) * C.s, w: TW * c.sz * C.s, h: TH * c.sz * C.s };
+      if (r.x > vw || r.x + r.w < 0 || r.y > vh || r.y + r.h < 0) continue;
+      drawTile(c, r.x, r.y, r.w, r.h, now, alpha);
+    }
+    return;
+  }
   const y0 = C.y, y1 = C.y + vh / C.s;
   const r0 = Math.max(0, Math.floor((y0 - g.head) / stepY(g))), r1 = Math.floor((y1 - g.head) / stepY(g));
   for (let k = r0 * g.cols; k < Math.min(g.cards.length, (r1 + 1) * g.cols); k++) {
