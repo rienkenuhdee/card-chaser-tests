@@ -8,6 +8,7 @@ if (state.lens === "time") state.lens = "all"; // Time starts from the beginning
 lensBox.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.lens === state.lens)));
 resize();
 started = true;
+if (state.lens === "wants") enterWants();
 setChrome();
 markMode();
 try { if (localStorage.getItem("wall-list") === "1") setListMode(true); } catch { /* fine */ }

@@ -23,8 +23,11 @@
   handful like Photos. The mosaic is novel; how you move through it shouldn't be.
 - **A collector's archive, not a toy.** Archivo (condensed for names, tabular figures for prices), hairlines, small
   radii, color from the cards themselves. Rounded, bouncy type read as "comic sans".
-- **Lenses over pages.** Need, Deals, Value and Time recolor what you're looking at instead of navigating away. A lens
-  may rearrange as well as recolor (Deals brings the deals out in front), as long as every other lens flies it all home.
+- **Lenses over pages.** Need, Wants, Value and Time recolor what you're looking at instead of navigating away. A lens
+  may rearrange as well as recolor (Wants deals your want list out of the wall), as long as every other lens flies it
+  all home and the wall is exactly as it was.
+- **A deal is a property of a want.** A live listing matters because you're chasing the card, so deals live inside the
+  want list, leading their set, rather than as a surface of their own.
 - **Frame budget is a feature.** A slow frame makes pinches lag and makes a flick read as a slow release, so snapping
   goes the wrong way. Keep the held-pinch frame under budget (see `npm run test:perf`).
 
@@ -69,11 +72,21 @@ and a holo flash are lovely, but we don't rip packs in this product, so the two 
 reserve of animation for later (the flip-out, the dealing-in wave, the sealed-pack reveal). Inside Select, a sideways
 drag paints instead of sliding to the next set; a drag from the title still slides.
 
+**Round 9: The show floor.** Three answers to one-handed and glanceable: a Show mode that turns the wall into a
+Reminders-style checklist of wants; a thumb-reach keypad of set codes and digits that answers with a huge NEED IT /
+HAVE IT verdict; and the hit list, where the wants deal out of their panels as big tiles stacked from the bottom.
+Kept: the hit list, reframed. It isn't a show mode, it's the want list, and it took over the Deals lens: Wants folds
+the wall back and deals the wants out by set, live deals leading each set with the asking price, "was" and percent
+under (the round 7 lift's treatment, now inside the tiles), the rest showing the most you'd pay. Tap the circle or
+swipe to say you got it; the tile flies home and a keypad asks what you paid. Learned: the verdict banner was the
+clearest show-floor answer but needed set codes the vintage sets don't print; the budget line and the show dates were
+scaffolding, not the idea. Dropped: the round 7 deal lift (replaced by this), the Show pill, the budget.
+
 ## Open questions (next rounds)
 
-- A deal arriving: the tray's flight from panel to edge as the notification, landing in the lens reflow?
+- A deal arriving: the round 7 tray's flight from panel to edge as the notification, landing on the want list?
 - Painting past the screen's edge: should a sweep scroll the binder as it goes?
-- The show floor: one-handed, glanceable, built around your wants (Sacramento, Nov 20 to 22).
+- At the show: does the Wants lens alone carry a vendor table, or does the verdict (NEED IT, pay up to) earn a place when a card is looked up?
 - Trading: your spares meeting someone else's wants.
 - The first 30 seconds: onboarding before anything is marked.
 - Bringing the mosaic into the real app as the Chase home.

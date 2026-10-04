@@ -14,7 +14,7 @@ function font(weight, size, narrow = false) {
 }
 function readTheme() {
   const cs = getComputedStyle(document.documentElement);
-  for (const k of ["bg", "slot", "slot-line", "ink", "muted", "deal", "gold", "panel", "paper", "paper-ink"]) theme[k] = cs.getPropertyValue(`--${k}`).trim();
+  for (const k of ["bg", "slot", "slot-line", "ink", "muted", "deal", "gold", "panel", "panel-solid", "paper", "paper-ink"]) theme[k] = cs.getPropertyValue(`--${k}`).trim();
   theme.panelFill = cs.getPropertyValue("--panel-fill").trim();
   if (typeof heatCache !== "undefined") heatCache.clear();
   theme.dark = cs.colorScheme === "dark" || matchMedia("(prefers-color-scheme: dark)").matches && document.documentElement.dataset.theme !== "light";
@@ -64,11 +64,12 @@ function fitText(t, max) {
 const state = { lens: "all", q: "", matches: null, focus: null, dimAll: 0, introT0: 0, trans: null, press: null, g: null };
 // Where you are: the mosaic of everything, or inside one group (a set, a region, a price band).
 let view = "mosaic";
-try { const l = localStorage.getItem("wall-lens"); if (["all", "need", "deals", "value"].includes(l)) state.lens = l; } catch { /* default */ }
+try { const l = localStorage.getItem("wall-lens"); if (["all", "need", "wants", "value"].includes(l)) state.lens = l; } catch { /* default */ }
 function emphasis(c) {
+  if (c.away) return 0; // out on the want list: its slot in the wall is empty
   if (state.matches) return state.matches.has(c) ? 1 : 0.1;
   if (state.lens === "need") return c.owned ? 0.16 : 1;
-  if (state.lens === "deals") return !c.owned && c.deal ? 1 : 0.18; // the rest of the set stays readable around the deals
+  if (state.lens === "wants") return isWant(c) ? 1 : 0.18;
   if (state.lens === "value") return c.owned ? 1 : 0.22; // what yours is worth: the cards you own glow
   if (state.lens === "time") return 1;
   return 1;
@@ -108,7 +109,7 @@ function drawTile(c, sx, sy, w, h, now, mult = 1) {
   }
   if (w < 5) { // a heat map: one dot per card
     ctx.fillStyle = value ? (c.owned ? heat(c.price) : theme.slot) : flood > 0.5 ? typeColor(c) : theme.slot;
-    if (!c.owned && c.deal && (state.lens === "deals" || state.lens === "all")) ctx.fillStyle = theme.deal;
+    if (!c.owned && c.deal && (state.lens === "wants" || state.lens === "all")) ctx.fillStyle = theme.deal;
     ctx.fillRect(sx, sy, Math.max(w, 1), Math.max(h, 1));
     return;
   }
@@ -145,29 +146,9 @@ function drawTile(c, sx, sy, w, h, now, mult = 1) {
 }
 
 // An empty pocket: a hairline outline, and once you can read it, what it is and what it costs to fill.
-let tintKey = "", tintVal = "";
-function dealTint() { const k = theme.slot + theme.deal; if (k !== tintKey) { tintKey = k; tintVal = mix(theme.slot, theme.deal, theme.dark ? 0.16 : 0.09); } return tintVal; }
 function emptyPocket(c, sx, sy, w, h, value) {
   const r = w * 0.045;
   const dealOn = c.deal && state.lens !== "need" && state.lens !== "time";
-  // A deal out in front: the asking price leads, how far under market it is, and the card's name.
-  if (lifted && c.lift && dealOn && !value) {
-    rr(sx, sy, w, h, r); ctx.fillStyle = dealTint(); ctx.fill();
-    ctx.lineWidth = Math.max(1, w * 0.014); ctx.strokeStyle = theme.deal;
-    rr(sx + 0.5, sy + 0.5, w - 1, h - 1, r); ctx.stroke();
-    if (w < 30) return;
-    const pad = w * 0.08, pct = Math.round(discount(c) * 100);
-    ctx.textBaseline = "alphabetic"; ctx.textAlign = "left"; ctx.fillStyle = theme.deal;
-    font(800, w * 0.16); ctx.fillText(short(c.deal), sx + pad, sy + pad + w * 0.14);
-    ctx.fillStyle = theme.muted; font(500, w * 0.072); ctx.fillText(`was ${short(c.price)}`, sx + pad, sy + pad + w * 0.23);
-    ctx.textAlign = "right"; ctx.fillStyle = theme.deal;
-    font(800, w * 0.22); ctx.fillText(`${pct}%`, sx + w - pad, sy + h * 0.62);
-    ctx.fillStyle = theme.muted; font(600, w * 0.07); ctx.fillText("under market", sx + w - pad, sy + h * 0.62 + w * 0.085);
-    ctx.textAlign = "left"; ctx.fillStyle = theme.ink;
-    font(700, w * 0.095, true); ctx.fillText(fitText(c.name, w - pad * 2), sx + pad, sy + h - pad - w * 0.08);
-    ctx.fillStyle = theme.muted; font(500, w * 0.064); ctx.fillText(`${sets[c.si].code} ${c.num}/${sets[c.si].printed}`, sx + pad, sy + h - pad);
-    return;
-  }
   rr(sx, sy, w, h, r); ctx.fillStyle = theme.slot; ctx.fill();
   ctx.lineWidth = Math.max(1, w * 0.008);
   ctx.strokeStyle = value ? heat(c.price) : dealOn ? theme.deal : theme["slot-line"];
@@ -262,20 +243,14 @@ function panelStat(g) {
   const n = g.cards.length, owned = ownedNow(g.cards);
   if (state.matches) { const m = g.cards.filter((c) => state.matches.has(c)).length; return m ? `${m} found` : ""; }
   if (state.lens === "need") return `${n - owned} to go`;
-  if (state.lens === "deals") { const d = g.cards.filter((c) => !c.owned && c.deal).length; return d ? `${d} deal${d === 1 ? "" : "s"}` : "No deals"; }
+  if (state.lens === "wants") { const d = g.cards.filter(isWant).length; return d ? `${d} wanted` : ""; }
   if (state.lens === "value") return short(worthOf(g.cards));
   return `${owned}/${n}`;
 }
 const mr = (r) => ({ x: r.x, y: r.y - mScroll, w: r.w, h: r.h });
 function drawPanel(g, now, alpha = 1, labelAlpha = 1) {
   if (!g.m) return;
-  let m = mr(g.m);
-  // During a lens flight the panel travels too, from where it was to where it's going.
-  const T = state.trans;
-  if (T?.kind === "morph" && g.pm) {
-    const k = ease(clamp((now - T.t0 - 140) / (T.dur - 520), 0, 1)), a = mr(g.pm);
-    m = { x: a.x + (m.x - a.x) * k, y: a.y + (m.y - a.y) * k, w: a.w + (m.w - a.w) * k, h: a.h + (m.h - a.h) * k };
-  }
+  const m = mr(g.m);
   if (m.y > vh || m.y + m.h < 0) return;
   ctx.globalAlpha = alpha;
   rr(m.x + PG, m.y + PG, m.w - PG * 2, m.h - PG * 2, 12);
@@ -289,36 +264,28 @@ function drawPanel(g, now, alpha = 1, labelAlpha = 1) {
   const stat = panelStat(g);
   font(600, size * 0.82); const sw = stat ? ctx.measureText(stat).width + 8 : 0;
   font(800, size, true); ctx.fillText(fitText(g.name, w - sw), x, m.y + PG + 22);
-  if (stat) { ctx.textAlign = "right"; font(600, size * 0.82); ctx.fillStyle = state.lens === "deals" && /^\d/.test(stat) ? theme.deal : theme.muted; ctx.fillText(stat, x + w, m.y + PG + 22); }
+  if (stat) { ctx.textAlign = "right"; font(600, size * 0.82); ctx.fillStyle = theme.muted; ctx.fillText(stat, x + w, m.y + PG + 22); }
   const owned = ownedNow(g.cards), n = g.cards.length;
   ctx.fillStyle = theme["slot-line"]; ctx.fillRect(x, m.y + PG + 30, w, 2);
   ctx.fillStyle = owned === n ? "#E2B33C" : g.ink; ctx.fillRect(x, m.y + PG + 30, w * owned / n, 2);
   ctx.globalAlpha = 1;
 }
 function drawMosaic(now, alpha = 1, except = null) {
+  // While the want list is out the wall sits folded back and dimmed behind it.
+  const o = wl.open;
+  if (o > 0) { const k = 1 - 0.06 * o; ctx.save(); ctx.translate(vw / 2, topPad()); ctx.scale(k, k); ctx.translate(-vw / 2, -topPad()); alpha *= 1 - (theme.dark ? 0.78 : 0.84) * o; }
   for (const g of groups) {
     if (g === except) continue;
     if (g.m.y - mScroll > vh || g.m.y + g.m.h - mScroll < 0) continue;
     drawPanel(g, now, alpha);
     for (const c of g.cards) drawTile(c, c.m.x, c.m.y - mScroll, c.m.w, c.m.h, now, alpha);
   }
+  if (o > 0) ctx.restore();
 }
 // One group's binder through a camera, offset sideways (for the slide between sets).
 const binderRect = (c, C, ox = 0) => ({ x: (c.x - C.x) * C.s + ox, y: (c.y - C.y) * C.s, w: TW * c.sz * C.s, h: TH * c.sz * C.s });
 function drawSet(g, now, C = cam, ox = 0, alpha = 1) {
   drawHeader(g, now, C, ox, alpha);
-  // The lens changed inside this set: every card travels from its old slot to its new one.
-  if (shuffle && shuffle.g === g) {
-    for (const c of g.cards) {
-      if (c === state.focus) continue;
-      const k = ease(clamp((now - shuffle.t0 - c.delay) / shuffle.dur, 0, 1));
-      const x = c.px + (c.x - c.px) * k, y = c.py + (c.y - c.py) * k;
-      const r = { x: (x - C.x) * C.s + ox, y: (y - C.y) * C.s, w: TW * c.sz * C.s, h: TH * c.sz * C.s };
-      if (r.x > vw || r.x + r.w < 0 || r.y > vh || r.y + r.h < 0) continue;
-      drawTile(c, r.x, r.y, r.w, r.h, now, alpha);
-    }
-    return;
-  }
   const y0 = C.y, y1 = C.y + vh / C.s;
   const r0 = Math.max(0, Math.floor((y0 - g.head) / stepY(g))), r1 = Math.floor((y1 - g.head) / stepY(g));
   for (let k = r0 * g.cols; k < Math.min(g.cards.length, (r1 + 1) * g.cols); k++) {
@@ -347,6 +314,7 @@ function frame(now) {
   raf = 0; frameFoil = false;
   const dt = Math.min(48, now - (lastFrame || now)); lastFrame = now;
   let more = stepFly(now);
+  if (stepWantsOpen(now)) more = true;
   if (stepInertia(dt)) more = true;
   if (view === "set" && !state.trans && !fly) clampCam(state.g);
   for (const c of cards) { const t = emphasis(c); if (Math.abs(c.e - t) > 0.005) { c.e += (t - c.e) * Math.min(1, dt / 90); more = true; } else c.e = t; }
@@ -403,6 +371,7 @@ function frame(now) {
   ctx.globalAlpha = 1;
   for (const c of cards) if (c.anim) { more = true; break; }
   drawMarks();
+  if (drawWants(now)) more = true;
   if (frameFoil) more = true; // foil keeps shimmering while a foil card is on screen
   if (state.press) more = true;
   if (state.introT0 && now - state.introT0 < 3000 && !reduced) more = true;
