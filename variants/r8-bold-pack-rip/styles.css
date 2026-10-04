@@ -1,0 +1,44 @@
+/* Open a pack: the pill inside a set, the number pad that rises from the bottom, and what hides while it's up. */
+.pk-pill { position: fixed; z-index: 3; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 74px); transform: translateX(-50%); display: none; align-items: center; gap: 8px; height: 42px; padding: 0 16px 0 13px; border-radius: 12px;
+  font: 700 14.5px var(--font); color: var(--ink); cursor: pointer; white-space: nowrap; transition: transform .18s, opacity .25s; }
+.pk-pill svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.pk-pill:active { transform: translateX(-50%) scale(.96); }
+body.inset:not(.focused):not(.packing):not(.timing):not(.listmode) .pk-pill:not([hidden]) { display: inline-flex; }
+body.packing .lens, body.packing .timebar, body.packing .caption { transform: translate(-50%, 160%); opacity: 0; pointer-events: none; }
+
+.pack { position: fixed; z-index: 4; left: 50%; bottom: 0; width: min(560px, 100%); transform: translate(-50%, 110%); padding: 10px 14px calc(env(safe-area-inset-bottom, 0px) + 12px);
+  border-radius: 18px 18px 0 0; border-bottom: 0; transition: transform .42s cubic-bezier(.2,.9,.25,1.02); display: grid; gap: 10px; }
+.pack[hidden] { display: none; }
+.pack.up { transform: translate(-50%, 0); }
+@media (min-width: 720px) { .pack { bottom: 16px; border-radius: 18px; border-bottom: 1px solid var(--line); transform: translate(-50%, calc(100% + 60px)); } .pack.up { transform: translate(-50%, 0); } }
+.pk-head { display: flex; align-items: center; gap: 6px; }
+.pk-t { flex: 1; min-width: 0; }
+.pk-t b { display: block; font: 800 20px/1.1 var(--font); font-stretch: 78%; letter-spacing: -0.01em; }
+.pk-t small { display: block; margin-top: 2px; color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pk-done { flex: none; height: 40px; padding: 0 18px; border-radius: 10px; border: 1px solid var(--ink); background: var(--ink); color: var(--bg); font: 700 15px var(--font); cursor: pointer; transition: transform .15s; }
+.pk-done:active { transform: scale(.96); }
+.pk-show { display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 14px; border: 1px solid var(--line); border-radius: 12px; background: color-mix(in srgb, var(--ink) 4%, transparent); }
+.pk-num { flex: none; min-width: 2.2ch; font: 700 28px/1 var(--font); letter-spacing: .02em; }
+.pk-num:empty::before { content: "_"; color: var(--muted); opacity: .5; }
+.pk-match { flex: 1; min-width: 0; font-size: 14px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pk-match.ok { color: var(--ink); font-weight: 600; }
+.pk-match.no { color: #C8402E; font-weight: 600; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .pk-match.no { color: #F08A7A; } }
+.pk-show.shake { animation: pk-shake .36s; }
+@keyframes pk-shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+.pk-keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.pk-keys button { height: 48px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-solid); color: var(--ink); font: 600 22px var(--font); font-variant-numeric: tabular-nums; cursor: pointer; display: grid; place-items: center; transition: transform .1s, background .15s; touch-action: manipulation; }
+.pk-keys button:active { transform: scale(.95); background: var(--line); }
+.pk-keys button svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.pk-keys #pk-add { font-size: 16px; font-weight: 700; color: var(--muted); }
+.pk-keys #pk-add.ready { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.pk-pulls { display: none; flex-wrap: wrap; gap: 6px; align-items: center; }
+body.listmode .pk-pulls { display: flex; }
+body.listmode .pk-pulls:empty { display: none; }
+.pk-count { font-weight: 700; font-size: 14px; margin-right: 4px; }
+.pk-chip { height: 30px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line); background: none; font: 600 13px var(--font); cursor: pointer; }
+.pk-chip span { color: var(--muted); margin-left: 2px; }
+#list .lhead h2 { margin-top: 26px; }
+#list .lhead .pk-open { margin-top: 24px; height: 34px; font-size: 13.5px; }
+@media (max-height: 700px) { .pk-keys button { height: 42px; } .pk-show { height: 42px; } }
+body.listmode.packing #list { padding-bottom: 440px; }
