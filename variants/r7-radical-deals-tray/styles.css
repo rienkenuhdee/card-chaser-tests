@@ -1,0 +1,14 @@
+/* r7-radical-deals-tray: the Deals lens carries the tray count; the caption sits above the tray; the list shows the tray. */
+.lens button { overflow: visible; }
+.lens .badge { position: absolute; top: -4px; right: -3px; z-index: 2; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--deal); color: var(--bg);
+  font: 700 10.5px/18px var(--font); text-align: center; letter-spacing: 0; pointer-events: none; font-variant-numeric: tabular-nums; }
+.lens .badge[hidden] { display: none; }
+.lens .badge.tick { animation: badge-tick .38s cubic-bezier(.2,.9,.25,1.04); }
+@keyframes badge-tick { 0% { transform: scale(1); } 40% { transform: scale(1.4); } 100% { transform: scale(1); } }
+.caption { bottom: calc(env(safe-area-inset-bottom, 0px) + 164px); }
+#list .ltray { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; border-bottom: 1px solid var(--line); }
+#list .ltray .lrow { border-bottom: 0; }
+#list .lacts { display: flex; gap: 6px; }
+#list .lacts .pill-btn { height: 34px; padding: 0 10px; font-size: 13px; }
+#list .lacts .pill-btn[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); }
+@media (prefers-reduced-motion: reduce) { .lens .badge { animation: none !important; } }
