@@ -1,0 +1,27 @@
+/* Trade: the sheet under a popped-up spare. Who wants it, what they'd give, Propose. */
+.tsheet { position: fixed; z-index: 5; left: 50%; bottom: 0; width: min(520px, 100%); transform: translate(-50%, 110%); padding: 12px 14px calc(env(safe-area-inset-bottom, 0px) + 12px);
+  border-radius: 18px 18px 0 0; border-bottom: 0; display: grid; gap: 8px; transition: transform .4s cubic-bezier(.2,.9,.25,1.02); pointer-events: none; }
+@media (min-width: 720px) { .tsheet { bottom: 16px; border-radius: 18px; border-bottom: 1px solid var(--line); } }
+body.trading .tsheet { transform: translate(-50%, 0); pointer-events: auto; }
+body.trading .lens { transform: translate(-50%, 160%); opacity: 0; pointer-events: none; }
+body.trading .caption { display: none; }
+.trows { display: grid; gap: 8px; max-height: min(40vh, 360px); overflow-y: auto; padding: 2px; margin: 0 -2px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.trows::-webkit-scrollbar { display: none; }
+.trows:empty { display: none; }
+.trow { display: grid; grid-template-columns: 1fr auto; gap: 8px 10px; align-items: center; padding: 10px 12px 11px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel-fill); }
+.trow.done { border-color: var(--gold); }
+.twho { display: grid; gap: 2px; min-width: 0; }
+.twho b { font: 800 16px/1.15 var(--font); font-stretch: 85%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.twho b span { font-weight: 500; font-stretch: 100%; font-size: 13px; color: var(--muted); }
+.twho .tbal { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.trow.done .tbal { color: var(--gold); font-weight: 600; }
+.tpro { height: 40px; min-width: 96px; }
+.tchips { grid-column: 1 / -1; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 1px 1px 2px; margin: 0 -1px; -webkit-overflow-scrolling: touch; }
+.tchips::-webkit-scrollbar { display: none; }
+.chip { flex: none; display: grid; gap: 1px; max-width: 160px; padding: 6px 10px 6px 8px; border-radius: 8px; background: var(--slot); border-left: 3px solid var(--c, var(--slot-line)); line-height: 1.2; }
+.chip > span { font: 700 13px var(--font); font-stretch: 85%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chip small { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.chip small b { color: var(--ink); font-weight: 700; }
+.chip.cash { border-left-color: var(--gold); }
+.t-acts .mbtn { width: 100%; height: 46px; font-size: 15px; }
+.t-acts .mbtn { border-color: var(--gold); background: color-mix(in srgb, var(--gold) 16%, transparent); }
