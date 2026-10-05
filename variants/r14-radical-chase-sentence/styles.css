@@ -1,0 +1,25 @@
+/* r14-radical-chase-sentence: the row under the search box, chips, the chase menu's sentences, the list */
+.srow { position: fixed; z-index: 3; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 66px); transform: translateX(-50%); width: min(620px, calc(100vw - 20px)); height: 38px; padding: 0 5px; border-radius: 12px;
+  display: flex; align-items: center; gap: 6px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; touch-action: pan-x; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; white-space: nowrap; }
+.srow::-webkit-scrollbar { display: none; }
+body.inset:not(.qon) .srow, body.trading .srow, body.listmode .srow, body.offering .srow, body.paying .srow, body.focused .srow { display: none; }
+.sr-lbl { flex: none; padding: 0 4px 0 7px; font: 600 12.5px var(--font); color: var(--muted); }
+.sr-n { flex: 1; min-width: 0; padding: 0 7px; font: 600 13.5px var(--font); color: var(--ink); overflow: hidden; text-overflow: ellipsis; }
+.sr-go { flex: none; height: 28px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line); background: none; font: 700 13.5px var(--font); color: var(--ink); cursor: pointer; transition: transform .18s; }
+.sr-go.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.sr-go:active { transform: scale(.96); }
+.sr-chip { flex: none; display: inline-flex; align-items: center; height: 28px; border-radius: 8px; border: 1px solid var(--line); background: none; font: 600 13px var(--font); color: var(--ink); white-space: nowrap; cursor: pointer; padding: 0 10px; transition: background .15s, transform .18s; }
+.sr-chip:hover { background: var(--line); }
+.sr-chip:active { transform: scale(.96); }
+.sr-chip.sr-saved { padding: 0; border-color: color-mix(in srgb, var(--gold) 55%, var(--line)); background: color-mix(in srgb, var(--gold) 9%, transparent); }
+.sr-saved .sr-run { height: 100%; padding: 0 2px 0 10px; border: 0; background: none; font: inherit; color: inherit; cursor: pointer; display: inline-flex; align-items: baseline; gap: 6px; }
+.sr-saved small { font: 500 11.5px var(--font); color: var(--muted); }
+.sr-x { width: 26px; height: 100%; border: 0; background: none; font: 500 17px var(--font); color: var(--muted); cursor: pointer; border-radius: 0 8px 8px 0; }
+.sr-x:hover { background: var(--line); color: var(--ink); }
+.sr-new { color: var(--muted); border-style: dashed; }
+body:not(.inset) .toast, body.inset.qon .toast { top: calc(env(safe-area-inset-top, 0px) + 114px); }
+.arrange-menu .sr-mh { margin: 4px 0 0; padding: 8px 12px 4px; font: 700 13px var(--font); color: var(--muted); border-top: 1px solid var(--line); }
+.arrange-menu [data-chase] b { text-transform: none; }
+.arrange-menu [data-chase] .sr-tick { opacity: 1; color: var(--muted); font-size: 18px; }
+#list .lpop { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 6px; background: color-mix(in srgb, var(--gold) 18%, transparent); color: var(--gold); font: 700 11px var(--font); vertical-align: 2px; }
+#list .pill-btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
