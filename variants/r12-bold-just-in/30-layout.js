@@ -15,7 +15,9 @@ function binderLayout(g) {
   g.cards.forEach((c, k) => { c.sz = g.sz; c.col = k % g.cols; c.row = Math.floor(k / g.cols); c.x = c.col * stepX(g); c.y = g.head + c.row * stepY(g); });
 }
 let vw = innerWidth, vh = innerHeight;
-const topPad = () => 70, botPad = () => (document.body.classList.contains("timing") ? 160 : 72);
+// r12-bold-just-in: the only change in this part. The "Just in" shelf under the search bar pushes the wall down while
+// it is out (shelfPad, in 78-just-in.js), so nothing sits under it and a touch on the shelf never meant the wall.
+const topPad = () => 70 + shelfPad(), botPad = () => (document.body.classList.contains("timing") ? 160 : 72);
 const LABEL = 40, PG = 6;
 // Ordered strip treemap: groups keep their order (oldest set first), rows fill the width, the rows fill the height.
 // The mosaic scrolls when it needs to: every card gets at least a small tile, so a big collection grows downward

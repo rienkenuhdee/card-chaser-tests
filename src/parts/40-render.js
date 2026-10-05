@@ -119,13 +119,13 @@ function drawTile0(c, sx, sy, w, h, now, mult = 1) {
   }
   if (w < 5) { // a heat map: one dot per card
     ctx.fillStyle = value ? (c.owned ? heat(c.price) : theme.slot) : flood > 0.5 ? typeColor(c) : theme.slot;
-    if (!c.owned && c.deal && (state.lens === "chase" || state.lens === "have")) ctx.fillStyle = theme.deal;
+    if (!c.owned && c.deal && isChase(c) && (state.lens === "chase" || state.lens === "have")) ctx.fillStyle = theme.deal;
     ctx.fillRect(sx, sy, Math.max(w, 1), Math.max(h, 1));
     return;
   }
   if (w < 26) { // binder at arm's length: shapes and colour (kept cheap: this draws a thousand times a frame)
     const r = w * 0.09, round = w >= 12;
-    const dealOn = !c.owned && c.deal && state.lens !== "need" && !state.time;
+    const dealOn = !c.owned && c.deal && isChase(c) && state.lens !== "need" && !state.time; // a deal is a property of a chase
     if (flood < 1) {
       ctx.fillStyle = theme.slot;
       if (round) { rr(sx, sy, w, h, r); ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = dealOn ? theme.deal : theme["slot-line"]; ctx.stroke(); }
@@ -158,7 +158,7 @@ function drawTile0(c, sx, sy, w, h, now, mult = 1) {
 // An empty pocket: a hairline outline, and once you can read it, what it is and what it costs to fill.
 function emptyPocket(c, sx, sy, w, h, value) {
   const r = w * 0.045;
-  const dealOn = c.deal && state.lens !== "need" && !state.time;
+  const dealOn = c.deal && isChase(c) && state.lens !== "need" && !state.time;
   rr(sx, sy, w, h, r); ctx.fillStyle = theme.slot; ctx.fill();
   ctx.lineWidth = Math.max(1, w * 0.008);
   ctx.strokeStyle = value ? heat(c.price) : dealOn ? theme.deal : theme["slot-line"];
@@ -250,6 +250,7 @@ const ownedNow = (list) => (state.time ? list.filter((c) => c.owned && c.got && 
 
 // A mosaic panel: the group's name and how it's going, over a field of its cards.
 function panelStat(g) {
+  if (picking()) return "\u2003\u2003"; // the tick's place
   const n = g.cards.length, owned = ownedNow(g.cards);
   if (state.matches) { const m = g.cards.filter((c) => state.matches.has(c)).length; return m ? `${m} found` : ""; }
   if (state.lens === "need") return `${n - owned} to go`;
@@ -288,12 +289,20 @@ function drawPanel(g, now, alpha = 1, labelAlpha = 1) {
   ctx.globalAlpha = 1;
 }
 function drawMosaic(now, alpha = 1, except = null) {
+  // While you pick your sets, the ones you haven't ticked sit back a little once you've ticked one.
+  const pick = picking() && wel.picks.size > 0;
+  let settling = false;
   for (const g of groups) {
+    const t = pick && g.set && !wel.picks.has(g.set.id) ? 0.42 : 1;
+    g.pe ??= 1;
+    if (Math.abs(g.pe - t) > 0.01) { g.pe += (t - g.pe) * (reduced ? 1 : 0.16); settling = true; } else g.pe = t;
     if (g === except) continue;
     if (g.m.y - mScroll > vh || g.m.y + g.m.h - mScroll < 0) continue;
-    drawPanel(g, now, alpha);
-    for (const c of g.cards) drawTile(c, c.m.x, c.m.y - mScroll, c.m.w, c.m.h, now, alpha);
+    const a = alpha * g.pe;
+    drawPanel(g, now, a);
+    for (const c of g.cards) drawTile(c, c.m.x, c.m.y - mScroll, c.m.w, c.m.h, now, a);
   }
+  if (settling) kick();
 }
 // One group's binder through a camera, offset sideways (for the slide between sets).
 const binderRect = (c, C, ox = 0) => ({ x: (c.x - C.x) * C.s + ox, y: (c.y - C.y) * C.s, w: TW * c.sz * C.s, h: TH * c.sz * C.s });
@@ -328,6 +337,7 @@ let raf = 0, started = false, lastFrame = 0;
 // compositor), the next frame still happens, so a transition can never freeze half-way.
 let watchdog = 0;
 function kick() {
+  welcomeSync(); // the welcome sheet follows every change on the wall
   if (raf) return;
   raf = requestAnimationFrame(frame);
   clearTimeout(watchdog);
@@ -395,7 +405,7 @@ function frame(now) {
   if (state.focus) { const c = state.focus, r = binderRect(c, cam); ctx.globalAlpha = 1; drawTile(c, r.x, r.y, r.w, r.h, now); if (c.anim) more = true; if (c.owned && c.tier >= 3 && !reduced) more = true; }
   ctx.globalAlpha = 1;
   for (const c of cards) if (c.anim) { more = true; break; }
-  drawMarks();
+  drawMarks(); drawPicks();
   if (drawPop(now)) more = true;
   drawTraders(now);
   if (tbl.on) drawTable(now);

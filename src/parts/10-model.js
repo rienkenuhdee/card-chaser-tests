@@ -35,7 +35,8 @@ sets.forEach((st, si) => {
     price = Math.round(price * 100) / 100;
     const own0 = h32(id + "o") < clamp(OWN_RATE[st.id] * (tier <= 1 ? 1.3 : tier === 2 ? 1 : tier === 3 ? 0.66 : 0.32), 0, 0.97);
     const mark = saved[id];
-    const owned = mark == null ? own0 : typeof mark === "object" ? mark.on : Boolean(mark);
+    // The wall starts empty: only your own marks count. The seeded ownership (own0) is what an import brings in.
+    const owned = mark == null ? false : typeof mark === "object" ? mark.on : Boolean(mark);
     // When you got it (made up for the demo): most of the vintage came in one day, the childhood binder found again;
     // modern cards trickle in from release. Cards you mark yourself are dated the moment you mark them.
     const START = Date.parse("2023-01-15"), NOW = Date.now(), BINDER = Date.parse("2024-03-09");
@@ -49,7 +50,7 @@ sets.forEach((st, si) => {
     // A deal is a live copy for less than the card's price; a floor-priced common at or over market isn't one.
     let deal = !own0 && dr < 0.07 ? Math.max(0.25, Math.round(price * (0.55 + 0.3 * h32(id + "e")) * 100) / 100) : null;
     if (deal !== null && deal >= price) deal = null;
-    const c = { i: cards.length, si, k, id, name, num, rname, tier, type: t, dex: Number(dex) || 0, price, owned, got, deal, artist: ARTISTS[Math.floor(h32(id + "a") * ARTISTS.length)], x: 0, y: 0, sz: 1, col: 0, row: 0, e: 1, anim: null, intro: 0 };
+    const c = { i: cards.length, si, k, id, name, num, rname, tier, type: t, dex: Number(dex) || 0, price, owned, got, deal, own0, artist: ARTISTS[Math.floor(h32(id + "a") * ARTISTS.length)], x: 0, y: 0, sz: 1, col: 0, row: 0, e: 1, anim: null, intro: 0 };
     cards.push(c); st.cards.push(c);
   });
 });

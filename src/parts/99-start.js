@@ -17,6 +17,6 @@ placeInk();
 // The opening: the collection inks in, set by set, oldest first.
 cards.forEach((c) => { c.intro = c.g * 140 + c.k * 2.2; });
 state.introT0 = performance.now();
-setTimeout(() => { if (!firstTouch) document.getElementById("caption").classList.add("gone"); }, 9000);
+if (!welcomed) { document.body.classList.add("welcoming"); setTimeout(() => startWelcome(), 0); } // a first run: the welcome comes up once the wall has inked in
 document.fonts?.ready.then(() => kick());
 kick();

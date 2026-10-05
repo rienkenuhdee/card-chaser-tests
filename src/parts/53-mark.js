@@ -47,6 +47,18 @@ function markCard(c, on) {
   if (session.get(c) === c.owned) session.delete(c); // back where it started: not a change any more
   updateBar();
 }
+// Select all: every card in the set you're in becomes yours (through the session, so Undo takes them all back).
+function markAllInSet() {
+  const g = state.g; if (!g || !marking) return;
+  const todo = g.cards.filter((c) => !c.owned); if (!todo.length) { toast("You have all of them already."); return; }
+  const now = performance.now();
+  todo.forEach((c, i) => { if (!session.has(c)) session.set(c, c.owned); c.owned = true; c.got = Date.now(); saved[c.id] = { on: true, at: c.got }; if (!reduced) c.anim = { t0: now + i * 5, to: true }; });
+  persist(); updateBar(); updateCount(); drawList(); tick(14);
+  if (lifted) liftLayout(true);
+  if (view === "set") { g.burst = now; }
+  kick();
+}
+document.getElementById("m-all").onclick = () => markAllInSet();
 markBtn.onclick = () => enterMark();
 document.getElementById("m-done").onclick = () => leaveMark();
 mUndo.onclick = () => { if (!session.size) return; revert([...session]); session.clear(); updateBar(); tick(6); toast("Put back as it was"); };

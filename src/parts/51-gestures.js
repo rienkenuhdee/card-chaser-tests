@@ -228,6 +228,7 @@ canvas.addEventListener("wheel", (e) => {
 function tap(sx, sy) {
   if (state.trans) return;
   const h = hit(sx, sy);
+  if (picking() && !state.focus && h?.block) return togglePick(h.block); // which sets do you collect?
   if (state.focus) { if (h?.card === state.focus) return; unfocus(); return; }
   if (view === "mosaic") {
     const ch = chipAt(sx, sy); if (ch) return openTable(ch.t, ch); // a trader: the table

@@ -1,0 +1,55 @@
+/* r12-bold-just-in: the "Just in" shelf under the search bar (it slides out from beneath the strip), its chips, the
+   flying tile, the count on Chase. */
+.shelf { position: fixed; z-index: 2; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 66px); width: min(620px, calc(100% - 20px)); height: 100px;
+  transform: translate(-50%, -190px); opacity: 0; pointer-events: none; border-radius: 14px; padding: 7px 0 0; display: grid; grid-template-rows: 18px 1fr; gap: 3px; overflow: hidden; will-change: transform; }
+body.shelved .shelf { pointer-events: auto; }
+body.listmode .shelf, body.trading .shelf { display: none; }
+.sh-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 0 12px; }
+.sh-head b { font: 700 12px var(--font); letter-spacing: .05em; text-transform: uppercase; color: var(--ink); white-space: nowrap; }
+.sh-head span { font: 500 12px var(--font); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sh-head span[hidden] { display: none; }
+.sh-row { display: flex; align-items: flex-start; gap: 8px; padding: 2px 8px 10px; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x proximity; touch-action: pan-x; scrollbar-width: none; overscroll-behavior-x: contain; }
+.sh-row::-webkit-scrollbar { display: none; }
+/* A chip: the card's mini face, the asking price in green, how far under, its name and when it came in. */
+.chip { flex: none; position: relative; display: flex; align-items: center; gap: 8px; width: 170px; height: 64px; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 12px;
+  background: var(--panel-fill); color: var(--ink); text-align: left; cursor: pointer; scroll-snap-align: start; touch-action: pan-x; overflow: hidden;
+  transition: width .26s cubic-bezier(.2,.9,.25,1.04), margin .26s cubic-bezier(.2,.9,.25,1.04), opacity .22s, border-color .35s, transform .24s cubic-bezier(.2,.9,.25,1.04), background .3s; }
+.chip .face { flex: none; display: block; width: 40px; height: 56px; margin-left: 3px; border-radius: 3px; }
+.chip .ctext { flex: 1; min-width: 0; display: grid; line-height: 1.12; padding-right: 8px; }
+.chip .cprice { font: 800 15.5px var(--font); color: var(--deal); font-variant-numeric: tabular-nums; }
+.chip .cunder { font: 700 11px var(--font); color: var(--deal); }
+.chip .cname { margin-top: 3px; font: 700 12.5px var(--font); font-stretch: 85%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chip .cwhen { font: 500 10.5px var(--font); color: var(--muted); }
+.chip.unseen { border-color: var(--deal); }
+.chip.new { pointer-events: none; border-style: dashed; }
+.chip.new .face, .chip.new .ctext { opacity: 0; }
+.chip.in .face, .chip.in .ctext { transition: opacity .25s; }
+.chip.enter, .chip.gone { width: 0; margin-right: -8px; border-color: transparent; }
+.chip.gone { opacity: 0; pointer-events: none; }
+.chip.lifting { transition: none; z-index: 1; box-shadow: 0 10px 24px rgb(0 0 0 / .22); }
+.chip.armed { opacity: .55; }
+.chip.pulse { animation: chip-pulse .9s cubic-bezier(.2,.7,.3,1) both; }
+@keyframes chip-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--deal) 75%, transparent); background: color-mix(in srgb, var(--deal) 32%, var(--panel-fill)); }
+  100% { box-shadow: 0 0 0 16px transparent; background: var(--panel-fill); }
+}
+/* The tile in flight: one element carrying the chip's face, above the shelf, below the sheets. */
+.flier { position: fixed; z-index: 4; left: 0; top: 0; width: 40px; height: 56px; transform-origin: 0 0; pointer-events: none; border-radius: 3px; box-shadow: 0 10px 28px rgb(0 0 0 / .32); will-change: transform; }
+.flier[hidden] { display: none; }
+.flier canvas { display: block; width: 100%; height: 100%; border-radius: 3px; }
+/* Chase counts the arrivals you haven't looked at. */
+.lens button { overflow: visible; }
+.lens .badge { position: absolute; top: -4px; right: -3px; z-index: 2; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--deal); color: var(--bg);
+  font: 700 10.5px/18px var(--font); text-align: center; letter-spacing: 0; pointer-events: none; font-variant-numeric: tabular-nums; }
+.lens .badge[hidden] { display: none; }
+.lens .badge.tick { animation: badge-tick .38s cubic-bezier(.2,.9,.25,1.04); }
+@keyframes badge-tick { 0% { transform: scale(1); } 40% { transform: scale(1.45); } 100% { transform: scale(1); } }
+/* The toast and the menus sit under the shelf while it's out. */
+body.shelved .toast { top: calc(env(safe-area-inset-top, 0px) + 176px); }
+body.shelved .arrange-menu { top: calc(env(safe-area-inset-top, 0px) + 172px); }
+/* The list: the arrivals as rows with Got it and Put back. */
+#list .ljust .lrow { grid-template-columns: 1fr; grid-template-areas: "name" "meta" "price" "state"; gap: 1px; }
+#list .ljust .lstate { text-align: left; color: var(--deal); }
+#list .ljust .lacts { display: grid; gap: 6px; }
+#list .ljust .lacts .pill-btn { height: 36px; padding: 0 12px; font-size: 13.5px; }
+@media (prefers-reduced-motion: reduce) { .chip.pulse, .lens .badge { animation: none !important; } }
