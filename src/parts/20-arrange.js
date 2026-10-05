@@ -13,7 +13,7 @@ function arrange(m) {
   mode = m;
   if (m === "set") {
     groups = sets.map((st) => ({ key: st.id, name: st.name, ink: st.ink, cards: st.cards, set: st,
-      sub: () => state.lens === "value" ? `${st.year}. Yours is worth ${money(worthOf(st.cards))}` : state.lens === "need" ? `${st.year}. ${st.cards.length - ownedIn(st.cards)} to go` : `${st.year}. ${ownedIn(st.cards)} of ${st.cards.length}` }));
+      sub: () => state.value ? `${st.year}. Yours is worth ${money(worthOf(st.cards))}` : state.lens === "need" ? `${st.year}. ${st.cards.length - ownedIn(st.cards)} to go` : `${st.year}. ${ownedIn(st.cards)} of ${st.cards.length}` }));
   } else if (m === "pokemon") {
     // The Dex view: every Pokémon card by region and Dex number, oldest print first. A Pokémon counts once you own any card of it.
     const byGen = GEN.map(([lo, hi, name], i) => ({ key: name, name, ink: GEN_INK[i], cards: cards.filter((c) => c.dex >= lo && c.dex <= hi).sort((a, b) => a.dex - b.dex || sets[a.si].year - sets[b.si].year || a.i - b.i) }));
@@ -22,7 +22,7 @@ function arrange(m) {
     for (const g of groups) g.sub = () => {
       if (!g.cards[0].dex) return `${ownedIn(g.cards)} of ${g.cards.length} cards`;
       const species = new Set(g.cards.map((c) => c.dex)), have = new Set(g.cards.filter((c) => c.owned).map((c) => c.dex));
-      return state.lens === "value" ? `Yours is worth ${money(worthOf(g.cards))}` : `${have.size} of ${species.size} Pokémon, ${ownedIn(g.cards)} of ${g.cards.length} cards`;
+      return state.value ? `Yours is worth ${money(worthOf(g.cards))}` : `${have.size} of ${species.size} Pokémon, ${ownedIn(g.cards)} of ${g.cards.length} cards`;
     };
   } else {
     // Size is worth: the cards that cost the most take up the most wall.

@@ -68,7 +68,63 @@ function mosaicLayout() {
   stripTreemap(items, R);
   for (const g of groups) packPanel(g);
 }
-function layoutAll() { groups.forEach(binderLayout); mosaicLayout(); }
+// ---------- chase lead ----------
+// With the Chase lens on the layout changes as well as the colour (rounds 7 and 9): every panel with something to
+// chase goes full width, the chased cards sit in it as feed tiles (two across on a phone), live deals first, and the
+// rest of the set packs in small below them. A panel with nothing to chase folds to one line. Any other lens flies it
+// all home.
+let lifted = false; // whether the current layout is the chase-first one
+let shuffle = null; // the in-set reorder flight when the lens changes inside a binder: { g, t0, dur, end }
+const FOLD = 54, TILE_GAP = 8, REST = 15;
+const feedCols = (w) => clamp(Math.floor((w + TILE_GAP) / (150 + TILE_GAP)), 2, 4);
+// Chased cards first (live deals, best discount first, then the most you'd pay); the rest keep the arrangement's order.
+const chaseOrder = (a, b) => (b.deal ? 1 : 0) - (a.deal ? 1 : 0) || (a.deal && b.deal ? b.price / b.deal - a.price / a.deal : 0) || b.price - a.price || a.i - b.i;
+function orderGroup(g) {
+  g.base ||= g.cards;
+  const lead = lifted ? g.base.filter(isChase).sort(chaseOrder) : [];
+  g.lead = lead;
+  g.cards = lead.length ? [...lead, ...g.base.filter((c) => !isChase(c))] : g.base;
+  g.cards.forEach((c, k) => { c.k = k; c.lift = 0; });
+  for (const c of lead) c.lift = 1;
+}
+// The height a lifted panel needs: its tiles, then its other cards as small cells.
+function liftedH(g, w) {
+  const inner = w - PG * 2 - 12, cols = feedCols(inner), tw = (inner - TILE_GAP * (cols - 1)) / cols, th = Math.round(tw * 0.64);
+  const rows = Math.ceil(g.lead.length / cols), rest = g.cards.length - g.lead.length;
+  const rc = Math.max(1, Math.floor(inner / REST)), rr = Math.ceil(rest / rc);
+  return PG + LABEL + rows * (th + TILE_GAP) + (rest ? 6 + rr * (REST * TH / TW) : 0) + PG + 6;
+}
+function packLifted(g) {
+  const inner = innerOf(g.m), cols = feedCols(inner.w), tw = (inner.w - TILE_GAP * (cols - 1)) / cols, th = Math.round(tw * 0.64);
+  const n = g.lead.length, rows = Math.ceil(n / cols);
+  g.cards.forEach((c, k) => {
+    if (k < n) { c.m = { x: inner.x + (k % cols) * (tw + TILE_GAP), y: inner.y + Math.floor(k / cols) * (th + TILE_GAP), w: tw, h: th }; return; }
+    const j = k - n, rc = Math.max(1, Math.floor(inner.w / REST)), cw = inner.w / rc, ch = REST * TH / TW;
+    c.m = { x: inner.x + (j % rc) * cw, y: inner.y + rows * (th + TILE_GAP) + 6 + Math.floor(j / rc) * ch, w: cw * 0.86, h: ch - cw * 0.14 * TH / TW };
+  });
+}
+// A folded panel keeps its cards as a hairline under the title, so opening it still grows them into the binder.
+function packFolded(g) {
+  const m = g.m, x = m.x + PG + 10, w = m.w - PG * 2 - 20, n = g.cards.length;
+  g.cards.forEach((c, k) => { c.m = { x: x + (w * k) / n, y: m.y + PG + 30, w: Math.max(0.5, w / n), h: 2 }; });
+}
+function liftedLayout() {
+  const R = { x: 8, y: topPad(), w: vw - 16 };
+  const live = groups.filter((g) => g.lead.length), folded = groups.filter((g) => !g.lead.length);
+  let y = R.y;
+  // On a wide screen two live panels sit side by side; on a phone they stack.
+  const across = R.w >= 900 ? 2 : 1, pw = R.w / across;
+  for (let i = 0; i < live.length; i += across) {
+    const row = live.slice(i, i + across), h = Math.max(...row.map((g) => liftedH(g, pw)));
+    row.forEach((g, j) => { g.m = { x: R.x + j * pw, y, w: pw, h }; });
+    y += h;
+  }
+  for (const g of folded) { g.m = { x: R.x, y, w: R.w, h: FOLD }; y += FOLD; }
+  mMax = Math.max(0, y + botPad() - vh);
+  mScroll = clamp(mScroll, 0, mMax);
+  for (const g of groups) if (g.lead.length) packLifted(g); else packFolded(g);
+}
+function layoutAll() { lifted = state.lens === "chase"; for (const g of groups) orderGroup(g); groups.forEach(binderLayout); if (lifted) liftedLayout(); else mosaicLayout(); }
 
 // ---------- camera (inside a set) ----------
 const cam = { x: 0, y: 0, s: 1 };

@@ -13,7 +13,19 @@ function toast(t, action = null) {
 const about = document.getElementById("about");
 document.getElementById("info").onclick = () => about.showModal();
 document.getElementById("about-close").onclick = () => about.close();
-document.getElementById("reset").onclick = () => { saved = {}; persist(); try { for (const k of ["wall-wants", "wall-paid"]) localStorage.removeItem(k); } catch { /* fine */ } location.reload(); };
+document.getElementById("reset").onclick = () => { saved = {}; persist(); try { for (const k of ["wall-chase", "wall-spares", "wall-paid"]) localStorage.removeItem(k); } catch { /* fine */ } location.reload(); };
+
+// ---------- settings: appearance, the list, reset ----------
+const prefs = document.getElementById("prefs");
+document.getElementById("settings").onclick = () => prefs.showModal();
+document.getElementById("prefs-close").onclick = () => prefs.close();
+function setTheme(t) {
+  if (t === "auto") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = t;
+  prefs.querySelectorAll("[data-theme]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.theme === t)));
+  try { localStorage.setItem("wall-theme", t); } catch { /* fine */ }
+  readTheme(); kick();
+}
+prefs.querySelectorAll("[data-theme]").forEach((b) => (b.onclick = () => setTheme(b.dataset.theme)));
 
 // ---------- home: tap the count to see the whole wall ----------
 document.getElementById("count").addEventListener("click", (e) => { e.preventDefault(); if (view === "set") exitToMosaic(); });
@@ -47,11 +59,11 @@ function rearrange(m) {
 const listEl = document.getElementById("list");
 function drawList() {
   if (!document.body.classList.contains("listmode")) return;
-  const show = (c) => (state.matches ? state.matches.has(c) : state.lens === "need" ? !c.owned : state.lens === "wants" ? isWant(c) : true);
+  const show = (c) => (state.matches ? state.matches.has(c) : state.lens === "need" ? !c.owned : state.lens === "chase" ? isChase(c) : state.lens === "trade" ? isSpare(c) : true);
   let top = "";
-  if (state.lens === "wants") {
-    const ws = cards.filter((c) => isWant(c) && (!wl.q || matchQ(c, wl.q))).sort((a, b) => a.si - b.si || (b.deal ? 1 : 0) - (a.deal ? 1 : 0) || capOf(b) - capOf(a));
-    top = `<section><h2>Your want list</h2><p class="lsub">${ws.length} to find. Live deals first.</p><ul>${ws.map((c) => {
+  if (state.lens === "chase") {
+    const ws = cards.filter((c) => isChase(c) && (!state.matches || state.matches.has(c))).sort((a, b) => a.si - b.si || (b.deal ? 1 : 0) - (a.deal ? 1 : 0) || capOf(b) - capOf(a));
+    top = `<section><h2>Your chase list</h2><p class="lsub">${ws.length} to find. Live deals first.</p><ul>${ws.map((c) => {
       const st = sets[c.si];
       return `<li class="lwrow"><div class="lrow"><span class="lname">${c.name}</span><span class="lmeta">${st.name} #${c.num}, ${c.rname}</span><span class="lprice">${c.deal ? `<b class="ldeal">Live ${money(c.deal)}</b>` : `Pay up to ${money(capOf(c))}`}</span><span class="lstate">Market ${money(c.price)}</span></div><button type="button" class="pill-btn lgot" data-got="${c.i}">Got it</button></li>`;
     }).join("")}</ul>${ws.length ? "" : `<p class="lsub">Nothing to find yet.</p>`}</section>`;
@@ -61,7 +73,7 @@ function drawList() {
     if (!items.length) return "";
     return `<section><h2>${g.name}</h2><p class="lsub">${g.sub()}</p><ul>${items.map((c) => {
       const st = sets[c.si];
-      return `<li><button class="lrow" data-i="${c.i}" aria-pressed="${c.owned}"><span class="lname">${c.name}</span><span class="lmeta">${st.name} #${c.num}, ${c.rname}</span><span class="lprice">${!c.owned && c.deal ? `<b class="ldeal">Deal ${money(c.deal)}</b>` : money(c.price)}</span><span class="lstate">${c.owned ? "Have it" : isWant(c) ? `Want it, up to ${money(capOf(c))}` : "Need it"}</span></button></li>`;
+      return `<li><button class="lrow" data-i="${c.i}" aria-pressed="${c.owned}"><span class="lname">${c.name}</span><span class="lmeta">${st.name} #${c.num}, ${c.rname}</span><span class="lprice">${!c.owned && c.deal ? `<b class="ldeal">Deal ${money(c.deal)}</b>` : money(c.price)}</span><span class="lstate">${c.owned ? (isSpare(c) ? "Spare" : "Have it") : isChase(c) ? `Chasing, up to ${money(capOf(c))}` : "Need it"}</span></button></li>`;
     }).join("")}</ul></section>`;
   }).join("") || `<p class="lsub">Nothing here with this lens.</p>`;
 }
@@ -74,5 +86,5 @@ function setListMode(on) {
   unfocus(); drawList();
   if (on) listEl.querySelector("h1")?.focus(); else { kick(); canvas.focus(); }
 }
-document.getElementById("to-list").onclick = () => { about.close(); setListMode(true); };
+document.getElementById("to-list").onclick = () => { prefs.close(); setListMode(true); };
 document.getElementById("to-wall").onclick = () => setListMode(false);

@@ -1,14 +1,14 @@
 // ---------- start ----------
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { readTheme(); kick(); });
 addEventListener("resize", () => { resize(); placeInk(); });
+try { const t = localStorage.getItem("wall-theme"); if (t === "light" || t === "dark") setTheme(t); } catch { /* auto */ }
 readTheme();
 arrange(mode);
 vw = innerWidth; vh = innerHeight;
-if (state.lens === "time") state.lens = "all"; // Time starts from the beginning when you pick it, so it isn't restored
 lensBox.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.lens === state.lens)));
+markFilters(); // Value is remembered; Time starts from the beginning when you pick it, so it isn't
 resize();
 started = true;
-if (state.lens === "wants") enterWants();
 setChrome();
 markMode();
 try { if (localStorage.getItem("wall-list") === "1") setListMode(true); } catch { /* fine */ }
