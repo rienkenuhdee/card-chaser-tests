@@ -114,7 +114,7 @@ function drawLive(now) {
     const p = (now - b.t0) / 3000;
     if (p < 1) {
       const sx = (g.x - cam.x) * cam.s, sy = (g.y - cam.y) * cam.s, sw = g.w * cam.s, hh = g.head * cam.s;
-      ctx.globalAlpha = Math.min(1, p * 10, (1 - p) * 4); ctx.fillStyle = theme.deal; ctx.textAlign = "right"; ctx.textBaseline = "alphabetic";
+      ctx.globalAlpha = Math.min(1, p * 10, (1 - p) * 4); ctx.fillStyle = b.col || theme.deal; ctx.textAlign = "right"; ctx.textBaseline = "alphabetic";
       font(700, clamp(14 * hh / 132, 11, 20)); ctx.fillText(fitText(b.g === g ? b.text : `${b.text}, ${b.g.name}`, sw), sx + sw, sy + hh * 0.97); ctx.globalAlpha = 1;
     } else live.beat = null;
   }

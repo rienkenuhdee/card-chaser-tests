@@ -1,9 +1,9 @@
 // ---------- toast, about ----------
 const toastEl = document.getElementById("toast");
-function toast(t, action = null) {
+function toast(t, action = null, label = "Undo") {
   toastEl.textContent = t;
   if (action) {
-    const b = document.createElement("button"); b.textContent = "Undo"; b.className = "toast-btn";
+    const b = document.createElement("button"); b.textContent = label; b.className = "toast-btn";
     b.onclick = () => { toastEl.classList.remove("show"); action(); };
     toastEl.append(" ", b);
   }
@@ -68,14 +68,7 @@ function drawList() {
       return `<li class="lwrow"><div class="lrow"><span class="lname">${c.name}</span><span class="lmeta">${st.name} #${c.num}, ${c.rname}</span><span class="lprice">${c.deal ? `<b class="ldeal">Live ${money(c.deal)}</b>` : `Pay up to ${money(capOf(c))}`}</span><span class="lstate">Market ${money(c.price)}</span></div><button type="button" class="pill-btn lgot" data-got="${c.i}">Got it</button></li>`;
     }).join("")}</ul>${ws.length ? "" : `<p class="lsub">Nothing to find yet.</p>`}</section>`;
   }
-  if (state.lens === "trade") {
-    const ts = TRADERS.filter((t) => wantsOf(t).length).sort((a, b) => wantsOf(b).length - wantsOf(a).length);
-    top = `<section><h2>Trade with</h2><p class="lsub">Collectors who want something of yours, and what they have that you chase.</p><ul>${ts.map((t) => {
-      const want = wantsOf(t), has = offersOf(t), prop = proposedTo(t);
-      const names = (l) => l.map((c) => c.name).join(", ");
-      return `<li class="lwrow ltrade"><div class="lrow"><span class="lname">${t.name}, ${t.where}</span><span class="lmeta">Wants ${names(want)} (${money(sumOf(want))}).${has.length ? ` Has ${names(has)} (${money(sumOf(has))}) that you chase.` : " Has nothing you chase."}</span><span class="lprice">${has.length ? balanceText(has, want, t) : ""}</span><span class="lstate">${prop ? `Proposed ${prop.give.length} for ${prop.get.length}` : ""}</span></div>${has.length ? `<button type="button" class="pill-btn" data-trade="${t.id}">Propose</button>` : ""}</li>`;
-    }).join("")}</ul>${ts.length ? "" : `<p class="lsub">Nobody wants your spares yet.</p>`}</section>`;
-  }
+  if (state.lens === "trade") top = tradeListHTML();
   listEl.querySelector("#list-body").innerHTML = top + groups.map((g) => {
     const items = g.cards.filter(show);
     if (!items.length) return "";

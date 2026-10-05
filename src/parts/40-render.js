@@ -90,15 +90,15 @@ function drawTile(c, sx, sy, w, h, now, mult = 1) {
     rr(sx + 0.5, sy + 0.5, w - 1, h - 1, w * 0.09); ctx.stroke(); ctx.globalAlpha = 1;
   }
   // The green: the flash on the card that changed, and the ripple's tint on its neighbours.
-  let tint = 0;
-  if (fp) tint = 0.55 * (1 - fp);
-  else { const rp = groups[c.g].ripple; if (rp?.live) { const t = (now - rp.t0 - Math.hypot(c.col - rp.col, c.row - rp.row) * 38) / 300; if (t > 0 && t < 1) tint = 0.3 * Math.sin(Math.PI * t); } }
+  let tint = 0, col = theme.deal;
+  if (fp) { tint = 0.55 * (1 - fp); if (f.gold) col = theme.gold; }
+  else { const rp = groups[c.g].ripple; if (rp?.live) { const t = (now - rp.t0 - Math.hypot(c.col - rp.col, c.row - rp.row) * 38) / 300; if (t > 0 && t < 1) { tint = 0.3 * Math.sin(Math.PI * t); if (rp.gold) col = theme.gold; } } }
   if (tint < 0.01 || c.e < 0.05) return;
   const a = Math.min(1, mult) * c.e;
-  ctx.fillStyle = theme.deal; ctx.globalAlpha = a * tint;
+  ctx.fillStyle = col; ctx.globalAlpha = a * tint;
   if (w < 5) ctx.fillRect(sx, sy, Math.max(w, 1), Math.max(h, 1)); else { rr(sx, sy, w, h, Math.min(w * 0.06, 12)); ctx.fill(); }
   if (fp) { // a ring spreads from the card, so it can be found in a dense wall
-    const e = 4 + 10 * fp; ctx.globalAlpha = a * (1 - fp); ctx.lineWidth = 2; ctx.strokeStyle = theme.deal;
+    const e = 4 + 10 * fp; ctx.globalAlpha = a * (1 - fp); ctx.lineWidth = 2; ctx.strokeStyle = col;
     rr(sx - e, sy - e, w + e * 2, h + e * 2, Math.min(w * 0.06, 12) + e); ctx.stroke();
   }
   ctx.globalAlpha = 1;
@@ -301,12 +301,12 @@ function drawPanel(g, now, alpha = 1, labelAlpha = 1) {
   ctx.textBaseline = "alphabetic"; ctx.textAlign = "left"; ctx.fillStyle = theme.ink;
   // For three seconds after a deal arrives in this panel, its header shows the card and the price, in green.
   let beat = null;
-  if (g.beat) { const p = (now - g.beat.t0) / 3000; if (p < 1) beat = { text: g.beat.text, a: Math.min(1, p * 10, (1 - p) * 4) }; else g.beat = null; }
+  if (g.beat) { const p = (now - g.beat.t0) / 3000; if (p < 1) beat = { text: g.beat.text, col: g.beat.col || theme.deal, a: Math.min(1, p * 10, (1 - p) * 4) }; else g.beat = null; }
   font(beat ? 700 : 600, size * 0.82);
   const stat = beat ? fitText(beat.text, w * 0.72) : panelStat(g), sw = stat ? textW(stat) + 8 : 0;
   font(800, size, true); ctx.fillText(fitText(g.name, w - sw), x, m.y + PG + 22);
   if (stat) {
-    ctx.textAlign = "right"; font(beat ? 700 : 600, size * 0.82); ctx.fillStyle = beat ? theme.deal : theme.muted;
+    ctx.textAlign = "right"; font(beat ? 700 : 600, size * 0.82); ctx.fillStyle = beat ? beat.col : theme.muted;
     if (beat) ctx.globalAlpha = alpha * beat.a;
     ctx.fillText(stat, x + w, m.y + PG + 22);
     ctx.globalAlpha = alpha * labelAlpha;
@@ -437,6 +437,7 @@ function frame(now) {
   if (drawLive(now)) more = true;
   if (drawPop(now)) more = true;
   drawTraders(now);
+  if (drawFlights(now)) more = true;
   if (tbl.on) drawTable(now);
   if (frameFoil) more = true; // foil keeps shimmering while a foil card is on screen
   if (state.press) more = true;
