@@ -33,8 +33,8 @@ const listNames = (names, k) => { const rest = names.length - k; if (rest > 0) r
 
 // ----- the rules -----
 let rules = [];
-try { rules = (JSON.parse(localStorage.getItem("wall-chases") || "[]") || []).filter((r) => r && typeof r === "object"); } catch { rules = []; }
-const persistRules = () => { try { localStorage.setItem("wall-chases", JSON.stringify(rules)); } catch { /* private mode */ } };
+try { rules = (JSON.parse(localStorage.getItem("wall-chases-bold") || "[]") || []).filter((r) => r && typeof r === "object"); } catch { rules = []; }
+const persistRules = () => { try { localStorage.setItem("wall-chases-bold", JSON.stringify(rules)); } catch { /* private mode */ } };
 const mkRule = (kind, f) => ({ kind, set: null, pokemon: null, dex: 0, artist: null, fullArt: false, popular: false, ...f });
 const ruleKey = (r) => `${r.set || ""}|${r.pokemon || ""}|${r.dex || 0}|${r.artist || ""}|${r.fullArt ? 1 : 0}|${r.popular ? 1 : 0}`;
 const findRule = (r) => rules.find((x) => ruleKey(x) === ruleKey(r)) || null;
@@ -363,4 +363,4 @@ function drawList() {
 listEl.addEventListener("click", (e) => { const b = e.target.closest("[data-rm]"); if (b) removeRule(rules[Number(b.dataset.rm)]); });
 
 // Reset the demo clears the chases too.
-document.getElementById("reset").onclick = () => { saved = {}; persist(); try { for (const k of ["wall-chase", "wall-chases", "wall-spares", "wall-paid", "wall-trades", "wall-welcomed", "wall-imported", "wall-sets", "wall-lens", "wall-mode", "wall-value"]) localStorage.removeItem(k); } catch { /* fine */ } location.reload(); };
+document.getElementById("reset").onclick = () => { saved = {}; persist(); try { for (const k of ["wall-chase", "wall-chases-bold", "wall-spares", "wall-paid", "wall-trades", "wall-welcomed", "wall-imported", "wall-sets", "wall-lens", "wall-mode", "wall-value"]) localStorage.removeItem(k); } catch { /* fine */ } location.reload(); };

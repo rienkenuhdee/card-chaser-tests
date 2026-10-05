@@ -78,8 +78,8 @@ function sentence(q) {
 
 // ----- saved chases -----
 let chases = [];
-try { chases = (JSON.parse(localStorage.getItem("wall-chases") || "[]") || []).filter((q) => typeof q === "string"); } catch { chases = []; }
-const persistChases = () => { try { localStorage.setItem("wall-chases", JSON.stringify(chases)); } catch { /* private mode */ } };
+try { chases = (JSON.parse(localStorage.getItem("wall-chases-sentence") || "[]") || []).filter((q) => typeof q === "string"); } catch { chases = []; }
+const persistChases = () => { try { localStorage.setItem("wall-chases-sentence", JSON.stringify(chases)); } catch { /* private mode */ } };
 let fresh = new Set(); // the newest sentence's cards lead their sets in the Chase lens
 function applyChases() {
   for (const c of cards) c.chase0 = false;
@@ -230,7 +230,7 @@ syncMenu();
 arrBtn.addEventListener("click", () => syncMenu()); // counts change as you find cards
 
 // ----- Reset the demo forgets the sentences too -----
-document.getElementById("reset").onclick = () => { saved = {}; persist(); try { for (const k of ["wall-chase", "wall-chases", "wall-spares", "wall-paid", "wall-trades", "wall-welcomed", "wall-imported", "wall-sets", "wall-lens", "wall-mode", "wall-value"]) localStorage.removeItem(k); } catch { /* fine */ } location.reload(); };
+document.getElementById("reset").onclick = () => { saved = {}; persist(); try { for (const k of ["wall-chase", "wall-chases-sentence", "wall-spares", "wall-paid", "wall-trades", "wall-welcomed", "wall-imported", "wall-sets", "wall-lens", "wall-mode", "wall-value"]) localStorage.removeItem(k); } catch { /* fine */ } location.reload(); };
 
 // ----- layout: room for the row above the mosaic, and for the "People chase" line in a set's panel -----
 const innerOf2 = (g) => { const m = g.m, pc = pcOn(g, m.w, m.h) ? PC : 0; return { x: m.x + PG + 6, y: m.y + PG + LABEL + pc, w: m.w - PG * 2 - 12, h: m.h - PG * 2 - LABEL - pc - 6 }; };

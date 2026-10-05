@@ -9,10 +9,10 @@
 // ----- the rules -----
 const HOLO = 3, FULL = 4; // tiers: Rare Holo is 3; VMAX, Ultra, Illustration rares and up are 4
 let chases = [];
-try { chases = JSON.parse(localStorage.getItem("wall-chases") || "[]") || []; } catch { chases = []; }
+try { chases = JSON.parse(localStorage.getItem("wall-chases-safe") || "[]") || []; } catch { chases = []; }
 if (!Array.isArray(chases)) chases = [];
 chases = chases.filter((r) => r && typeof r === "object" && r.id && r.label);
-const persistChases = () => { try { localStorage.setItem("wall-chases", JSON.stringify(chases)); } catch { /* private mode */ } };
+const persistChases = () => { try { localStorage.setItem("wall-chases-safe", JSON.stringify(chases)); } catch { /* private mode */ } };
 // A Pokémon is its Dex number. Its name is the plainest card name for it (no Dark, Galarian, V or ex).
 const baseName = (n) => n.replace(/^(Dark|Light|Galarian|Alolan|Hisuian|Paldean|Shining|Mega|M|Team Rocket's|Rocket's|Brock's|Misty's|Erika's|Sabrina's|Koga's|Blaine's|Giovanni's|Lt\. Surge's) /, "").replace(/ (V|VMAX|VSTAR|ex|EX|GX|BREAK|Prime|LEGEND|LV\.X)$/, "");
 const SPECIES = new Map();
@@ -84,7 +84,7 @@ function showChase(r) {
 function clearActive() { if (!activeChase) return; activeChase = null; syncPill(); if (lifted) liftLayout(true); drawList(); }
 lensBox.addEventListener("click", () => { if (state.lens !== "chase") clearActive(); });
 // Reset the demo clears the saved chases too.
-document.getElementById("reset").onclick = () => { saved = {}; persist(); try { for (const k of ["wall-chase", "wall-chases", "wall-spares", "wall-paid", "wall-trades", "wall-welcomed", "wall-imported", "wall-sets", "wall-lens", "wall-mode", "wall-value"]) localStorage.removeItem(k); } catch { /* fine */ } location.reload(); };
+document.getElementById("reset").onclick = () => { saved = {}; persist(); try { for (const k of ["wall-chase", "wall-chases-safe", "wall-spares", "wall-paid", "wall-trades", "wall-welcomed", "wall-imported", "wall-sets", "wall-lens", "wall-mode", "wall-value"]) localStorage.removeItem(k); } catch { /* fine */ } location.reload(); };
 
 // ----- the chase lens shows the active chase first -----
 function orderGroup(g) {
