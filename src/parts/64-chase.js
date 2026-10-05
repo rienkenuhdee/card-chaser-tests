@@ -1,30 +1,40 @@
-// ---------- wants: the Wants lens is your want list ----------
-// A deal is a live listing on a card you're chasing, so deals live inside the want list (round 9). Switching to the
-// Wants lens folds the mosaic back and dims it while every card you want deals out of its panel as a big tile,
+// ---------- chase: the Chase lens is your chase list; Trade is your spares ----------
+// A deal is a live listing on a card you're chasing, so deals live inside the chase list (round 9). Switching to the
+// Chase lens folds the mosaic back and dims it while every card you want deals out of its panel as a big tile,
 // stacking from the bottom of the screen up, by set, oldest first; within a set the live deals lead. Tap the circle
 // (or swipe the tile sideways) when you get the card: it flies home into its set, is marked owned, and a thumb-reach
 // keypad asks what you paid. Any other lens flies everything home and the wall is exactly as it was.
 const capOf = (c) => Math.round(c.price * 0.85 * 100) / 100; // the most you'd pay (made up: 85% of market)
-let wants = {}, paid = {};
-try { wants = JSON.parse(localStorage.getItem("wall-wants") || "{}") || {}; } catch { wants = {}; }
+let chasing = {}, paid = {};
+try { chasing = JSON.parse(localStorage.getItem("wall-chase") || "{}") || {}; } catch { chasing = {}; }
 try { paid = JSON.parse(localStorage.getItem("wall-paid") || "{}") || {}; } catch { paid = {}; }
-const persistWants = () => { try { localStorage.setItem("wall-wants", JSON.stringify(wants)); localStorage.setItem("wall-paid", JSON.stringify(paid)); } catch { /* private mode */ } };
+const persistChase = () => { try { localStorage.setItem("wall-chase", JSON.stringify(chasing)); localStorage.setItem("wall-paid", JSON.stringify(paid)); } catch { /* private mode */ } };
 // Made-up wants, seeded by card id so variants compare; a card with a live deal is a want by definition.
-for (const c of cards) c.want0 = Boolean(c.deal) || h32(c.id + "w") < 0.1;
-const isWant = (c) => !c.owned && (wants[c.id] ?? c.want0);
+for (const c of cards) c.chase0 = Boolean(c.deal) || h32(c.id + "w") < 0.1;
+const isChase = (c) => !c.owned && (chasing[c.id] ?? c.chase0);
+// Spares: a card you own an extra of, up for trade (made up, seeded by card id).
+let spares = {};
+try { spares = JSON.parse(localStorage.getItem("wall-spares") || "{}") || {}; } catch { spares = {}; }
+for (const c of cards) c.spare0 = h32(c.id + "s") < 0.08;
+const isSpare = (c) => c.owned && (spares[c.id] ?? c.spare0);
 
-// ----- Want it, next to I have it on the card panel -----
-const wantBtn = document.getElementById("p-want");
-function updateWant(c) {
-  const on = isWant(c);
-  wantBtn.hidden = c.owned;
-  wantBtn.textContent = on ? "Want it ✓" : "Want it";
-  wantBtn.classList.toggle("on", on); wantBtn.setAttribute("aria-pressed", String(on));
+// ----- Chase it (or, on a card you own, Spare), next to I have it on the card panel -----
+const flagBtn = document.getElementById("p-want");
+function updateFlag(c) {
+  const on = c.owned ? isSpare(c) : isChase(c);
+  flagBtn.textContent = c.owned ? (on ? "Spare ✓" : "Spare") : (on ? "Chasing ✓" : "Chase it");
+  flagBtn.classList.toggle("on", on); flagBtn.setAttribute("aria-pressed", String(on));
 }
-wantBtn.onclick = () => {
-  const c = state.focus; if (!c || c.owned) return;
-  wants[c.id] = !isWant(c); persistWants(); updateWant(c); tick(5); drawList(); kick();
-  toast(wants[c.id] ? `${c.name} on your want list. Pay up to ${money(capOf(c))}.` : `${c.name} off your want list.`);
+flagBtn.onclick = () => {
+  const c = state.focus; if (!c) return;
+  if (c.owned) {
+    spares[c.id] = !isSpare(c); try { localStorage.setItem("wall-spares", JSON.stringify(spares)); } catch { /* fine */ }
+    updateFlag(c); tick(5); drawList(); kick();
+    toast(spares[c.id] ? `${c.name} is a spare, up for trade.` : `${c.name} is no longer a spare.`);
+    return;
+  }
+  chasing[c.id] = !isChase(c); persistChase(); updateFlag(c); tick(5); drawList(); kick();
+  toast(chasing[c.id] ? `${c.name} on your chase list. Pay up to ${money(capOf(c))}.` : `${c.name} off your chase list.`);
 };
 
 // ----- the keypad: what did you pay? -----
@@ -54,9 +64,9 @@ function payFinish(skip) {
   const c = pay.c; if (!c) return;
   const amount = skip ? null : clamp(Math.round((parseFloat(pay.str) || 0) * 100) / 100, 0, 99999);
   closePay();
-  paid[c.id] = amount; persistWants(); drawList();
-  const undo = () => { delete paid[c.id]; setOwned(c, false, { quiet: true }); persistWants(); };
-  const left = cards.filter(isWant).length;
+  paid[c.id] = amount; persistChase(); drawList();
+  const undo = () => { delete paid[c.id]; setOwned(c, false, { quiet: true }); persistChase(); };
+  const left = cards.filter(isChase).length;
   toast(`${c.name} got${amount ? ` for ${money(amount)}` : ""}.${left ? ` ${left} to find.` : " That's all of them."}`, undo);
 }
 document.getElementById("pay-keys").addEventListener("click", (e) => { const b = e.target.closest("[data-k]"); if (b) payKey(b.dataset.k); });
@@ -71,7 +81,7 @@ addEventListener("keydown", (e) => {
 });
 // Got it: the card is yours now; the tile flies home and the keypad asks what you paid.
 function gotIt(c) {
-  if (!isWant(c)) return;
+  if (!isChase(c)) return;
   tick(14);
   setOwned(c, true, { quiet: true });
   openPay(c);
@@ -118,9 +128,9 @@ function layoutItems() {
   wl.scroll = clamp(wl.scroll, 0, Math.max(0, wl.H - availH()));
 }
 // The list follows the wants: a card marked owned leaves, a card wanted again deals back out.
-function syncWants(now) {
+function syncChase(now) {
   const want = new Set();
-  for (const c of cards) if (isWant(c)) want.add(c);
+  for (const c of cards) if (isChase(c)) want.add(c);
   let changed = wl.dirty;
   for (const r of [...wl.rows]) if (!want.has(r.c)) { leaveRow(r, now); changed = true; }
   const have = new Set(wl.rows.map((r) => r.c)), fresh = [];
@@ -160,7 +170,7 @@ function stepFlights(now) {
 }
 
 // ----- on and off: the lens switches it -----
-function enterWants() {
+function enterChase() {
   if (wl.on) return;
   if (state.trans) finishTransition();
   if (state.focus) unfocus();
@@ -169,23 +179,23 @@ function enterWants() {
   if (view === "set") {
     exitToMosaic();
     const T = state.trans;
-    if (T) { const done = T.done; T.done = (t) => { done?.(t); enterWants(); }; return; }
+    if (T) { const done = T.done; T.done = (t) => { done?.(t); enterChase(); }; return; }
     view = "mosaic"; state.g = null; setChrome();
   }
   wl.on = true; wl.closing = false; wl.scroll = 0; wl.vel = 0; wl.inertia = false; wl.drag = null; wl.ghosts = [];
   const q = qIn.value.trim().toLowerCase(); wl.q = q ? q.split(/\s+/) : null; state.matches = null;
   state.introT0 = 0; wl.dirty = true;
-  document.body.classList.add("wants");
+  document.body.classList.add("chase");
   wl.t0 = performance.now(); wl.from = wl.open; wl.to = 1;
   readSafe();
   for (const r of wl.rows) if (r.c.flight?.kind === "home") dealRow(r, 0); // caught mid-flight home: turn round
-  syncWants(performance.now());
+  syncChase(performance.now());
   drawList(); kick();
 }
-function exitWants() {
+function exitChase() {
   if (!wl.on) return;
   wl.on = false; wl.closing = true; wl.drag = null; wl.inertia = false; closePay();
-  document.body.classList.remove("wants");
+  document.body.classList.remove("chase");
   wl.t0 = performance.now(); wl.from = wl.open; wl.to = 0;
   const rows = [...wl.rows].sort((a, b) => a.cy - b.cy);
   rows.forEach((r, i) => { const from = r.c.flight?.cur ? { ...r.c.flight.cur } : pocketRect(r); startFlight({ c: r.c, kind: "home", from, to: () => homeRect(r.c), dur: 560, delay: Math.min(500, i * 14), lift: 24, done: () => { r.c.away = false; kick(); } }); });
@@ -195,7 +205,7 @@ function exitWants() {
 }
 
 // ----- drawing the list (after the wall, every frame) -----
-function stepWantsOpen(now) {
+function stepChaseOpen(now) {
   if (wl.open === wl.to) return false;
   const p = reduced ? 1 : clamp((now - wl.t0) / 480, 0, 1);
   wl.open = wl.from + (wl.to - wl.from) * ease(p);
@@ -247,16 +257,16 @@ function drawHead(h, y) {
 function drawEmpty() {
   ctx.globalAlpha = 1; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
   const y = vh - listBot() - 120;
-  ctx.fillStyle = theme.ink; font(800, 22, true); ctx.fillText(wl.q ? "Nothing on your want list matches" : "Nothing on your want list yet", vw / 2, y);
-  ctx.fillStyle = theme.muted; font(500, 14); ctx.fillText(wl.q ? "Clear the search to see the whole list." : "Open a card and choose Want it.", vw / 2, y + 26);
+  ctx.fillStyle = theme.ink; font(800, 22, true); ctx.fillText(wl.q ? "Nothing on your chase list matches" : "Nothing on your chase list yet", vw / 2, y);
+  ctx.fillStyle = theme.muted; font(500, 14); ctx.fillText(wl.q ? "Clear the search to see the whole list." : "Open a card and choose Chase it.", vw / 2, y + 26);
 }
 // Returns whether another frame is needed.
-function drawWants(now) {
+function drawChase(now) {
   if (!(wl.on || wl.closing || flights.length || wl.ghosts.length)) return false;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   const dt = Math.min(48, now - (wl.last || now)); wl.last = now;
   let more = false;
-  if (wl.on) syncWants(now);
+  if (wl.on) syncChase(now);
   const k = reduced ? 1 : Math.min(1, dt / 140);
   if (Math.abs(wl.Hcur - wl.H) > 0.3) { wl.Hcur += (wl.H - wl.Hcur) * k; more = true; } else wl.Hcur = wl.H;
   if (wl.inertia && !wl.drag) {
@@ -298,11 +308,11 @@ function rowAt(x, y) {
   for (const it of wl.items) { if (it.kind !== "row") continue; const ry = top + it.ycur; if (y >= ry && y <= ry + ROW_H && x >= listX() && x <= listX() + listW()) return it; }
   return null;
 }
-function wantsDown(x, y) {
+function chaseDown(x, y) {
   wl.inertia = false; hideCaption(); if (document.activeElement === qIn) qIn.blur();
   wl.drag = { x, y, t: performance.now(), s0: wl.scroll, row: rowAt(x, y), axis: null, samples: [{ x, y, t: performance.now() }] };
 }
-function wantsMove(x, y) {
+function chaseMove(x, y) {
   const d = wl.drag; if (!d) return;
   const dx = x - d.x, dy = y - d.y, now = performance.now();
   d.samples.push({ x, y, t: now }); if (d.samples.length > 8) d.samples.shift();
@@ -313,7 +323,7 @@ function wantsMove(x, y) {
   } else wl.scroll = clamp(d.s0 + dy, 0, Math.max(0, wl.H - availH()));
   kick();
 }
-function wantsUp(x, y, cancelled) {
+function chaseUp(x, y, cancelled) {
   const d = wl.drag; if (!d) return; wl.drag = null;
   if (cancelled) { if (d.row) d.row.armed = false; kick(); return; }
   const now = performance.now();
@@ -333,22 +343,22 @@ function wantsUp(x, y, cancelled) {
     tick(4); toast(`${c.name}: market ${money(c.price)}. Tap the circle when you get it.`);
   }
 }
-const wantsOwn = () => wl.on || wl.closing;
+const chaseOwn = () => wl.on || wl.closing;
 for (const type of ["touchstart", "touchmove", "touchend", "touchcancel"]) document.addEventListener(type, (e) => {
-  if (!wantsOwn() || e.target !== canvas) return;
+  if (!chaseOwn() || e.target !== canvas) return;
   e.stopImmediatePropagation(); e.preventDefault();
   if (paying() || !wl.on) return;
   const ts = e.touches;
-  if (type === "touchstart") { if (ts.length !== 1) { wantsUp(null, null, true); return; } wantsDown(ts[0].clientX, ts[0].clientY); }
-  else if (type === "touchmove") { if (ts.length !== 1) { wantsUp(null, null, true); return; } wantsMove(ts[0].clientX, ts[0].clientY); }
-  else if (!ts.length) { const p = e.changedTouches[0]; wantsUp(p?.clientX, p?.clientY, type === "touchcancel"); }
+  if (type === "touchstart") { if (ts.length !== 1) { chaseUp(null, null, true); return; } chaseDown(ts[0].clientX, ts[0].clientY); }
+  else if (type === "touchmove") { if (ts.length !== 1) { chaseUp(null, null, true); return; } chaseMove(ts[0].clientX, ts[0].clientY); }
+  else if (!ts.length) { const p = e.changedTouches[0]; chaseUp(p?.clientX, p?.clientY, type === "touchcancel"); }
 }, { capture: true, passive: false });
-let wantsMouse = false;
-document.addEventListener("pointerdown", (e) => { if (e.pointerType !== "mouse" || !wantsOwn() || e.target !== canvas) return; e.stopImmediatePropagation(); if (paying() || !wl.on) return; wantsMouse = true; wantsDown(e.clientX, e.clientY); }, true);
-document.addEventListener("pointermove", (e) => { if (e.pointerType !== "mouse" || !wantsMouse) return; e.stopImmediatePropagation(); wantsMove(e.clientX, e.clientY); }, true);
-for (const type of ["pointerup", "pointercancel"]) document.addEventListener(type, (e) => { if (e.pointerType !== "mouse" || !wantsMouse) return; wantsMouse = false; e.stopImmediatePropagation(); wantsUp(e.clientX, e.clientY, type === "pointercancel"); }, true);
+let chaseMouse = false;
+document.addEventListener("pointerdown", (e) => { if (e.pointerType !== "mouse" || !chaseOwn() || e.target !== canvas) return; e.stopImmediatePropagation(); if (paying() || !wl.on) return; chaseMouse = true; chaseDown(e.clientX, e.clientY); }, true);
+document.addEventListener("pointermove", (e) => { if (e.pointerType !== "mouse" || !chaseMouse) return; e.stopImmediatePropagation(); chaseMove(e.clientX, e.clientY); }, true);
+for (const type of ["pointerup", "pointercancel"]) document.addEventListener(type, (e) => { if (e.pointerType !== "mouse" || !chaseMouse) return; chaseMouse = false; e.stopImmediatePropagation(); chaseUp(e.clientX, e.clientY, type === "pointercancel"); }, true);
 document.addEventListener("wheel", (e) => {
-  if (!wantsOwn() || e.target !== canvas) return;
+  if (!chaseOwn() || e.target !== canvas) return;
   e.stopImmediatePropagation(); e.preventDefault();
   if (!wl.on) return;
   wl.scroll = clamp(wl.scroll - e.deltaY, 0, Math.max(0, wl.H - availH())); kick();
@@ -356,7 +366,7 @@ document.addEventListener("wheel", (e) => {
 canvas.addEventListener("keydown", (e) => {
   if (!wl.on) return;
   if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.stopImmediatePropagation(); e.preventDefault(); wl.scroll = clamp(wl.scroll + (e.key === "ArrowUp" ? 120 : -120), 0, Math.max(0, wl.H - availH())); kick(); }
-  else if (e.key === "Escape" || e.key === "Backspace") { e.stopImmediatePropagation(); e.preventDefault(); lensBox.querySelector('[data-lens="all"]').click(); }
+  else if (e.key === "Escape" || e.key === "Backspace") { e.stopImmediatePropagation(); e.preventDefault(); setLens("have"); }
 }, true);
 addEventListener("resize", () => { readSafe(); wl.dirty = true; kick(); });
 readSafe();

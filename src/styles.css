@@ -139,14 +139,14 @@ body.listmode canvas#wall, body.listmode .caption { display: none; }
 .toast.act.show { pointer-events: auto; }
 .toast-btn { flex: none; height: 32px; padding: 0 12px; border: 0; border-radius: 8px; background: color-mix(in srgb, var(--bg) 18%, transparent); color: var(--bg); font: 700 14px var(--font); cursor: pointer; }
 
-dialog#about { border: 1px solid var(--line); border-radius: 18px; background: var(--panel-solid); color: var(--ink); width: min(460px, calc(100vw - 28px)); padding: 22px; box-shadow: var(--shadow); }
-dialog#about::backdrop { background: rgb(8 10 16 / .5); }
-dialog#about h2 { margin: 0 0 6px; font: 800 26px var(--font); font-stretch: 78%; }
-dialog#about p, dialog#about li { font-size: 15px; line-height: 1.5; color: var(--ink); }
-dialog#about ul { padding-left: 18px; margin: 8px 0 16px; }
-dialog#about .row { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
-dialog#about .btn { height: 42px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--line); background: none; font: 600 14.5px var(--font); cursor: pointer; }
-dialog#about .btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+dialog { border: 1px solid var(--line); border-radius: 18px; background: var(--panel-solid); color: var(--ink); width: min(460px, calc(100vw - 28px)); padding: 22px; box-shadow: var(--shadow); }
+dialog::backdrop { background: rgb(8 10 16 / .5); }
+dialog h2 { margin: 0 0 6px; font: 800 26px var(--font); font-stretch: 78%; }
+dialog p, dialog li { font-size: 15px; line-height: 1.5; color: var(--ink); }
+dialog ul { padding-left: 18px; margin: 8px 0 16px; }
+dialog .row { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+dialog .btn { height: 42px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--line); background: none; font: 600 14.5px var(--font); cursor: pointer; }
+dialog .btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 
@@ -171,7 +171,7 @@ body.marking .lens { transform: translate(-50%, 160%); opacity: 0; pointer-event
 .mbtn:not(:disabled):active { transform: scale(.96); }
 
 /* Wants: the want list over the folded-back wall. Rearrange and Mark step aside; the keypad asks what you paid. */
-body.wants #arrange, body.wants #mark, body.wants .caption { display: none; }
+body.chase #arrange, body.chase #mark, body.chase .caption { display: none; }
 .pay-scrim { position: fixed; inset: 0; z-index: 6; background: rgb(8 10 16 / .34); opacity: 0; pointer-events: none; transition: opacity .25s; }
 body.paying .pay-scrim { opacity: 1; pointer-events: auto; }
 .pay { position: fixed; z-index: 7; left: 50%; bottom: 0; width: min(440px, 100%); transform: translate(-50%, 110%); padding: 14px 14px calc(env(safe-area-inset-bottom, 0px) + 14px);
@@ -197,3 +197,14 @@ body.paying .pay { transform: translate(-50%, 0); pointer-events: auto; }
 .lwrow { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--line); }
 .lwrow .lrow { border-bottom: 0; flex: 1; min-width: 0; cursor: default; }
 .lwrow .lgot { margin-right: 2px; }
+
+/* Filters by the search box (a menu, lit while one is on), the settings cog, the appearance switch. */
+.ib[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.ib[aria-pressed="true"] svg circle[fill] { fill: var(--ink); }
+.arrange-menu.right { left: auto; right: max(10px, calc(50% - 310px)); transform-origin: top right; }
+dialog .lbl { margin: 14px 0 6px; font: 700 12.5px var(--font); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+dialog .row + .row { margin-top: 14px; }
+.seg { display: inline-flex; padding: 4px; border-radius: 12px; background: var(--line); }
+.seg button { height: 34px; padding: 0 16px; border: 0; border-radius: 9px; background: none; font: 600 14.5px var(--font); color: var(--muted); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--panel-solid); color: var(--ink); box-shadow: 0 1px 3px rgb(0 0 0 / .12); }
+@media (max-width: 479px) { body.inset .count { display: none; } }

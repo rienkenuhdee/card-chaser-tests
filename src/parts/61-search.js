@@ -4,7 +4,7 @@ const matchQ = (c, words) => { const hay = `${c.name} ${sets[c.si].name} ${c.num
 function runSearch() {
   const q = qIn.value.trim().toLowerCase();
   searchBox.classList.toggle("has", Boolean(q));
-  if (state.lens === "wants") { wl.q = q ? q.split(/\s+/) : null; state.matches = null; wl.dirty = true; drawList(); kick(); return; }
+  if (state.lens === "chase") { wl.q = q ? q.split(/\s+/) : null; state.matches = null; wl.dirty = true; drawList(); kick(); return; }
   if (!q) { state.matches = null; drawList(); kick(); return; }
   const words = q.split(/\s+/);
   const m = cards.filter((c) => matchQ(c, words));
@@ -28,8 +28,8 @@ qIn.addEventListener("input", () => { clearTimeout(qIn.t); qIn.t = setTimeout(ru
 qIn.addEventListener("keydown", (e) => { if (e.key === "Enter") { clearTimeout(qIn.t); runSearch(); qIn.blur(); } if (e.key === "Escape") { qIn.value = ""; runSearch(); qIn.blur(); } });
 document.getElementById("clear").onclick = (e) => { e.preventDefault(); qIn.value = ""; runSearch(); };
 function updateCount() {
-  const n = state.lens === "time" ? cards.filter((c) => c.owned && c.got && c.got <= state.t).length : cards.filter((c) => c.owned).length;
+  const n = state.time ? cards.filter((c) => c.owned && c.got && c.got <= state.t).length : cards.filter((c) => c.owned).length;
   document.getElementById("count").textContent = `${n.toLocaleString()} of ${TOTAL.toLocaleString()}`;
   // A shorter placeholder where Mark shares the strip with the search box on a narrow screen.
-  qIn.placeholder = vw >= 420 ? `Search ${TOTAL.toLocaleString()} cards` : view === "set" && !marking ? "Search" : "Search cards";
+  qIn.placeholder = vw >= 520 ? `Search ${TOTAL.toLocaleString()} cards` : "Search";
 }

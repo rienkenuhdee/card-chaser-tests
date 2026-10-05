@@ -23,6 +23,8 @@
       <button class="count" id="count" aria-label="Show the whole wall"></button>
       <button class="clear" id="clear" aria-label="Clear search"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" style="stroke:currentColor;stroke-width:2.2;stroke-linecap:round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </label>
+    <button class="ib" id="filter" aria-haspopup="menu" aria-expanded="false" aria-controls="filter-menu" aria-pressed="false" aria-label="Filters: value and time"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="9" cy="7" r="2.2" fill="var(--panel-solid)"/><circle cx="15" cy="12" r="2.2" fill="var(--panel-solid)"/><circle cx="8" cy="17" r="2.2" fill="var(--panel-solid)"/></svg></button>
+    <button class="ib" id="settings" aria-label="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M5.6 18.4l1.6-1.6M16.8 7.2l1.6-1.6"/></svg></button>
     <button class="ib" id="info" aria-label="About this experiment"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.8v.4"/></svg></button>
   </div>
 </div>
@@ -38,16 +40,19 @@
 </div>
 <div class="lens glass" role="group" aria-label="Lens">
   <span class="ink" aria-hidden="true"></span>
-  <button data-lens="all" aria-pressed="true">All</button>
+  <button data-lens="have" aria-pressed="true">Have</button>
   <button data-lens="need" aria-pressed="false">Need</button>
-  <button data-lens="wants" aria-pressed="false">Wants</button>
-  <button data-lens="value" aria-pressed="false">Value</button>
-  <button data-lens="time" aria-pressed="false">Time</button>
+  <button data-lens="chase" aria-pressed="false">Chase</button>
+  <button data-lens="trade" aria-pressed="false">Trade</button>
 </div>
 <div class="arrange-menu glass" id="arrange-menu" role="menu" aria-label="Arrange the wall" hidden>
   <button role="menuitemradio" data-mode="set" aria-checked="true"><span><b>By set</b><small>Every set, oldest first</small></span><span class="tick" aria-hidden="true">✓</span></button>
   <button role="menuitemradio" data-mode="pokemon" aria-checked="false"><span><b>By Pokémon</b><small>Your Dex, region by region</small></span><span class="tick" aria-hidden="true">✓</span></button>
   <button role="menuitemradio" data-mode="value" aria-checked="false"><span><b>By value</b><small>The more it's worth, the bigger it is</small></span><span class="tick" aria-hidden="true">✓</span></button>
+</div>
+<div class="arrange-menu right glass" id="filter-menu" role="menu" aria-label="Filters" hidden>
+  <button role="menuitemcheckbox" data-filter="value" aria-checked="false"><span><b>Value</b><small>The more it's worth, the hotter</small></span><span class="tick" aria-hidden="true">✓</span></button>
+  <button role="menuitemcheckbox" data-filter="time" aria-checked="false"><span><b>Time</b><small>Play through when you got each card</small></span><span class="tick" aria-hidden="true">✓</span></button>
 </div>
 <main id="list" aria-label="Your collection as a list">
   <div class="lwrap">
@@ -63,7 +68,7 @@
     <div class="row"><div><h1 id="p-name">Card</h1><p class="meta" id="p-meta"></p></div><div class="price" id="p-price"></div></div>
     <p class="deal" id="p-deal" hidden></p>
   </div>
-  <div class="acts"><button class="act primary" id="p-own">I have it</button><button class="act want" id="p-want" aria-pressed="false">Want it</button><button class="act" id="p-buy">Find a copy</button></div>
+  <div class="acts"><button class="act primary" id="p-own">I have it</button><button class="act want" id="p-want" aria-pressed="false">Chase it</button><button class="act" id="p-buy">Find a copy</button></div>
   <p class="hint">Flick the card to move along the set. Drag the wall to leave.</p>
 </section>
 <div class="toast" id="toast" role="status"></div>
@@ -80,14 +85,23 @@
   <ul>
     <li><b>Tap a set</b> (or spread two fingers on it) to open it. Its cards grow into a binder. Scroll down it; flick sideways for the next set; pinch out or tap back to close it.</li>
     <li><b>Tap a card</b> to bring it up close. Flick it sideways to move along the set.</li>
-    <li><b>Lenses</b> at the bottom recolor the wall: what you need, what's worth the most, and <b>Time</b>: scrub or play through when you got each card.</li>
-    <li><b>Wants</b> is your want list: the cards you're chasing deal out of the wall as tiles, live deals first. Tap the circle when you get one and say what you paid. <b>Want it</b> on any card adds it.</li>
+    <li><b>Have, Need, Chase, Trade</b> at the bottom are lenses: they recolor the wall rather than taking you somewhere else.</li>
+    <li><b>Chase</b> is your chase list: the cards you're after deal out of the wall as tiles, live deals first. Tap the circle when you get one and say what you paid. <b>Chase it</b> on any card adds it; <b>Spare</b> on a card you own puts it up for trade.</li>
+    <li><b>Filters</b> (top, by the search) add <b>Value</b>, the more it's worth the hotter, and <b>Time</b>: scrub or play through when you got each card.</li>
     <li><b>Search</b> flies you to the cards that match.</li>
     <li><b>Press and hold</b> any card to mark it, then keep the finger down and sweep along the row. <b>Mark</b> (top, inside a set) does the same by tapping: a handful at once, Done sums it up. <b>Tap the count</b> to see everything again.</li>
     <li><b>Rearrange</b> (top left) lays the same cards out by set, by Pokémon or by value.</li>
   </ul>
   <p style="color:var(--muted);font-size:13.5px">1,327 real cards from 10 sets. Ownership, prices and deals are made up for the demo, and your taps are kept on this device only.</p>
-  <div class="row" style="flex-wrap:wrap"><button class="btn" id="to-list">Show as a list</button><button class="btn" id="reset">Reset the demo</button><button class="btn primary" id="about-close">Back to the wall</button></div>
+  <div class="row"><button class="btn primary" id="about-close">Back to the wall</button></div>
+</dialog>
+<dialog id="prefs" aria-labelledby="prefs-h">
+  <h2 id="prefs-h">Settings</h2>
+  <p class="lbl">Appearance</p>
+  <div class="seg" role="group" aria-label="Appearance"><button type="button" data-theme="auto" aria-pressed="true">Auto</button><button type="button" data-theme="light" aria-pressed="false">Light</button><button type="button" data-theme="dark" aria-pressed="false">Dark</button></div>
+  <p class="lbl">Your collection</p>
+  <div class="row" style="justify-content:flex-start"><button class="btn" id="to-list">Show as a list</button><button class="btn" id="reset">Reset the demo</button></div>
+  <div class="row"><button class="btn primary" id="prefs-close">Done</button></div>
 </dialog>
 <script>
 /* SCRIPT */

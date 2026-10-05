@@ -31,7 +31,7 @@ function fillPanel(c, dir) {
   const swap = document.getElementById("swap");
   const put = () => {
     document.getElementById("p-name").textContent = c.name;
-    document.getElementById("p-meta").textContent = `${st.name}, ${st.code} ${c.num}/${st.printed}. ${c.rname}.${c.owned && c.got ? ` Yours since ${new Date(c.got).toLocaleDateString("en-US", { month: "short", year: "numeric" })}.` : ""}${!c.owned && isWant(c) ? ` Pay up to ${money(capOf(c))}.` : ""}`;
+    document.getElementById("p-meta").textContent = `${st.name}, ${st.code} ${c.num}/${st.printed}. ${c.rname}.${c.owned && c.got ? ` Yours since ${new Date(c.got).toLocaleDateString("en-US", { month: "short", year: "numeric" })}.` : ""}${!c.owned && isChase(c) ? ` Pay up to ${money(capOf(c))}.` : c.owned && isSpare(c) ? " You have a spare." : ""}`;
     document.getElementById("p-price").innerHTML = `${money(c.price)}<small>market</small>`;
     const dl = document.getElementById("p-deal");
     if (!c.owned && c.deal) { dl.hidden = false; dl.textContent = `A copy on eBay for ${money(c.deal)} right now, ${Math.round((1 - c.deal / c.price) * 100)}% under.`; } else dl.hidden = true;
@@ -40,7 +40,7 @@ function fillPanel(c, dir) {
     own.className = `act ${c.owned ? "owned" : "primary"}`;
     own.setAttribute("aria-pressed", String(c.owned));
     buy.textContent = c.owned ? "Back to the set" : c.deal ? `Buy for ${money(c.deal)}` : "Find a copy";
-    updateWant(c);
+    updateFlag(c);
   };
   if (dir && !reduced) { swap.classList.add("out"); setTimeout(() => { put(); swap.classList.remove("out"); }, 140); } else put();
 }

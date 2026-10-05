@@ -16,11 +16,16 @@ for (const [dark, width, height] of [[false, 390, 844], [true, 390, 844], [false
   const p = await phone(browser, file, { dark, motion: false, dpr: 2, width, height });
   for (const mode of ["set", "pokemon", "value"]) {
     await p.click("#arrange"); await wait(150); await p.click(`[data-mode="${mode}"]`); await wait(250);
-    for (const lens of ["all", "need", "wants", "value", "time"]) {
+    for (const lens of ["have", "need", "chase", "trade"]) {
       await p.click(`[data-lens="${lens}"]`); await wait(200);
-      if (lens === "all" || width < 700) await p.screenshot({ path: path.join(out, `${tag}-${mode}-${lens}.png`) });
+      if (lens === "have" || width < 700) await p.screenshot({ path: path.join(out, `${tag}-${mode}-${lens}.png`) });
     }
-    await p.click('[data-lens="all"]'); await wait(150);
+    await p.click('[data-lens="have"]'); await wait(150);
+    for (const f of ["value", "time"]) {
+      await p.click("#filter"); await wait(120); await p.click(`[data-filter="${f}"]`); await wait(250);
+      if (width < 700) await p.screenshot({ path: path.join(out, `${tag}-${mode}-${f}.png`) });
+      await p.click("#filter"); await wait(120); await p.click(`[data-filter="${f}"]`); await wait(150);
+    }
   }
   // open the first group, screenshot the binder, and a card up close
   const g = await p.evaluate(() => { const m = __w.groups[0].m; return { x: m.x + m.w / 2, y: m.y + m.h / 2 - __w.mScroll }; });

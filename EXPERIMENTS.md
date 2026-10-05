@@ -23,9 +23,9 @@
   handful like Photos. The mosaic is novel; how you move through it shouldn't be.
 - **A collector's archive, not a toy.** Archivo (condensed for names, tabular figures for prices), hairlines, small
   radii, color from the cards themselves. Rounded, bouncy type read as "comic sans".
-- **Lenses over pages.** Need, Wants, Value and Time recolor what you're looking at instead of navigating away. A lens
-  may rearrange as well as recolor (Wants deals your want list out of the wall), as long as every other lens flies it
-  all home and the wall is exactly as it was.
+- **Lenses over pages.** Have, Need, Chase and Trade recolor what you're looking at instead of navigating away. A lens
+  may rearrange as well as recolor (Chase deals your chase list out of the wall), as long as every other lens flies it
+  all home and the wall is exactly as it was. Value and Time are filters by the search box: they sit on top of any lens.
 - **A deal is a property of a want.** A live listing matters because you're chasing the card, so deals live inside the
   want list, leading their set, rather than as a surface of their own.
 - **Frame budget is a feature.** A slow frame makes pinches lag and makes a flick read as a slow release, so snapping
@@ -81,6 +81,10 @@ under (the round 7 lift's treatment, now inside the tiles), the rest showing the
 swipe to say you got it; the tile flies home and a keypad asks what you paid. Learned: the verdict banner was the
 clearest show-floor answer but needed set codes the vintage sets don't print; the budget line and the show dates were
 scaffolding, not the idea. Dropped: the round 7 deal lift (replaced by this), the Show pill, the budget.
+
+**Chrome, after round 9.** Ryan's reshuffle: the lens bar is Have, Need, Chase, Trade (Wants became Chase; Trade is your
+spares, made up for now, with Spare on any card you own). Value and Time moved up by the search box as filters that
+combine with any lens. A settings cog by the info button holds appearance, the list view and reset.
 
 ## Open questions (next rounds)
 
