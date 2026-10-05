@@ -115,9 +115,18 @@ and spares start empty too, and a deal only shows on a card you chase. Learned: 
 most collectors, so the manual path is the "or"; the assembly from nothing and the typed card landing are worth
 lifting into the import's flood later. Dropped: the ten-card quota and the flick axis.
 
+**Round 12: A deal arrives.** Three answers, on a simulated feed (a live copy lands on a chased card every nine
+seconds): a badge on Chase and a banner that taps through to the offers; the card itself flying up to a "Just in" shelf
+and leaving a ghost; and the wall being live, the tile flashing where it sits with a ripple, the panel header beating
+the price, a line racing to the Chase button, "just now" under the price in Chase, and a struck-through price on a
+drop, with a Live filter that replays the session. Kept: the live wall, without the replay. Learned: the event in the
+wall is noticed without nagging, and the badge on Chase is enough of a count; the shelf and the ghosts were a surface
+of their own again. Open: one tap from the mosaic to the offers when the tile is off screen. Also fixed: the Time
+filter showed "Invalid Date" on an empty wall.
+
 ## Open questions (next rounds)
 
-- A deal arriving: the round 7 tray's flight from panel to edge as the notification, landing on the want list?
+- A deal arriving off screen: one tap from the line to the offers, and whether the arrival should nudge the wall.
 - Painting past the screen's edge: should a sweep scroll the binder as it goes?
 - At the show: does the Wants lens alone carry a vendor table, or does the verdict (NEED IT, pay up to) earn a place when a card is looked up?
 - Trading, next: counter-proposals, and what a trade looks like after the handshake.

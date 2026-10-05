@@ -75,12 +75,33 @@ function emphasis(c) {
 }
 
 function drawTile(c, sx, sy, w, h, now, mult = 1) {
+  // A deal just landed on this card: a flash (a pop, or two pulses for a price drop; still when motion is reduced).
+  let fp = 0;
+  const f = c.flash;
+  if (f) { fp = (now - f.t0) / 1100; if (fp >= 1 || fp < 0) { if (fp >= 1) c.flash = null; fp = 0; } }
+  if (fp && !reduced) {
+    const k = f.drop ? 1 + 0.07 * Math.abs(Math.sin(Math.PI * 2 * fp)) : 1 + 0.12 * Math.sin(Math.PI * Math.min(1, fp * 2));
+    sx += (w - w * k) / 2; sy += (h - h * k) / 2; w *= k; h *= k;
+  }
   drawTile0(c, sx, sy, w, h, now, mult);
   // In the Need lens the cards you're chasing stand out further still: a gold ring.
   if (state.lens === "need" && !c.owned && w >= 5 && c.e > 0.5 && !c.lift && isChase(c)) {
     ctx.globalAlpha = Math.min(1, mult); ctx.lineWidth = Math.max(1.5, w * 0.07); ctx.strokeStyle = theme.gold;
     rr(sx + 0.5, sy + 0.5, w - 1, h - 1, w * 0.09); ctx.stroke(); ctx.globalAlpha = 1;
   }
+  // The green: the flash on the card that changed, and the ripple's tint on its neighbours.
+  let tint = 0;
+  if (fp) tint = 0.55 * (1 - fp);
+  else { const rp = groups[c.g].ripple; if (rp?.live) { const t = (now - rp.t0 - Math.hypot(c.col - rp.col, c.row - rp.row) * 38) / 300; if (t > 0 && t < 1) tint = 0.3 * Math.sin(Math.PI * t); } }
+  if (tint < 0.01 || c.e < 0.05) return;
+  const a = Math.min(1, mult) * c.e;
+  ctx.fillStyle = theme.deal; ctx.globalAlpha = a * tint;
+  if (w < 5) ctx.fillRect(sx, sy, Math.max(w, 1), Math.max(h, 1)); else { rr(sx, sy, w, h, Math.min(w * 0.06, 12)); ctx.fill(); }
+  if (fp) { // a ring spreads from the card, so it can be found in a dense wall
+    const e = 4 + 10 * fp; ctx.globalAlpha = a * (1 - fp); ctx.lineWidth = 2; ctx.strokeStyle = theme.deal;
+    rr(sx - e, sy - e, w + e * 2, h + e * 2, Math.min(w * 0.06, 12) + e); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
 }
 function drawTile0(c, sx, sy, w, h, now, mult = 1) {
   const a0 = mult * c.e * (state.focus && state.focus !== c ? 1 - state.dimAll * 0.72 : 1);
@@ -278,11 +299,18 @@ function drawPanel(g, now, alpha = 1, labelAlpha = 1) {
   const x = m.x + PG + 10, w = m.w - PG * 2 - 20;
   const size = clamp(m.w * 0.075, 12, 17);
   ctx.textBaseline = "alphabetic"; ctx.textAlign = "left"; ctx.fillStyle = theme.ink;
-  font(800, size, true);
-  const stat = panelStat(g);
-  font(600, size * 0.82); const sw = stat ? ctx.measureText(stat).width + 8 : 0;
+  // For three seconds after a deal arrives in this panel, its header shows the card and the price, in green.
+  let beat = null;
+  if (g.beat) { const p = (now - g.beat.t0) / 3000; if (p < 1) beat = { text: g.beat.text, a: Math.min(1, p * 10, (1 - p) * 4) }; else g.beat = null; }
+  font(beat ? 700 : 600, size * 0.82);
+  const stat = beat ? fitText(beat.text, w * 0.72) : panelStat(g), sw = stat ? textW(stat) + 8 : 0;
   font(800, size, true); ctx.fillText(fitText(g.name, w - sw), x, m.y + PG + 22);
-  if (stat) { ctx.textAlign = "right"; font(600, size * 0.82); ctx.fillStyle = theme.muted; ctx.fillText(stat, x + w, m.y + PG + 22); }
+  if (stat) {
+    ctx.textAlign = "right"; font(beat ? 700 : 600, size * 0.82); ctx.fillStyle = beat ? theme.deal : theme.muted;
+    if (beat) ctx.globalAlpha = alpha * beat.a;
+    ctx.fillText(stat, x + w, m.y + PG + 22);
+    ctx.globalAlpha = alpha * labelAlpha;
+  }
   const owned = ownedNow(g.cards), n = g.cards.length;
   ctx.fillStyle = theme["slot-line"]; ctx.fillRect(x, m.y + PG + 30, w, 2);
   ctx.fillStyle = owned === n ? "#E2B33C" : g.ink; ctx.fillRect(x, m.y + PG + 30, w * owned / n, 2);
@@ -406,6 +434,7 @@ function frame(now) {
   ctx.globalAlpha = 1;
   for (const c of cards) if (c.anim) { more = true; break; }
   drawMarks(); drawPicks();
+  if (drawLive(now)) more = true;
   if (drawPop(now)) more = true;
   drawTraders(now);
   if (tbl.on) drawTable(now);

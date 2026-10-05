@@ -295,3 +295,16 @@ body.welcoming .lens, body.welcoming .markbar { opacity: 0; pointer-events: none
 .w-opt { display: flex; align-items: center; gap: 10px; font: 500 14.5px var(--font); color: var(--ink); cursor: pointer; }
 .w-opt input { width: 20px; height: 20px; accent-color: var(--ink); margin: 0; }
 .w-all { height: 46px; font-size: 15px; }
+
+/* The wall is live (round 12). The Chase lens button: a count of the deals you haven't looked at yet, and a glow when one arrives. */
+.lens button[data-lens="chase"] { z-index: 2; }
+.lbadge { position: absolute; top: -5px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--deal); color: #fff;
+  font: 700 11px/18px var(--font); font-style: normal; text-align: center; font-variant-numeric: tabular-nums; pointer-events: none; transition: transform .25s cubic-bezier(.2,.9,.25,1.04); }
+.lbadge[hidden] { display: none; }
+.lens button.lglow { color: var(--deal); }
+.lens button.lglow .lbadge { transform: scale(1.3); }
+.lens button.lglow::after { content: ""; position: absolute; inset: 0; border-radius: 10px; pointer-events: none;
+  box-shadow: 0 0 0 1.5px var(--deal), 0 0 18px color-mix(in srgb, var(--deal) 60%, transparent); animation: lglow 1.1s ease-out both; }
+@keyframes lglow { from { opacity: 1; } to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .lens button.lglow::after { animation: none; opacity: 1; } }
+
