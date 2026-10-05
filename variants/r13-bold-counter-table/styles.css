@@ -1,0 +1,14 @@
+/* r13-bold-counter-table: the reply happens on the table. */
+/* The waiting line over the strip: a thin line of text with a quiet pulse, while the cards sit in her hands. */
+.tb-wait { position: fixed; z-index: 2; left: 50%; top: 0; transform: translateX(-50%); display: none; align-items: center; gap: 7px;
+  font: 600 12.5px var(--font); color: var(--muted); white-space: nowrap; pointer-events: none; }
+.tb-wait.on { display: flex; }
+.tb-wait i { width: 7px; height: 7px; border-radius: 50%; background: var(--deal); animation: tb-pulse 1.8s ease-in-out infinite; }
+@keyframes tb-pulse { 0%, 100% { opacity: .3; transform: scale(.8); } 50% { opacity: 1; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .tb-wait i { animation: none; opacity: 1; } }
+/* Two buttons fit the bar: the second one is quieter. */
+.tradebar #tb-alt { padding: 0 11px; }
+.tradebar .mbtn { max-width: 44vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The list: Accept and Decline under a trade in progress. */
+.ltrade .lacts { display: flex; flex-direction: column; gap: 6px; }
+.ltrade .lacts .pill-btn { height: 36px; padding: 0 12px; font-size: 14px; }
