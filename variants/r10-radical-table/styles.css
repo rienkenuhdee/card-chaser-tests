@@ -1,0 +1,15 @@
+/* The trade table: Back stays, the trade bar takes the lens bar's place, and nothing else on the wall is reachable. */
+.tradebar { position: fixed; z-index: 3; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); transform: translate(-50%, 160%); opacity: 0; pointer-events: none;
+  width: min(520px, calc(100vw - 20px)); display: flex; align-items: center; gap: 6px; padding: 5px 5px 5px 14px; border-radius: 14px;
+  transition: transform .4s cubic-bezier(.2,.9,.25,1.04), opacity .3s; }
+body.trading .tradebar { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
+body.trading .lens, body.trading .timebar { transform: translate(-50%, 160%); opacity: 0; pointer-events: none; }
+body.trading .caption { display: none; }
+.tradebar .mtext { flex: 1; min-width: 0; display: grid; gap: 1px; line-height: 1.2; }
+.tradebar b { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.tradebar span { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.tradebar .mbtn[hidden] { display: none; }
+/* The list: a trader's row reads top to bottom. */
+.ltrade .lrow { grid-template-columns: 1fr; grid-template-areas: "name" "meta" "price" "state"; }
+.ltrade .lstate { text-align: left; color: var(--deal); }
+.ltrade .lmeta { line-height: 1.35; }
