@@ -1,0 +1,70 @@
+/* r14-safe-chase-builder: saved chases in the top-left menu, the New chase sheet, the active chase pill. */
+
+/* The menu grows a "Your chases" section: rows with a count and a delete, then New chase. It scrolls past the screen. */
+.arrange-menu { max-height: calc(100vh - env(safe-area-inset-top, 0px) - 150px); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.ch-rows { display: grid; gap: 2px; }
+.ch-head { margin: 4px 0 2px; padding: 10px 12px 2px; border-top: 1px solid var(--line); font: 600 11.5px var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.ch-row { display: grid; grid-template-columns: 1fr 36px; align-items: center; gap: 2px; }
+.arrange-menu .ch-go { grid-template-columns: 1fr; min-width: 0; }
+.arrange-menu .ch-go span { min-width: 0; }
+.arrange-menu .ch-go b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.arrange-menu .ch-go[aria-current="true"] b { color: var(--gold); }
+.arrange-menu .ch-del { grid-template-columns: 1fr; width: 36px; height: 36px; padding: 0; justify-items: center; color: var(--muted); }
+.arrange-menu .ch-del:hover { color: var(--ink); }
+.ch-del svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.arrange-menu .ch-new { grid-template-columns: 1fr 20px; }
+.ch-plus { font: 800 20px/1 var(--font); color: var(--ink); text-align: center; }
+
+/* The sheet: glass, along the bottom, like the welcome. The wall under it keeps working and shows what the rule
+   would match. */
+.chase-sheet { position: fixed; z-index: 5; left: 50%; bottom: 0; width: min(520px, 100%); transform: translate(-50%, 110%); opacity: 0; pointer-events: none;
+  padding: 10px 18px calc(env(safe-area-inset-bottom, 0px) + 14px); border-radius: 18px 18px 0 0; border-bottom: 0; display: grid; gap: 10px; max-height: 76vh;
+  transition: transform .45s cubic-bezier(.2,.9,.25,1.02), opacity .3s; }
+@media (min-width: 720px) { .chase-sheet { bottom: 16px; border-radius: 18px; border-bottom: 1px solid var(--line); } }
+body.building .chase-sheet.on { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
+body.building.focused .chase-sheet, body.building.offering .chase-sheet, body.building.paying .chase-sheet, body.building.trading .chase-sheet, body.listmode .chase-sheet { transform: translate(-50%, 110%); opacity: 0; pointer-events: none; }
+body.building .lens, body.building .markbar, body.building .timebar, body.building .welcome, body.building .caption { opacity: 0; pointer-events: none; }
+body.building .chase-pill { display: none; }
+@media (prefers-reduced-motion: reduce) { .chase-sheet { transition: none; } }
+.cs-top { display: flex; align-items: center; justify-content: space-between; min-height: 32px; margin-right: -10px; }
+.cs-title { font: 800 23px/1.05 var(--font); font-stretch: 78%; letter-spacing: -0.01em; }
+.cs-kind { display: flex; width: 100%; }
+.cs-kind button { flex: 1; padding: 0 4px; font-size: 13.5px; white-space: nowrap; }
+.cs-fields { display: grid; gap: 10px; overflow-y: auto; min-height: 0; margin: 0 -18px; padding: 0 18px; }
+.cs-field { display: grid; gap: 6px; }
+.cs-field[hidden] { display: none; }
+.cs-lbl { font: 600 11.5px var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.cs-chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -18px; padding: 1px 18px 2px; }
+.cs-chips::-webkit-scrollbar { display: none; }
+.cs-chips.wrap { flex-wrap: wrap; overflow: visible; margin: 0; padding: 0; }
+.cs-chips.wrap:empty { display: none; }
+.cs-chip { flex: none; height: 32px; padding: 0 12px; border-radius: 9px; border: 1px solid var(--line); background: none; font: 600 13.5px var(--font); color: var(--ink); cursor: pointer; white-space: nowrap; transition: background .15s, color .15s; }
+.cs-chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.cs-chip small { font-weight: 500; font-size: 12px; opacity: .65; margin-left: 5px; }
+.cs-none { font-size: 13.5px; color: var(--muted); padding: 4px 0; }
+.cs-in { width: 100%; height: 42px; border: 1px solid var(--line); border-radius: 10px; background: var(--slot); color: var(--ink); font: 500 16px var(--font); padding: 0 12px; outline: none; }
+.cs-in:focus { border-color: var(--ink); }
+.cs-rar { display: flex; width: 100%; }
+.cs-rar button { flex: 1; padding: 0 6px; font-size: 13.5px; white-space: nowrap; }
+.cs-foot { display: flex; align-items: center; gap: 12px; padding-top: 2px; }
+.cs-tally { flex: none; display: grid; }
+.cs-tally b { font: 800 28px/1 var(--font); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.cs-tally b.zero { color: var(--muted); }
+.cs-tally small { margin-top: 3px; font: 500 12px var(--font); color: var(--muted); }
+.cs-line { flex: 1; min-width: 0; font-size: 13.5px; line-height: 1.3; color: var(--muted); }
+#cs-save { height: 46px; max-width: 48%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* The active chase, named above the lens bar while the Chase lens shows it first. */
+.chase-pill { position: fixed; z-index: 3; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 74px); transform: translateX(-50%); display: flex; align-items: center; gap: 8px; max-width: calc(100vw - 20px);
+  padding: 5px 5px 5px 14px; border-radius: 12px; font-size: 14px; white-space: nowrap; }
+.chase-pill[hidden] { display: none; }
+.chase-pill b { font-weight: 700; color: var(--gold); overflow: hidden; text-overflow: ellipsis; }
+.chase-pill span { color: var(--muted); }
+.cp-x { width: 30px; height: 30px; border: 0; border-radius: 8px; background: none; display: grid; place-items: center; color: var(--muted); cursor: pointer; }
+.cp-x:hover { background: var(--line); color: var(--ink); }
+.cp-x svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
+body.focused .chase-pill, body.offering .chase-pill, body.paying .chase-pill, body.trading .chase-pill, body.marking .chase-pill, body.welcoming .chase-pill, body.listmode .chase-pill, body.timing .chase-pill, body.inset .chase-pill { display: none; }
+
+/* The list: chase rows with Show and Delete; the popular dot by a name. */
+.lchase .pill-btn { height: 36px; padding: 0 12px; }
+.lpop { color: var(--gold); font-size: 10px; vertical-align: 2px; }
