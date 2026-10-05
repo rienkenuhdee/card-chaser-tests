@@ -7,7 +7,7 @@ const BAND_INK = ["#FF4F2E", "#E8B53A", "#BF9428", "#5C66A8", "#7A88A8"];
 const worthOf = (list) => list.reduce((a, c) => a + (c.owned ? c.price : 0), 0);
 const ownedIn = (list) => list.filter((c) => c.owned).length;
 let mode = "set";
-try { mode = ["set", "pokemon", "value"].includes(localStorage.getItem("wall-mode")) ? localStorage.getItem("wall-mode") : "set"; } catch { /* default */ }
+try { mode = ["set", "pokemon", "artist", "value"].includes(localStorage.getItem("wall-mode")) ? localStorage.getItem("wall-mode") : "set"; } catch { /* default */ }
 let groups = [];
 function arrange(m) {
   mode = m;
@@ -24,6 +24,10 @@ function arrange(m) {
       const species = new Set(g.cards.map((c) => c.dex)), have = new Set(g.cards.filter((c) => c.owned).map((c) => c.dex));
       return state.value ? `Yours is worth ${money(worthOf(g.cards))}` : `${have.size} of ${species.size} Pokémon, ${ownedIn(g.cards)} of ${g.cards.length} cards`;
     };
+  } else if (m === "artist") {
+    // The artist chase: every illustrator's cards together, most cards first.
+    groups = ARTISTS.map((name, i) => ({ key: name, name, ink: GEN_INK[i % GEN_INK.length], cards: cards.filter((c) => c.artist === name).sort((a, b) => sets[a.si].year - sets[b.si].year || a.i - b.i) })).filter((g) => g.cards.length).sort((a, b) => b.cards.length - a.cards.length);
+    for (const g of groups) g.sub = () => state.value ? `Yours is worth ${money(worthOf(g.cards))}` : `${ownedIn(g.cards)} of ${g.cards.length} cards`;
   } else {
     // Size is worth: the cards that cost the most take up the most wall.
     groups = BANDS.map(([lo, hi, name, sz], i) => ({ key: name, name, sz, ink: BAND_INK[i], cards: cards.filter((c) => c.price >= lo && c.price < hi).sort((a, b) => b.price - a.price) })).filter((g) => g.cards.length);

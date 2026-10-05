@@ -13,7 +13,7 @@ function toast(t, action = null) {
 const about = document.getElementById("about");
 document.getElementById("info").onclick = () => about.showModal();
 document.getElementById("about-close").onclick = () => about.close();
-document.getElementById("reset").onclick = () => { saved = {}; persist(); try { for (const k of ["wall-chase", "wall-spares", "wall-paid"]) localStorage.removeItem(k); } catch { /* fine */ } location.reload(); };
+document.getElementById("reset").onclick = () => { saved = {}; persist(); try { for (const k of ["wall-chase", "wall-spares", "wall-paid", "wall-trades"]) localStorage.removeItem(k); } catch { /* fine */ } location.reload(); };
 
 // ---------- settings: appearance, the list, reset ----------
 const prefs = document.getElementById("prefs");
@@ -48,7 +48,7 @@ function rearrange(m) {
     for (const g of groups) { g.ripple = null; g.burst = 0; }
     state.trans = { kind: "morph", t0: performance.now(), dur: reduced ? 1 : 1300, done: () => kick() };
     tick(10);
-    toast(m === "set" ? "By set, oldest first" : m === "pokemon" ? "By Pokémon, region by region" : "By value: the more it's worth, the bigger");
+    toast(m === "set" ? "Set chase: every set, oldest first" : m === "pokemon" ? "Pokémon chase: your Dex, region by region" : m === "artist" ? "Artist chase: every illustrator's cards together" : "By value: the more it's worth, the bigger");
     drawList(); kick();
   };
   if (view === "set") { view = "mosaic"; state.g = null; setChrome(); }
@@ -68,12 +68,20 @@ function drawList() {
       return `<li class="lwrow"><div class="lrow"><span class="lname">${c.name}</span><span class="lmeta">${st.name} #${c.num}, ${c.rname}</span><span class="lprice">${c.deal ? `<b class="ldeal">Live ${money(c.deal)}</b>` : `Pay up to ${money(capOf(c))}`}</span><span class="lstate">Market ${money(c.price)}</span></div><button type="button" class="pill-btn lgot" data-got="${c.i}">Got it</button></li>`;
     }).join("")}</ul>${ws.length ? "" : `<p class="lsub">Nothing to find yet.</p>`}</section>`;
   }
+  if (state.lens === "trade") {
+    const ts = TRADERS.filter((t) => wantsOf(t).length).sort((a, b) => wantsOf(b).length - wantsOf(a).length);
+    top = `<section><h2>Trade with</h2><p class="lsub">Collectors who want something of yours, and what they have that you chase.</p><ul>${ts.map((t) => {
+      const want = wantsOf(t), has = offersOf(t), prop = proposedTo(t);
+      const names = (l) => l.map((c) => c.name).join(", ");
+      return `<li class="lwrow ltrade"><div class="lrow"><span class="lname">${t.name}, ${t.where}</span><span class="lmeta">Wants ${names(want)} (${money(sumOf(want))}).${has.length ? ` Has ${names(has)} (${money(sumOf(has))}) that you chase.` : " Has nothing you chase."}</span><span class="lprice">${has.length ? balanceText(has, want, t) : ""}</span><span class="lstate">${prop ? `Proposed ${prop.give.length} for ${prop.get.length}` : ""}</span></div>${has.length ? `<button type="button" class="pill-btn" data-trade="${t.id}">Propose</button>` : ""}</li>`;
+    }).join("")}</ul>${ts.length ? "" : `<p class="lsub">Nobody wants your spares yet.</p>`}</section>`;
+  }
   listEl.querySelector("#list-body").innerHTML = top + groups.map((g) => {
     const items = g.cards.filter(show);
     if (!items.length) return "";
     return `<section><h2>${g.name}</h2><p class="lsub">${g.sub()}</p><ul>${items.map((c) => {
       const st = sets[c.si];
-      return `<li><button class="lrow" data-i="${c.i}" aria-pressed="${c.owned}"><span class="lname">${c.name}</span><span class="lmeta">${st.name} #${c.num}, ${c.rname}</span><span class="lprice">${!c.owned && c.deal ? `<b class="ldeal">Deal ${money(c.deal)}</b>` : money(c.price)}</span><span class="lstate">${c.owned ? (isSpare(c) ? "Spare" : "Have it") : isChase(c) ? `Chasing, up to ${money(capOf(c))}` : "Need it"}</span></button></li>`;
+      return `<li><button class="lrow" data-i="${c.i}" aria-pressed="${c.owned}"><span class="lname">${c.name}</span><span class="lmeta">${st.name} #${c.num}, ${c.rname}</span><span class="lprice">${!c.owned && c.deal ? `<b class="ldeal">Deal ${money(c.deal)}</b>` : money(c.price)}</span><span class="lstate">${c.owned ? (isSpare(c) ? (wantedBy(c).length ? `Spare, ${wantedBy(c).map((t) => t.name).join(" and ")} want${wantedBy(c).length === 1 ? "s" : ""} it` : "Spare") : "Have it") : isChase(c) ? `Chasing, up to ${money(capOf(c))}` : "Need it"}</span></button></li>`;
     }).join("")}</ul></section>`;
   }).join("") || `<p class="lsub">Nothing here with this lens.</p>`;
 }

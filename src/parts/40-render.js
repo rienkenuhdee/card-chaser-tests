@@ -66,14 +66,23 @@ const state = { lens: "have", value: false, time: false, q: "", matches: null, f
 let view = "mosaic";
 try { const l = localStorage.getItem("wall-lens"); if (["have", "need", "chase", "trade"].includes(l)) state.lens = l; state.value = localStorage.getItem("wall-value") === "1"; } catch { /* default */ }
 function emphasis(c) {
+  if (c.away) return 0; // out on the trade table: its tile is empty
   if (state.matches) return state.matches.has(c) ? 1 : 0.1;
-  if (state.lens === "need") return c.owned ? 0.16 : 1;
+  if (state.lens === "need") return c.owned ? 0.1 : 1;
   if (state.lens === "chase") return isChase(c) ? 1 : 0.18;
   if (state.lens === "trade") return isSpare(c) ? 1 : 0.18;
   return 1;
 }
 
 function drawTile(c, sx, sy, w, h, now, mult = 1) {
+  drawTile0(c, sx, sy, w, h, now, mult);
+  // In the Need lens the cards you're chasing stand out further still: a gold ring.
+  if (state.lens === "need" && !c.owned && w >= 5 && c.e > 0.5 && !c.lift && isChase(c)) {
+    ctx.globalAlpha = Math.min(1, mult); ctx.lineWidth = Math.max(1.5, w * 0.07); ctx.strokeStyle = theme.gold;
+    rr(sx + 0.5, sy + 0.5, w - 1, h - 1, w * 0.09); ctx.stroke(); ctx.globalAlpha = 1;
+  }
+}
+function drawTile0(c, sx, sy, w, h, now, mult = 1) {
   const a0 = mult * c.e * (state.focus && state.focus !== c ? 1 - state.dimAll * 0.72 : 1);
   if (a0 < 0.02) return;
   let scale = 1;
@@ -96,7 +105,7 @@ function drawTile(c, sx, sy, w, h, now, mult = 1) {
   ctx.globalAlpha = alpha;
   // A chased card out in front: while its tile is wider than it is tall it reads as a feed tile (the deal, or the
   // most you'd pay); as it grows into the binder it becomes the card.
-  if (c.lift && !c.owned && w > h * 1.05) { drawFeedTile(c, sx, sy, w, h, alpha); ctx.globalAlpha = 1; return; }
+  if (c.lift && w > h * 1.05) { if (c.owned) drawSpareTile(c, sx, sy, w, h, alpha, now); else drawFeedTile(c, sx, sy, w, h, alpha, now); ctx.globalAlpha = 1; return; }
   const value = state.value && !state.matches;
   // Marking animation: the owned face floods in from the middle.
   let flood = c.owned ? 1 : 0;
@@ -181,7 +190,7 @@ function cardFace(c, sx, sy, w, h, now, value) {
   if (w > 60) { ctx.fillStyle = engraving(); ctx.fillRect(sx, sy, w, h); }
   // Foil: holos and up catch the light as the wall moves under your finger.
   // (Skipped while things are moving: nobody sees foil mid-gesture, and it's the costliest thing on a card.)
-  if (c.tier >= 3 && !reduced && !state.trans && !fly && !inertia) {
+  if (c.tier >= 3 && !reduced && !foilOff && !state.trans && !fly && !inertia && !(tbl.on && tableMoving())) {
     frameFoil = true;
     const phase = ((now * 0.00005 + (sx + cam.x * cam.s * 0.25) * 0.0011) % 1 + 1) % 1;
     const fx = sx - w + phase * w * 3;
@@ -328,6 +337,7 @@ const ease = (p) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
 let frameFoil = false;
 function frame(now) {
   raf = 0; frameFoil = false;
+  if (tbl.on && tbl.q >= 1 && !tbl.anim) { drawTable(now); return; } // the table is its own level: nothing of the wall shows
   const dt = Math.min(48, now - (lastFrame || now)); lastFrame = now;
   let more = stepFly(now);
   if (stepInertia(dt)) more = true;
@@ -387,6 +397,8 @@ function frame(now) {
   for (const c of cards) if (c.anim) { more = true; break; }
   drawMarks();
   if (drawPop(now)) more = true;
+  drawTraders(now);
+  if (tbl.on) drawTable(now);
   if (frameFoil) more = true; // foil keeps shimmering while a foil card is on screen
   if (state.press) more = true;
   if (state.introT0 && now - state.introT0 < 3000 && !reduced) more = true;

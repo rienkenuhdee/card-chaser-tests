@@ -14,7 +14,7 @@ const R = [];
 for (const [dark, width, height] of [[false, 390, 844], [true, 390, 844], [false, 1440, 900]]) {
   const tag = `${width > 700 ? "desktop" : "phone"}-${dark ? "dark" : "light"}`;
   const p = await phone(browser, file, { dark, motion: false, dpr: 2, width, height });
-  for (const mode of ["set", "pokemon", "value"]) {
+  for (const mode of ["set", "pokemon", "artist", "value"]) {
     await p.click("#arrange"); await wait(150); await p.click(`[data-mode="${mode}"]`); await wait(250);
     for (const lens of ["have", "need", "chase", "trade"]) {
       await p.click(`[data-lens="${lens}"]`); await wait(200);

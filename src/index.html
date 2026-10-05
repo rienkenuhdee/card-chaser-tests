@@ -16,7 +16,7 @@
 <div class="top">
   <div class="strip glass">
     <button class="ib" id="back" aria-label="Back to everything" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
-    <button class="ib" id="arrange" aria-haspopup="menu" aria-expanded="false" aria-controls="arrange-menu" aria-label="Rearrange the wall"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg></button>
+    <button class="ib" id="arrange" aria-haspopup="menu" aria-expanded="false" aria-controls="arrange-menu" aria-label="What you're chasing: by set, Pokémon, artist or value"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg></button>
     <button class="mark" id="mark" aria-label="Mark several cards" hidden>Mark</button>
     <label class="search" id="search"><span class="sr">Find a card</span>
       <input id="q" type="search" placeholder="Search cards" autocomplete="off" enterkeyhint="search">
@@ -35,7 +35,7 @@
   <input type="range" id="t-range" min="0" max="1000" value="1000" aria-label="When you got your cards"></div>
 </div>
 <div class="markbar glass" id="markbar" role="group" aria-label="Marking">
-  <div class="mtext" aria-live="polite"><b id="m-head">Mark cards</b><span id="m-sub">Tap a card, or drag across a row</span></div>
+  <div class="mtext" aria-live="polite"><b id="m-head">Mark cards</b><span id="m-sub">Tap a card, drag across a row, or hold one to chase it</span></div>
   <button type="button" class="mbtn" id="m-undo" disabled>Undo</button><button type="button" class="mbtn primary" id="m-done">Done</button>
 </div>
 <div class="lens glass" role="group" aria-label="Lens">
@@ -45,9 +45,10 @@
   <button data-lens="chase" aria-pressed="false">Chase</button>
   <button data-lens="trade" aria-pressed="false">Trade</button>
 </div>
-<div class="arrange-menu glass" id="arrange-menu" role="menu" aria-label="Arrange the wall" hidden>
-  <button role="menuitemradio" data-mode="set" aria-checked="true"><span><b>By set</b><small>Every set, oldest first</small></span><span class="tick" aria-hidden="true">✓</span></button>
-  <button role="menuitemradio" data-mode="pokemon" aria-checked="false"><span><b>By Pokémon</b><small>Your Dex, region by region</small></span><span class="tick" aria-hidden="true">✓</span></button>
+<div class="arrange-menu glass" id="arrange-menu" role="menu" aria-label="What you're chasing" hidden>
+  <button role="menuitemradio" data-mode="set" aria-checked="true"><span><b>Set chase</b><small>Complete each set, oldest first</small></span><span class="tick" aria-hidden="true">✓</span></button>
+  <button role="menuitemradio" data-mode="pokemon" aria-checked="false"><span><b>Pokémon chase</b><small>Your Dex, region by region</small></span><span class="tick" aria-hidden="true">✓</span></button>
+  <button role="menuitemradio" data-mode="artist" aria-checked="false"><span><b>Artist chase</b><small>Every illustrator's cards together</small></span><span class="tick" aria-hidden="true">✓</span></button>
   <button role="menuitemradio" data-mode="value" aria-checked="false"><span><b>By value</b><small>The more it's worth, the bigger it is</small></span><span class="tick" aria-hidden="true">✓</span></button>
 </div>
 <div class="arrange-menu right glass" id="filter-menu" role="menu" aria-label="Filters" hidden>
@@ -72,6 +73,7 @@
   <p class="hint">Flick the card to move along the set. Drag the wall to leave.</p>
 </section>
 <div class="toast" id="toast" role="status"></div>
+<div class="tradebar glass" id="tradebar" role="group" aria-label="The trade"><div class="mtext" aria-live="polite"><b id="tb-head">Trade</b><span id="tb-sub"></span></div><button type="button" class="mbtn primary" id="tb-go" disabled>Shake hands</button></div>
 <div class="offers glass" id="offers" role="dialog" aria-labelledby="o-name" inert>
   <div class="o-head"><div class="o-title"><b id="o-name"></b><span id="o-meta"></span></div><button class="ib" id="o-close" aria-label="Put the card back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
   <div class="seg o-seg" role="group" aria-label="What to look for"><button type="button" data-kind="single" aria-pressed="true">Single</button><button type="button" data-kind="pack" aria-pressed="false">Pack</button><button type="button" data-kind="box" aria-pressed="false">Box</button></div>
@@ -94,10 +96,11 @@
     <li><b>Tap a card</b> to bring it up close. Flick it sideways to move along the set.</li>
     <li><b>Have, Need, Chase, Trade</b> at the bottom are lenses: they recolor the wall rather than taking you somewhere else.</li>
     <li><b>Chase</b> is your chase list: the cards you're after deal out of the wall as a feed of tiles, live deals first. Tap one and it pops up with every copy online: swipe through them, or switch to the packs and boxes it comes in. Got it asks what you paid. <b>Chase it</b> on any card adds it; <b>Spare</b> on a card you own puts it up for trade.</li>
+    <li><b>Trade</b> shows your spares and who wants them. Tap a collector and the screen becomes a table between you: their spares above, yours below. Drag cards onto the table and shake hands.</li>
     <li><b>Filters</b> (top, by the search) add <b>Value</b>, the more it's worth the hotter, and <b>Time</b>: scrub or play through when you got each card.</li>
     <li><b>Search</b> flies you to the cards that match.</li>
     <li><b>Press and hold</b> any card to mark it, then keep the finger down and sweep along the row. <b>Mark</b> (top, inside a set) does the same by tapping: a handful at once, Done sums it up. <b>Tap the count</b> to see everything again.</li>
-    <li><b>Rearrange</b> (top left) lays the same cards out by set, by Pokémon or by value.</li>
+    <li><b>The chase</b> (top left) lays the same cards out by set, by Pokémon, by artist or by value.</li>
   </ul>
   <p style="color:var(--muted);font-size:13.5px">1,327 real cards from 10 sets. Ownership, prices and deals are made up for the demo, and your taps are kept on this device only.</p>
   <div class="row"><button class="btn primary" id="about-close">Back to the wall</button></div>
