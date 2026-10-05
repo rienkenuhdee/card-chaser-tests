@@ -5,6 +5,8 @@ const SET_INK = { base1: "#E8603C", base2: "#45A866", base3: "#A35BD6", base5: "
 const OWN_RATE = { base1: 0.62, base2: 0.48, base3: 0.7, base5: 0.36, neo1: 0.28, swsh7: 0.3, sv3pt5: 0.82, sv8pt5: 0.44, me5: 0.16, me55: 0.1 };
 const SPECIAL = { "base1-4": 395, "base1-2": 142, "base1-15": 96, "base5-83": 210, "neo1-9": 160, "neo1-17": 90, "swsh7-215": 1350, "swsh7-218": 640, "swsh7-212": 420, "sv3pt5-199": 265, "sv3pt5-205": 140, "sv8pt5-161": 980, "sv8pt5-156": 260, "me55-B": 120, "me55-R": 120, "me55-G": 120 };
 
+// Illustrators are made up for the demo (real names, seeded per card), so an artist chase has something to show.
+const ARTISTS = ["Mitsuhiro Arita", "Ken Sugimori", "Kagemaru Himeno", "Atsuko Nishida", "Kouki Saitou", "Ryo Ueda", "5ban Graphics", "Naoki Saito", "Hideki Ishikawa", "Tomokazu Komiya", "Sowsow", "Yuka Morii", "Keiko Fukuyama", "Shin Nagasawa", "Masakazu Fukuda", "Kyoko Umemoto"];
 const h32 = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967296; };
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -47,7 +49,7 @@ sets.forEach((st, si) => {
     // A deal is a live copy for less than the card's price; a floor-priced common at or over market isn't one.
     let deal = !own0 && dr < 0.07 ? Math.max(0.25, Math.round(price * (0.55 + 0.3 * h32(id + "e")) * 100) / 100) : null;
     if (deal !== null && deal >= price) deal = null;
-    const c = { i: cards.length, si, k, id, name, num, rname, tier, type: t, dex: Number(dex) || 0, price, owned, got, deal, x: 0, y: 0, sz: 1, col: 0, row: 0, e: 1, anim: null, intro: 0 };
+    const c = { i: cards.length, si, k, id, name, num, rname, tier, type: t, dex: Number(dex) || 0, price, owned, got, deal, artist: ARTISTS[Math.floor(h32(id + "a") * ARTISTS.length)], x: 0, y: 0, sz: 1, col: 0, row: 0, e: 1, anim: null, intro: 0 };
     cards.push(c); st.cards.push(c);
   });
 });

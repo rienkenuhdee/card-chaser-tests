@@ -91,11 +91,25 @@ price and percent under, or the most you'd pay), the rest of the set packed smal
 chase fold to a line. Tap a tile and the card pops up with every copy online to swipe through, and a Single, Pack, Box
 switch looks for the packs and boxes it comes in, with the odds of pulling it.
 
+**Round 10: Trading.** Three answers to your spares meeting someone else's wants, with made-up collectors seeded per
+card: a marketplace listing per spare (who wants it, what they'd give, Propose); the pair as the unit, your spare beside
+their spare you chase with a balance beam and "Even it up"; and the trade table, where tapping a collector turns the
+screen into a table between you, their spares above, yours below, cards dragged onto it staying put with the balance
+between the piles. Kept: the table, whole. Learned: a composed level with the Wall's own binders beats a sheet for a
+two-sided act; the balance reads best as a sentence between the piles; the seeded data needed prefix keys because the
+hash correlates keys that differ only in their last character.
+
+**Fixes with round 10.** A spread inside a set now lands on the card under the fingers, centred, and a pinch from a card
+lands on the set rather than closing it (closing takes a second pinch). Chase tiles carry the card itself beside the
+price. Need dims what you own further and rings the cards you're chasing in gold. In Mark, press and hold puts a card on
+your chase list (or, owned, up for trade). The top-left menu is the chase: by set, by Pokémon, by artist (illustrators
+made up for the demo), or by value.
+
 ## Open questions (next rounds)
 
 - A deal arriving: the round 7 tray's flight from panel to edge as the notification, landing on the want list?
 - Painting past the screen's edge: should a sweep scroll the binder as it goes?
 - At the show: does the Wants lens alone carry a vendor table, or does the verdict (NEED IT, pay up to) earn a place when a card is looked up?
-- Trading: your spares meeting someone else's wants.
+- Trading, next: counter-proposals, and what a trade looks like after the handshake.
 - The first 30 seconds: onboarding before anything is marked.
 - Bringing the mosaic into the real app as the Chase home.

@@ -21,7 +21,7 @@ function tally() {
 function updateBar() {
   const t = tally();
   mHead.textContent = t.n ? t.head : "Mark cards";
-  mSub.textContent = t.n ? t.sub : "Tap a card, or drag across a row";
+  mSub.textContent = t.n ? t.sub : "Tap a card, drag across a row, or hold one to chase it";
   mUndo.disabled = !t.n;
 }
 function enterMark() {

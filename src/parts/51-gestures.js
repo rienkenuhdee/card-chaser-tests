@@ -66,7 +66,13 @@ function onDown(pts) {
     gesture.card = card;
     state.press = { c: card, t0: now, timer: setTimeout(() => {
       if (gesture?.kind !== "one" || gesture.moved || state.press?.c !== card) return;
-      if (!marking) enterMark();
+      if (marking) { // already marking: a hold puts the card on your chase list (or, owned, up for trade)
+        gesture = null; cancelPress(); tick(8);
+        if (card.owned) { spares[card.id] = !isSpare(card); try { localStorage.setItem("wall-spares", JSON.stringify(spares)); } catch { /* fine */ } toast(spares[card.id] ? `${card.name} is a spare, up for trade.` : `${card.name} is no longer a spare.`); }
+        else { chasing[card.id] = !isChase(card); persistChase(); toast(chasing[card.id] ? `${card.name} on your chase list.` : `${card.name} off your chase list.`); }
+        drawList(); kick(); return;
+      }
+      enterMark();
       beginStroke(card, samples[samples.length - 1] || { x: gesture.x, y: gesture.y });
     }, 430) };
     kick();
@@ -75,8 +81,9 @@ function onDown(pts) {
 function startTwo(pts) {
   cancelPress(); finishTransition();
   const [a, b] = pts, m = mid(a, b);
-  gesture = { kind: "two", d0: dist(a, b), m0: m, cam: { ...cam }, qs: [] };
-  if (state.focus) unfocus();
+  gesture = { kind: "two", d0: dist(a, b), m0: m, cam: { ...cam }, qs: [], m, r: 1 };
+  // A pinch from a card up close lands on the set, never past it: closing the set takes a second pinch.
+  if (state.focus) { unfocus(); fly = null; gesture.noClose = true; }
   // Spreading on (or near) a panel starts opening it, under your fingers.
   if (view === "mosaic") { const h = hit(m.x, m.y, true); if (h?.block) gesture.g = h.block; }
 }
@@ -120,7 +127,9 @@ function pinchMove(a, b) {
   }
   if (state.trans && state.trans.kind !== "open") return;
   const f = fitCam(state.g), s = g.cam.s * r;
+  g.m = m; g.r = r;
   if (s < f.s * 0.995) {
+    if (g.noClose) { Object.assign(cam, f); kick(); return; }
     // Pinching out of a framed set closes it, under your fingers, measured from where the fingers crossed the frame.
     if (!state.trans) { Object.assign(cam, f); state.trans = openTrans(state.g, 1, f); g.closeD = d * (f.s / s); }
     if (!state.trans.anim) { const q = clamp(1 - (1 - d / (g.closeD || d)) / 0.6, 0, 1); state.trans.q = q; g.qs.push({ q, t: now }); }
@@ -148,6 +157,13 @@ function releasePinch() {
     else to = T.q > (view === "mosaic" ? 0.35 : 0.65) ? 1 : 0;
     settle(to);
   } else if (view === "set" && state.g && cam.s < fitCam(state.g).s) flyTo(fitCam(state.g), 260);
+  // A spread that zooms well in lands on the card under the fingers, centred, the way a tap would.
+  else if (view === "set" && state.g && !g.noClose && g.r > 1.15 && g.m && cam.s > fitCam(state.g).s * 1.8) {
+    const h = hit(g.m.x, g.m.y);
+    let c = h?.card || null;
+    if (!c) { let bd = Infinity; for (const x of state.g.cards) { const r = binderRect(x, cam), d = Math.hypot(r.x + r.w / 2 - g.m.x, r.y + r.h / 2 - g.m.y); if (d < bd) { bd = d; c = x; } } }
+    if (c) focus(c);
+  }
 }
 function onUp(remaining, end, cancelled = false) {
   const g = gesture; if (!g) return;
@@ -214,7 +230,16 @@ function tap(sx, sy) {
   const h = hit(sx, sy);
   if (state.focus) { if (h?.card === state.focus) return; unfocus(); return; }
   if (view === "mosaic") {
-    if (h?.block && lifted) { const c = liftedAt(h.block, sx, sy); if (c) return popCard(c, mr(c.m)); } // a chased card: every offer online
+    const ch = chipAt(sx, sy); if (ch) return openTable(ch.t, ch); // a trader: the table
+    if (h?.block && lifted) {
+      const c = liftedAt(h.block, sx, sy);
+      if (c && state.lens === "trade") { // a spare: the table with whoever wants it
+        const who = wantedBy(c);
+        if (who.length) { const chip = strip?.chips.find((x) => x.t === who[0]); return openTable(who[0], chip); }
+        tick(3); return toast(`Nobody is chasing ${c.name} yet.`);
+      }
+      if (c) return popCard(c, mr(c.m)); // a chased card: every offer online
+    }
     if (h?.block) enterGroup(h.block);
     return;
   }

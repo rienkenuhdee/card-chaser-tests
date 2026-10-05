@@ -28,7 +28,7 @@ flagBtn.onclick = () => {
   const c = state.focus; if (!c) return;
   if (c.owned) {
     spares[c.id] = !isSpare(c); try { localStorage.setItem("wall-spares", JSON.stringify(spares)); } catch { /* fine */ }
-    updateFlag(c); tick(5); drawList(); kick();
+    updateFlag(c); tick(5); drawList(); if (lifted) liftLayout(true); kick();
     toast(spares[c.id] ? `${c.name} is a spare, up for trade.` : `${c.name} is no longer a spare.`);
     return;
   }
@@ -165,7 +165,7 @@ function drawPop(now) {
   ctx.globalAlpha = 0.6 * e; ctx.fillStyle = theme.bg; ctx.fillRect(0, 0, vw, vh);
   ctx.globalAlpha = 0.28 * e; rr(r.x + 2, r.y + 8, r.w, r.h, r.w * 0.045); ctx.fillStyle = "#000"; ctx.fill();
   const e0 = c.e; c.e = 1; ctx.globalAlpha = 1;
-  if (r.w > r.h * 1.05) drawFeedTile(c, r.x, r.y, r.w, r.h, 1); else drawTile(c, r.x, r.y, r.w, r.h, now);
+  if (r.w > r.h * 1.05) drawFeedTile(c, r.x, r.y, r.w, r.h, 1, now); else drawTile(c, r.x, r.y, r.w, r.h, now);
   c.e = e0; ctx.globalAlpha = 1;
   if (pop.closing && k >= 1) { pop.c = null; return false; }
   return k < 1;
@@ -194,21 +194,24 @@ addEventListener("keydown", (e) => { if (e.key === "Escape" && pop.c && !paying(
 let tintKey = "", tintVal = "";
 function dealTint() { const k = theme.slot + theme.deal; if (k !== tintKey) { tintKey = k; tintVal = mix(theme.slot, theme.deal, theme.dark ? 0.16 : 0.09); } return tintVal; }
 // The card as a deal (green: asking price, was, how far under) or as a chase (the most you'd pay, the market).
-function drawFeedTile(c, x, y, w, h, a) {
+// The card itself sits in the tile, with the price beside it.
+function drawFeedTile(c, x, y, w, h, a, now = performance.now()) {
   const st = sets[c.si], deal = Boolean(c.deal), rad = Math.min(12, w * 0.07);
   ctx.globalAlpha = a;
   rr(x, y, w, h, rad); ctx.fillStyle = deal ? dealTint() : theme["panel-solid"]; ctx.fill();
   ctx.lineWidth = deal ? 1.5 : 1; ctx.strokeStyle = deal ? theme.deal : theme["slot-line"]; ctx.stroke();
   if (w < 60) { ctx.globalAlpha = 1; return; }
-  const pad = Math.max(8, w * 0.06), s = clamp(w / 177, 0.6, 1.3);
+  const pad = Math.max(8, w * 0.05), s = clamp(w / 177, 0.6, 1.3);
+  const mh = h - pad * 2, mw = mh * TW / TH;
+  foilOff = true; cardFace(c, x + pad, y + pad, mw, mh, now, state.value && !state.matches); foilOff = false;
+  ctx.globalAlpha = a;
+  const tx = x + pad + mw + pad, tw = x + w - pad - tx;
   ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
-  ctx.fillStyle = deal ? theme.deal : theme.ink; font(800, 22 * s); ctx.fillText(short(c.deal ?? capOf(c)), x + pad, y + pad + 18 * s);
-  ctx.fillStyle = theme.muted; font(500, 11.5 * s); ctx.fillText(deal ? `was ${short(c.price)}` : "the most you'd pay", x + pad, y + pad + 33 * s);
-  ctx.textAlign = "right";
-  if (deal) { ctx.fillStyle = theme.deal; font(800, 20 * s); ctx.fillText(`${dealPct(c)}%`, x + w - pad, y + pad + 18 * s); ctx.fillStyle = theme.muted; font(600, 10.5 * s); ctx.fillText("under market", x + w - pad, y + pad + 33 * s); }
-  else { ctx.fillStyle = theme.muted; font(600, 11.5 * s); ctx.fillText(`Market ${short(c.price)}`, x + w - pad, y + pad + 18 * s); }
-  ctx.textAlign = "left"; ctx.fillStyle = theme.ink;
-  font(700, 14.5 * s, true); ctx.fillText(fitText(c.name, w - pad * 2), x + pad, y + h - pad - 14 * s);
-  ctx.fillStyle = theme.muted; font(500, 11 * s); ctx.fillText(fitText(`${st.code} ${c.num}/${st.printed}, ${c.rname}`, w - pad * 2), x + pad, y + h - pad);
+  ctx.fillStyle = deal ? theme.deal : theme.ink; font(800, 21 * s); ctx.fillText(fitText(short(c.deal ?? capOf(c)), tw), tx, y + pad + 17 * s);
+  ctx.fillStyle = theme.muted; font(500, 11 * s); ctx.fillText(fitText(deal ? `was ${short(c.price)}` : "the most you'd pay", tw), tx, y + pad + 31 * s);
+  if (deal) { ctx.fillStyle = theme.deal; font(800, 13 * s); ctx.fillText(fitText(`${dealPct(c)}% under market`, tw), tx, y + pad + 47 * s); }
+  else { ctx.fillStyle = theme.muted; font(600, 11 * s); ctx.fillText(fitText(`Market ${short(c.price)}`, tw), tx, y + pad + 47 * s); }
+  ctx.fillStyle = theme.ink; font(700, 14 * s, true); ctx.fillText(fitText(c.name, tw), tx, y + h - pad - 13 * s);
+  ctx.fillStyle = theme.muted; font(500, 11 * s); ctx.fillText(fitText(`${st.code} ${c.num}/${st.printed}`, tw), tx, y + h - pad);
   ctx.globalAlpha = 1;
 }

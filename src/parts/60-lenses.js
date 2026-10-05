@@ -21,8 +21,9 @@ function setLens(lens) {
 lensBox.querySelectorAll("button").forEach((b) => (b.onclick = () => setLens(b.dataset.lens)));
 // force: the chase list changed while it is out (Chase it, Got it, Undo), so the layout flies to its new shape.
 function liftLayout(force = false) {
-  const want = state.lens === "chase";
-  if (want === lifted && !(force && lifted)) { layoutAll(); return; }
+  const want = state.lens === "chase" || state.lens === "trade";
+  const same = want === lifted && (!want || state.lens === liftKey); // Chase to Trade is a flight too
+  if (same && !(force && lifted)) { layoutAll(); return; }
   const T = state.trans;
   if (T && !(T.anim || T.t0)) { layoutAll(); return; } // fingers are holding a transition: relayout under it
   if (T) finishTransition();

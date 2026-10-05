@@ -79,11 +79,13 @@ const FOLD = 54, TILE_GAP = 8, REST = 15;
 const feedCols = (w) => clamp(Math.floor((w + TILE_GAP) / (150 + TILE_GAP)), 2, 4);
 // Chased cards first (live deals, best discount first, then the most you'd pay); the rest keep the arrangement's order.
 const chaseOrder = (a, b) => (b.deal ? 1 : 0) - (a.deal ? 1 : 0) || (a.deal && b.deal ? b.price / b.deal - a.price / a.deal : 0) || b.price - a.price || a.i - b.i;
+let liftKey = null; // which lens the current lift is for
 function orderGroup(g) {
   g.base ||= g.cards;
-  const lead = lifted ? g.base.filter(isChase).sort(chaseOrder) : [];
+  const key = state.lens === "trade" ? isSpare : isChase, ord = state.lens === "trade" ? spareOrder : chaseOrder;
+  const lead = lifted ? g.base.filter(key).sort(ord) : [];
   g.lead = lead;
-  g.cards = lead.length ? [...lead, ...g.base.filter((c) => !isChase(c))] : g.base;
+  g.cards = lead.length ? [...lead, ...g.base.filter((c) => !key(c))] : g.base;
   g.cards.forEach((c, k) => { c.k = k; c.lift = 0; });
   for (const c of lead) c.lift = 1;
 }
@@ -112,6 +114,7 @@ function liftedLayout() {
   const R = { x: 8, y: topPad(), w: vw - 16 };
   const live = groups.filter((g) => g.lead.length), folded = groups.filter((g) => !g.lead.length);
   let y = R.y;
+  if (state.lens === "trade") y += stripLayout(R); else strip = null; // the traders along the top
   // On a wide screen two live panels sit side by side; on a phone they stack.
   const across = R.w >= 900 ? 2 : 1, pw = R.w / across;
   for (let i = 0; i < live.length; i += across) {
@@ -124,7 +127,7 @@ function liftedLayout() {
   mScroll = clamp(mScroll, 0, mMax);
   for (const g of groups) if (g.lead.length) packLifted(g); else packFolded(g);
 }
-function layoutAll() { lifted = state.lens === "chase"; for (const g of groups) orderGroup(g); groups.forEach(binderLayout); if (lifted) liftedLayout(); else mosaicLayout(); }
+function layoutAll() { lifted = state.lens === "chase" || state.lens === "trade"; liftKey = lifted ? state.lens : null; for (const g of groups) orderGroup(g); groups.forEach(binderLayout); if (lifted) liftedLayout(); else mosaicLayout(); }
 
 // ---------- camera (inside a set) ----------
 const cam = { x: 0, y: 0, s: 1 };
