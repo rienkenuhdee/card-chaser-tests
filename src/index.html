@@ -36,7 +36,7 @@
 </div>
 <div class="markbar glass" id="markbar" role="group" aria-label="Marking">
   <div class="mtext" aria-live="polite"><b id="m-head">Mark cards</b><span id="m-sub">Tap a card, drag across a row, or hold one to chase it</span></div>
-  <button type="button" class="mbtn" id="m-undo" disabled>Undo</button><button type="button" class="mbtn primary" id="m-done">Done</button>
+  <button type="button" class="mbtn" id="m-all">All</button><button type="button" class="mbtn" id="m-undo" disabled>Undo</button><button type="button" class="mbtn primary" id="m-done">Done</button>
 </div>
 <div class="lens glass" role="group" aria-label="Lens">
   <span class="ink" aria-hidden="true"></span>
@@ -62,7 +62,19 @@
     <div id="list-body"></div>
   </div>
 </main>
-<div class="caption glass" id="caption">Your whole collection. Tap a set to open it.</div>
+<div class="caption glass" id="caption" hidden>Your whole collection. Tap a set to open it.</div>
+<section class="welcome glass" id="welcome" aria-label="Welcome">
+  <div class="w-top"><span class="w-dots" aria-hidden="true"><i></i><i></i><i></i></span><button type="button" class="w-skip" id="w-skip">Skip</button></div>
+  <div class="w-row"><div class="w-text"><b id="w-title"></b><span id="w-line" aria-live="polite"></span></div><div class="w-tally" id="w-tally"><b id="w-n">0</b><small id="w-what"></small></div></div>
+  <div class="w-prog" id="w-prog" hidden><i></i></div>
+  <label class="w-opt" id="w-opt" hidden><input type="checkbox" id="w-chase"><span>Chase every card I'm missing</span></label>
+  <div class="w-acts">
+    <button type="button" class="mbtn primary w-next" id="w-next">Continue</button>
+    <div class="w-src" id="w-src" hidden><button type="button" class="mbtn primary" data-src="TCGplayer">TCGplayer</button><button type="button" class="mbtn primary" data-src="Collectr">Collectr</button></div>
+    <button type="button" class="mbtn w-all" id="w-all" hidden>Select all in this set</button>
+    <span class="w-or" id="w-or" hidden>or</span><button type="button" class="mbtn w-alt" id="w-alt" hidden>Pick your sets and mark by hand</button>
+  </div>
+</section>
 <p class="sr" id="where" aria-live="polite"></p>
 <section class="panel glass" id="panel" aria-live="polite" aria-label="Card">
   <div class="swap" id="swap">
@@ -92,6 +104,7 @@
   <h2 id="about-h">The Wall</h2>
   <p>An experiment for Card Chaser: no tabs, no screens. Your whole collection is one surface, and zooming is the navigation.</p>
   <ul>
+    <li><b>Starting out</b>: import your collection from TCGplayer or Collectr, or pick the sets you collect and mark by hand. Choose your sets again any time in Settings.</li>
     <li><b>Tap a set</b> (or spread two fingers on it) to open it. Its cards grow into a binder. Scroll down it; flick sideways for the next set; pinch out or tap back to close it.</li>
     <li><b>Tap a card</b> to bring it up close. Flick it sideways to move along the set.</li>
     <li><b>Have, Need, Chase, Trade</b> at the bottom are lenses: they recolor the wall rather than taking you somewhere else.</li>
@@ -110,7 +123,7 @@
   <p class="lbl">Appearance</p>
   <div class="seg" role="group" aria-label="Appearance"><button type="button" data-theme="auto" aria-pressed="true">Auto</button><button type="button" data-theme="light" aria-pressed="false">Light</button><button type="button" data-theme="dark" aria-pressed="false">Dark</button></div>
   <p class="lbl">Your collection</p>
-  <div class="row" style="justify-content:flex-start"><button class="btn" id="to-list">Show as a list</button><button class="btn" id="reset">Reset the demo</button></div>
+  <div class="row" style="justify-content:flex-start"><button class="btn" id="to-list">Show as a list</button><button class="btn" id="w-sets">Choose your sets</button><button class="btn" id="reset">Reset the demo</button></div>
   <div class="row"><button class="btn primary" id="prefs-close">Done</button></div>
 </dialog>
 <script>

@@ -9,12 +9,12 @@ try { chasing = JSON.parse(localStorage.getItem("wall-chase") || "{}") || {}; } 
 try { paid = JSON.parse(localStorage.getItem("wall-paid") || "{}") || {}; } catch { paid = {}; }
 const persistChase = () => { try { localStorage.setItem("wall-chase", JSON.stringify(chasing)); localStorage.setItem("wall-paid", JSON.stringify(paid)); } catch { /* private mode */ } };
 // Made-up wants, seeded by card id so variants compare; a card with a live deal is a want by definition.
-for (const c of cards) c.chase0 = Boolean(c.deal) || h32(c.id + "w") < 0.1;
+for (const c of cards) c.chase0 = false; // the chase list starts empty
 const isChase = (c) => !c.owned && (chasing[c.id] ?? c.chase0);
 // Spares: a card you own an extra of, up for trade (made up, seeded by card id).
 let spares = {};
 try { spares = JSON.parse(localStorage.getItem("wall-spares") || "{}") || {}; } catch { spares = {}; }
-for (const c of cards) c.spare0 = h32(c.id + "s") < 0.08;
+for (const c of cards) c.spare0 = false; // so do your spares
 const isSpare = (c) => c.owned && (spares[c.id] ?? c.spare0);
 
 // ----- Chase it (or, on a card you own, Spare), next to I have it on the card panel -----

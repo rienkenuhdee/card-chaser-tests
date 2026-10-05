@@ -105,11 +105,21 @@ price. Need dims what you own further and rings the cards you're chasing in gold
 your chase list (or, owned, up for trade). The top-left menu is the chase: by set, by Pokémon, by artist (illustrators
 made up for the demo), or by value.
 
+**Round 11: The first 30 seconds.** Three openings from an empty wall, each leading with an import from TCGplayer or
+Collectr (pretend: the seeded collection floods in): a first-run sheet with three steps (pick your sets, mark a few,
+chase one); the wall building itself from the first ten cards typed on a number pad; and ten flicks through famous
+cards ending in the mosaic assembling itself from nothing. Kept: the welcome sheet, with Ryan's two additions: Select
+all in the set during the marking step, and "Chase every card I'm missing" on the import. The wall now starts empty
+on a first run; the seeded 541 are what an import brings in, and Reset the demo returns to the opening. The chase list
+and spares start empty too, and a deal only shows on a card you chase. Learned: the import is the real first step for
+most collectors, so the manual path is the "or"; the assembly from nothing and the typed card landing are worth
+lifting into the import's flood later. Dropped: the ten-card quota and the flick axis.
+
 ## Open questions (next rounds)
 
 - A deal arriving: the round 7 tray's flight from panel to edge as the notification, landing on the want list?
 - Painting past the screen's edge: should a sweep scroll the binder as it goes?
 - At the show: does the Wants lens alone carry a vendor table, or does the verdict (NEED IT, pay up to) earn a place when a card is looked up?
 - Trading, next: counter-proposals, and what a trade looks like after the handshake.
-- The first 30 seconds: onboarding before anything is marked.
+- The import's reveal: the round 11 assembly from nothing as the flood after an import.
 - Bringing the mosaic into the real app as the Chase home.

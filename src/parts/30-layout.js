@@ -56,8 +56,26 @@ function packPanel(g) {
   g.cards.forEach((c, k) => { c.m = { x: ox + (k % best.cols) * cw, y: oy + Math.floor(k / best.cols) * ch, w: tw, h: th }; });
 }
 
+const W_FOLD = 50;
 function mosaicLayout() {
   const fitH = vh - topPad() - botPad();
+  // The sets you collect share the screen; the others fold to a line beneath (picked in the welcome, or in Settings).
+  if (mode === "set" && pickedSets.size && pickedSets.size < groups.length && groups.every((g) => g.set)) {
+    const mine = groups.filter((g) => pickedSets.has(g.set.id)), rest = groups.filter((g) => !pickedSets.has(g.set.id));
+    const n = mine.reduce((a, g) => a + g.cards.length, 0);
+    const R = { x: 8, y: topPad(), w: vw - 16, h: Math.max(fitH - rest.length * W_FOLD, fitH * 0.62, (n * 340) / (vw - 16)) };
+    const items = mine.map((g) => ({ g, v: Math.max(g.cards.length, 45) }));
+    const floor = items.reduce((t, i) => t + i.v, 0) * 0.06;
+    for (const i of items) i.v = Math.max(i.v, floor);
+    stripTreemap(items, R);
+    let y = R.y + R.h;
+    for (const g of rest) { g.m = { x: R.x, y, w: R.w, h: W_FOLD }; y += W_FOLD; }
+    mMax = Math.max(0, y + botPad() - vh);
+    mScroll = clamp(mScroll, 0, mMax);
+    for (const g of mine) packPanel(g);
+    for (const g of rest) packFolded(g);
+    return;
+  }
   const R = { x: 8, y: topPad(), w: vw - 16, h: Math.max(fitH, (cards.length * 340) / (vw - 16)) };
   mMax = Math.max(0, R.y + R.h + botPad() - vh);
   mScroll = clamp(mScroll, 0, mMax);

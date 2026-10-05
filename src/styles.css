@@ -248,3 +248,50 @@ body.trading .caption { display: none; }
 .ltrade .lrow { grid-template-columns: 1fr; grid-template-areas: "name" "meta" "price" "state"; }
 .ltrade .lstate { text-align: left; color: var(--deal); }
 .ltrade .lmeta { line-height: 1.35; }
+
+/* The welcome: the first-run sheet (round 11). */
+
+/* The sheet: glass, along the bottom, out of the wall's way. Three dots and Skip on top, the step's title and its
+   running count, one line of instruction, one button. */
+.welcome { position: fixed; z-index: 4; left: 50%; bottom: 0; width: min(520px, 100%); transform: translate(-50%, 110%); opacity: 0; pointer-events: none;
+  padding: 12px 18px calc(env(safe-area-inset-bottom, 0px) + 14px); border-radius: 18px 18px 0 0; border-bottom: 0; display: grid; gap: 10px;
+  transition: transform .45s cubic-bezier(.2,.9,.25,1.02), opacity .3s; }
+@media (min-width: 720px) { .welcome { bottom: 16px; border-radius: 18px; border-bottom: 1px solid var(--line); } }
+body.welcoming .welcome.on { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
+/* It steps aside whenever something else needs the bottom of the screen, and comes back when that goes. */
+body.welcoming.focused .welcome, body.welcoming.offering .welcome, body.welcoming.paying .welcome, body.welcoming.trading .welcome, body.welcoming.timing .welcome, body.listmode .welcome {
+  transform: translate(-50%, 110%); opacity: 0; pointer-events: none; }
+.w-top { display: flex; align-items: center; justify-content: space-between; min-height: 24px; }
+.w-dots { display: flex; gap: 6px; align-items: center; }
+.w-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--slot-line); transition: background .2s, transform .2s; }
+.w-dots i.on { background: var(--ink); transform: scale(1.25); }
+.welcome.only .w-dots, .welcome.intro .w-dots { visibility: hidden; }
+.w-skip { border: 0; background: none; padding: 4px 2px; margin-right: -2px; font: 600 14.5px var(--font); color: var(--muted); cursor: pointer; }
+.w-skip:hover { color: var(--ink); }
+.w-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.w-text { display: grid; gap: 4px; min-width: 0; }
+.w-text b { font: 800 23px/1.05 var(--font); font-stretch: 78%; letter-spacing: -0.01em; }
+.w-text span { font-size: 14.5px; line-height: 1.35; color: var(--muted); }
+.w-tally { flex: none; text-align: right; }
+.w-tally b { display: block; font: 800 28px/1 var(--font); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; transition: color .2s; }
+.w-tally b.zero { color: var(--muted); }
+.w-tally small { display: block; margin-top: 3px; font: 500 12px var(--font); color: var(--muted); }
+.welcome [hidden] { display: none !important; }
+.w-acts { display: grid; gap: 8px; }
+.w-next { height: 50px; font-size: 16px; }
+/* The first screen: import first and biggest, then "or" and the path by hand. */
+.w-src { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.w-src .mbtn { height: 50px; font-size: 16px; }
+.w-or { text-align: center; font: 600 12.5px var(--font); color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin: -2px 0; }
+.w-alt { height: 46px; font-size: 15px; }
+.w-prog { height: 3px; border-radius: 2px; background: var(--slot-line); overflow: hidden; margin: 2px 0 6px; }
+.w-prog i { display: block; height: 100%; background: var(--ink); transform-origin: left; animation: w-fill 1.1s cubic-bezier(.3,.1,.3,1) both; }
+@keyframes w-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@media (prefers-reduced-motion: reduce) { .w-prog i { animation: none; } }
+
+/* While the sheet is up, the lens bar and the mark bar wait: the sheet is the bottom of the screen. They stay in
+   place (not off-screen) so the lens bar can rise into view when the sheet goes. */
+body.welcoming .lens, body.welcoming .markbar { opacity: 0; pointer-events: none; transform: translate(-50%, 12px); }
+.w-opt { display: flex; align-items: center; gap: 10px; font: 500 14.5px var(--font); color: var(--ink); cursor: pointer; }
+.w-opt input { width: 20px; height: 20px; accent-color: var(--ink); margin: 0; }
+.w-all { height: 46px; font-size: 15px; }
