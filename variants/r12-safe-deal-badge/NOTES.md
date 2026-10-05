@@ -1,0 +1,36 @@
+# r12-safe-deal-badge
+
+**Round:** 12. A deal arrives: how does the wall tell you a live copy just appeared on a card you chase, and what do you do next?
+**Concept:** The two patterns iOS collectors already know, a badge and a banner. The Chase lens button wears a green badge with the count of deals you haven't looked at; when one arrives a banner drops from under the search bar with the card's mini face ("Live: Pikachu. $37.05, 18% under market. 30C 25/128."), holds five seconds, then slides away (or swipe it up); tap it and the card pops up out of the banner with its offers, which marks it seen and clears it from the badge. In the Chase lens an unseen deal wears a "New" sticker and leads its set; the list view gets a Deals row on top, newest first, with times.
+
+## What changed
+- Added `72-deal-feed.js` and `styles.css`. Nothing replaced or removed; the banner and the badge are created from the part.
+- The shared feed: 6 s after load, then every 9 s, `feedTick` runs `nextArrival`: the chased cards in `h32(c.id + "r")` order, the first without a deal gets one at `round(price * (0.55 + 0.3 * h32(c.id + "e")), 2)` (floored at $0.25, skipped if not under market); when every chased card has one, the chased card with the oldest deal drops 10% ("Price drop: …"). Each arrival sets `c.dealAt` and `c.dealSeen = false`. The seeded deals start as seen with `dealAt = 0`, so nothing announces itself on load and they are the oldest for the drop rule. An arrival waits (retries every 400 ms) while a gesture, a transition, a camera flight, inertia, the keypad or the welcome is on, so it never jumps an animation under your fingers. Arrivals are in memory only: a reload forgets them.
+- On arrival: in the Chase lens `liftLayout(true)` flies the tile to the front of its set (unless a card is up close, which would be kicked off it; then it just redraws); the focused card's panel and an open offers sheet refresh; the badge, the list and the banner update; a short tick.
+- Seen: `popCard` and `focus` are redefined (copies plus `markSeen`), so popping a card up for its offers or bringing it up close in the binder clears it. `markSeen` also takes the banner down if it is showing that card.
+- The badge: an `<i class="badge">` appended inside the Chase lens button (inline after the word, so the ink highlight follows; `placeInk` runs when it appears or goes). The button gets an aria-label "Chase, 3 new deals" while it shows. `drawList` is redefined to call `updateBadge` first, since every chase change already calls `drawList`, so un-chasing a card with a new deal drops it from the count.
+- The banner: `#deal-banner` (glass, `role="status"`, z-index 5, under the search bar), a button with a CSS mini face (the card's type colour with a paper strip and its number), "Live: name" with a green dot, and one muted line. `showBanner` drops it in (a small bump if one is already up), `BANNER_HOLD` 5.2 s, then `hideBanner`. Touch handlers follow a finger upward and dismiss past 24 px (the click is suppressed after a swipe). Tap: `openDeal` leaves the list, closes a table, a pop or a focused card, scrolls the Chase mosaic to the card's panel, and `popCard`s it from the banner's rect. A toast arriving while the banner is up sits beneath it (`body.dealing .toast`). Reduced motion: the base's `transition: none` makes it appear and go; the bump is skipped.
+- The Chase lens: `orderGroup` is redefined with `newFirst` (unseen first, newest first, then the base `chaseOrder`). `drawFeedTile` is a copy plus `newSticker` on the card's top-left corner; `emptyPocket` is a copy plus the same sticker in the binder (Chase lens only). The sticker is a green pill reading "New" with a white (dark: background) ring, 30 × 15 px at tile scale.
+- The offers sheet: `fillOffers` is a copy where the live offer reads "eBay, the live deal, just now" / "4 min ago".
+- The list: a "Deals" section on top (any lens; hidden when nothing is unseen) with "N new since you last looked. Tap one for the offers." Each row is a button (name, set and number, "Live $X", "16% under market, just now") plus Got it; tapping the row goes to the wall and pops the card. The chase list rows say "just now, market $0.56" on arrived deals. A 30 s interval refreshes the `<time>` elements so "4 min ago" keeps up without redrawing the list.
+- Debug builds expose `__w.arrive()`, `__w.unseenDeals()`, `__w.openDeal()` and `__w.feed` for screenshots and tests.
+
+## Try this first on the phone
+1. Import with "Chase every card I'm missing" ticked, then wait: six seconds in, the banner drops with a Live deal and Chase gets a 1. Tap the banner: the card grows out of it over the dimmed wall with its offers, the live one first, "just now". Close it: the badge is gone.
+2. Switch to Chase and leave it: every nine seconds a tile flies to the front of its set wearing a New sticker and the badge counts up. Swipe a banner up to dismiss it. Tap a New tile, or open the set and tap the card: the sticker goes.
+3. Settings, Show as a list: the Deals row on top, newest first, with times; tap a row and you are back on the wall with the card popped.
+
+## Gesture contract
+All checks pass (dpr 1 and 2). The tests run on a fresh wall with nothing chased, so the feed finds nothing to deliver; the timers run and do nothing. Nothing in the navigation changed: the banner and badge are DOM over the wall, and the only new tap targets are the banner, the badge's button (which is the Chase lens button) and the list's Deals rows.
+
+## Frame budget
+`npm run test:perf -- --variant r12-safe-deal-badge`: mosaic 16.7ms, held pinch 17.8ms (budget 34ms). The sticker is one rounded rect and one cached font per unseen tile; the badge and banner are DOM, touched only on arrival and on seen. `updateBadge` filters the cards on every `drawList` call (on chase changes, not per frame) and returns early when the count is unchanged.
+
+## Unsure about
+- The badge is deal green, not iOS red. Green reads as "deals" everywhere else on the wall; red might read as alarm, but it is the pattern people know. Easy to flip.
+- With 786 chases the feed delivers every 9 s and the banner holds 5 s, so on the Chase lens a banner is up more than half the time. That is the shared rule's pace, not a design choice; a real feed would be quieter. If it grates, the hold could shorten or a second arrival could stack ("2 new deals").
+- "Seen" is only popping the card up or bringing it up close. Scrolling past a New tile in the Chase lens doesn't clear it, and neither does opening the list's Deals row (only tapping a row does). Too sticky, or right?
+- The Deals row in the list disappears once everything has been looked at (no empty "Deals" header). A "Recent" memory of seen arrivals might be worth keeping for a show-floor glance.
+- The list's Deals row tap leaves the list for the wall's pop (the offers sheet is DOM, so it still reads). A screen-reader collector might prefer the offers to open without leaving the list.
+- Arrivals are not persisted: a reload returns to the seeded deals with no "new" ones. Persisting `deal`, `dealAt` and `dealSeen` is a few lines if the feed should survive a refresh.
+- The Chase lens toast still says "22 with a live deal" and doesn't count the new ones; the badge does. I left `setLens` alone.
