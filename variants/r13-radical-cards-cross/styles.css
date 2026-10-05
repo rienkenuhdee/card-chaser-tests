@@ -1,0 +1,21 @@
+/* After the handshake (round 13, radical): the trade lives in the wall. The Trade lens button counts replies in gold,
+   and a strip above the lens bar asks about a counter. */
+.lens button[data-lens="trade"] { z-index: 2; }
+.xbadge { background: var(--gold); color: var(--bg); }
+.lens button.xglow { color: var(--gold); }
+.lens button.xglow .lbadge { transform: scale(1.3); }
+.lens button.xglow::after { content: ""; position: absolute; inset: 0; border-radius: 10px; pointer-events: none;
+  box-shadow: 0 0 0 1.5px var(--gold), 0 0 18px color-mix(in srgb, var(--gold) 60%, transparent); animation: lglow 1.1s ease-out both; }
+@media (prefers-reduced-motion: reduce) { .lens button.xglow::after { animation: none; opacity: 1; } }
+.xbar { position: fixed; z-index: 3; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 72px); transform: translateX(-50%); width: min(460px, calc(100vw - 20px));
+  display: grid; gap: 8px; padding: 10px 12px; border-radius: 14px; border-color: color-mix(in srgb, var(--gold) 55%, var(--line)); }
+.xbar[hidden] { display: none; }
+body.timing .xbar { bottom: calc(env(safe-area-inset-bottom, 0px) + 160px); }
+body.focused .xbar, body.offering .xbar, body.marking .xbar, body.trading .xbar, body.welcoming .xbar, body.listmode .xbar, body.paying .xbar { display: none; }
+.xbar .mtext { display: grid; gap: 2px; line-height: 1.25; min-width: 0; }
+.xbar b { font-size: 15px; font-weight: 700; color: var(--gold); font-variant-numeric: tabular-nums; }
+.xbar span { font-size: 13px; color: var(--muted); }
+.xacts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.xacts .mbtn { height: 42px; }
+.xacts .mbtn.primary { background: var(--gold); border-color: var(--gold); color: var(--bg); }
+.ltrade .pill-btn + .pill-btn { margin-left: -2px; }
