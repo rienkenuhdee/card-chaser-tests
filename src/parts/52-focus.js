@@ -52,6 +52,7 @@ document.getElementById("p-buy").onclick = () => {
   if (c.owned) { unfocus(); return flyTo(fitCam(groups[c.g]), 460); }
   window.open(`https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(`pokemon ${c.name} ${c.num}/${st.printed} ${st.name}`)}&_sop=15`, "_blank", "noopener");
 };
+let quietLayout = false; // a trade changes several cards at once: one relayout at the end, not one per card
 function setOwned(c, on, { undo = null, quiet = false } = {}) {
   const now = performance.now();
   c.owned = on; c.got = on ? Date.now() : null; saved[c.id] = { on, at: c.got }; persist();
@@ -63,6 +64,6 @@ function setOwned(c, on, { undo = null, quiet = false } = {}) {
   if (on && owned === st.cards.length) { if (mode === "set") g.burst = now; tick(40); toast(`${st.name} complete. ${owned} of ${owned}.`, undo); }
   else if (!quiet) toast(on ? `${c.name} added. ${owned} of ${st.cards.length} in ${st.name}.` : `${c.name} taken out.`, undo);
   if (state.focus === c) fillPanel(c, 0);
-  if (lifted) liftLayout(true); // a chased card changed hands: the chase layout flies to its new shape
+  if (lifted && !quietLayout) liftLayout(true); // a chased card changed hands: the chase layout flies to its new shape
   updateCount(); drawList(); kick();
 }

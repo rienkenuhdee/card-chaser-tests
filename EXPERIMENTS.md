@@ -124,11 +124,29 @@ wall is noticed without nagging, and the badge on Chase is enough of a count; th
 of their own again. Open: one tap from the mosaic to the offers when the tile is off screen. Also fixed: the Time
 filter showed "Invalid Date" on an empty wall.
 
+**Round 13: After the handshake.** Three answers to a proposed trade, on a simulated other side (twelve seconds after
+Shake hands the trader accepts, counters by one card, or declines with a line, seeded by the moment): the trade as a
+thread in the trade bar, the counter as her hand moving a card on the same table, and the trade living in the wall
+itself with the cards leaning toward Trade on gold threads and crossing through the top edge. Kept, as the critic
+proposed: the thread as the bar (You proposed, Maya countered, Traded Oct 5, the rows in the list too) over the
+bold table (Shake hands keeps the table up with the cards gathered in her hands under "Waiting on Maya"; a counter
+moves one card with her ink on the table and offers Decline, Counter and Accept; Counter back puts the table in your
+hands and Shake hands sends it; an acceptance crosses the cards, drops them into their new binders and closes on the
+new wall), with the radical crossing when you've left the table: the reply flashes the cards gold where they sit and
+beats the panel header, a toast carries the line with Open, and an acceptance lifts your cards out through the top
+edge as hers fly in and land with the flood. The counter rule is reconciled toward them: she leaves out one of hers
+or asks for one more of yours she chases. Learned: the thread is the familiar shape for state over time, the table is
+the familiar place for her hand, and the wall is where the outcome belongs when you're not looking; the threads, tags
+and lean read as a glitch. Dropped: the threads and the lean, the press-and-hold read-out, the counter strip above the
+lens bar. Also fixed: a deal arriving while the table was up started a wall morph that froze under it; the wall now
+takes its new shape at once under the table.
+
 ## Open questions (next rounds)
 
 - A deal arriving off screen: one tap from the line to the offers, and whether the arrival should nudge the wall.
 - Painting past the screen's edge: should a sweep scroll the binder as it goes?
 - At the show: does the Wants lens alone carry a vendor table, or does the verdict (NEED IT, pay up to) earn a place when a card is looked up?
-- Trading, next: counter-proposals, and what a trade looks like after the handshake.
+- Trading: a real other side (the twelve-second reply is a stand-in), more than one card per counter, and whether a done trade should fall off the chip after a day.
+- Starting a trade: spares begin empty, so the demo needs a few marked by hand; an import option for doubles, or a hint on a spare's panel naming who wants it.
 - The import's reveal: the round 11 assembly from nothing as the flood after an import.
 - Bringing the mosaic into the real app as the Chase home.
