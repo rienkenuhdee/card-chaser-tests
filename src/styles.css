@@ -235,15 +235,47 @@ body.offering .lens { transform: translate(-50%, 160%); opacity: 0; pointer-even
 
 /* The trade table: Back stays, the trade bar takes the lens bar's place, and nothing else on the wall is reachable. */
 .tradebar { position: fixed; z-index: 3; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); transform: translate(-50%, 160%); opacity: 0; pointer-events: none;
-  width: min(520px, calc(100vw - 20px)); display: flex; align-items: center; gap: 6px; padding: 5px 5px 5px 14px; border-radius: 14px;
+  width: min(520px, calc(100vw - 20px)); display: flex; flex-direction: column; align-items: stretch; gap: 0; padding: 0 5px 5px; border-radius: 14px;
   transition: transform .4s cubic-bezier(.2,.9,.25,1.04), opacity .3s; }
 body.trading .tradebar { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
 body.trading .lens, body.trading .timebar { transform: translate(-50%, 160%); opacity: 0; pointer-events: none; }
 body.trading .caption { display: none; }
+.tb-row { display: flex; align-items: center; gap: 6px; padding: 5px 0 0 9px; }
 .tradebar .mtext { flex: 1; min-width: 0; display: grid; gap: 1px; line-height: 1.2; }
 .tradebar b { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
 .tradebar span { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
 .tradebar .mbtn[hidden] { display: none; }
+.tradebar .mbtn { max-width: 44vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tradebar #tb-alt, .tradebar #tb-dec, .tradebar #tb-take { padding: 0 11px; }
+/* A counter: the line on top, three buttons under it. */
+.tradebar.three .tb-row { flex-wrap: wrap; padding-left: 9px; }
+.tradebar.three .mtext { flex: 1 1 100%; padding-right: 9px; }
+.tradebar.three .mbtn { flex: 1; max-width: none; }
+/* The thread: the conversation above the offer line, newest at the bottom. */
+.thread { display: grid; gap: 3px; max-height: 136px; overflow-y: auto; touch-action: pan-y; -webkit-overflow-scrolling: touch; padding: 10px 9px 6px; scrollbar-width: none; overscroll-behavior: contain; }
+.thread::-webkit-scrollbar { display: none; }
+.thread:empty { display: none; }
+.thread:not(:empty) + .tb-row { border-top: 1px solid var(--line); margin-top: 2px; }
+.trow { display: flex; align-items: baseline; gap: 8px; font-size: 13.5px; line-height: 1.35; color: var(--ink); }
+.trow .tt { flex: 1; min-width: 0; }
+.thread span, .lthread span { font-size: inherit; color: inherit; white-space: normal; overflow: visible; text-overflow: clip; }
+.thread b, .lthread b { font-size: inherit; font-weight: 700; white-space: normal; overflow: visible; }
+.trow .tn { font-style: normal; }
+.trow time { flex: none; font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.trow.wait { color: var(--muted); align-items: center; }
+.trow .tdot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--gold); }
+@media (prefers-reduced-motion: no-preference) { .trow .tdot { animation: tdot 1.6s ease-in-out infinite; } }
+@keyframes tdot { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+.trow.sys { justify-content: center; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+.trow.sys .tt { flex: none; }
+@media (prefers-reduced-motion: no-preference) { .trow.new { animation: trow-in .32s cubic-bezier(.2,.9,.25,1.04) both; } }
+@keyframes trow-in { from { opacity: 0; transform: translateY(6px); } }
+/* The list: the thread in rows under each trader, with the same buttons. */
+#list .lthread { list-style: none; margin: 8px 0 2px; padding: 0 0 0 10px; border-top: 0; border-left: 2px solid var(--line); display: grid; gap: 4px; }
+.lthread .trow { font-size: 13.5px; }
+.lthread .trow.sys { justify-content: flex-start; }
+.ltrade .lacts { display: flex; gap: 6px; margin-top: 8px; }
+.pill-btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 /* The list: a trader's row reads top to bottom. */
 .ltrade .lrow { grid-template-columns: 1fr; grid-template-areas: "name" "meta" "price" "state"; }
 .ltrade .lstate { text-align: left; color: var(--deal); }
