@@ -1,0 +1,51 @@
+/* Ten flicks: the first screen is one card. The wall's chrome waits, invisible, until the wall assembles. */
+.caption { display: none !important; }
+.top, .lens { transition: opacity .6s; }
+body.decking .top, body.decking .lens { opacity: 0; }
+body.decking .lens { transition: none; }
+
+.deck { position: fixed; inset: 0; z-index: 2; pointer-events: none; }
+.deck[hidden], body.listmode .deck { display: none; }
+.deck button { pointer-events: auto; }
+.deck-top { position: absolute; left: 16px; right: 16px; bottom: calc(100% - var(--deck-top, 28%)); padding-bottom: 22px; text-align: center; }
+.deck-q { margin: 0; font: 800 30px/1.08 var(--font); font-stretch: 78%; letter-spacing: -0.012em; color: var(--ink); }
+.deck-sub { margin: 7px 0 0; font-size: 15px; color: var(--muted); }
+.deck-bot { position: absolute; left: 16px; right: 16px; top: calc(var(--deck-bot, 72%) + 22px); display: grid; justify-items: center; gap: 12px; }
+.deck-acts { display: flex; gap: 8px; }
+.deck-acts .pill-btn { height: 44px; padding: 0 16px; color: var(--ink); background: var(--panel-solid); transition: transform .15s; }
+.deck-acts .pill-btn:active { transform: scale(.95); }
+.deck-acts .pill-btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.deck-acts .pill-btn.gold { border-color: color-mix(in srgb, var(--gold) 70%, transparent); }
+.deck-bot[hidden] { display: none; }
+.deck-bot.choose { gap: 6px; }
+.deck-bot.choose .pill-btn.big { height: 50px; padding: 0 22px; font-size: 16px; font-weight: 700; color: var(--ink); background: var(--panel-solid); }
+.deck-bot.choose .pill-btn.big.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.deck-or { margin: 0; font: 600 13px var(--font); color: var(--muted); }
+.deck-n { margin: 0; display: flex; align-items: center; gap: 14px; font: 600 14px var(--font); color: var(--muted); }
+.deck-link { height: 32px; padding: 0 2px; border: 0; background: none; font: 600 14px var(--font); color: var(--ink); cursor: pointer; text-decoration: underline; text-decoration-color: var(--slot-line); text-underline-offset: 3px; }
+.deck-link[hidden] { display: none; }
+.deck-hint { margin: 0; font-size: 13px; color: var(--muted); text-align: center; transition: opacity .3s; }
+.deck-hint.gone { opacity: 0; }
+.deck-top, .deck-bot { transition: opacity .18s; }
+.deck.moving .deck-top, .deck.held .deck-bot { opacity: 0; }
+.deck.held button { pointer-events: none; }
+
+/* The list view: the same ten as rows. */
+#deck-list .ldeck { flex-wrap: wrap; padding-bottom: 10px; }
+#deck-list .ldeck .lrow { flex: 1 1 100%; cursor: default; }
+#deck-list .ldeck-acts { display: flex; gap: 6px; }
+#deck-list .ldeck-acts .pill-btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+#deck-list .deck-list-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+
+/* The import sheet (simulated): pick a source, a second of looking. */
+#imp .imp-sub { margin: 0 0 14px; color: var(--muted); font-size: 14.5px; line-height: 1.45; }
+#imp .imp-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+#imp .imp-choices .btn { height: 54px; font-size: 16px; font-weight: 700; }
+#imp .imp-choices .btn:disabled { opacity: .5; }
+#imp .imp-prog { position: relative; margin: 0 0 14px; padding-top: 10px; font-size: 14px; font-weight: 600; color: var(--ink); }
+#imp .imp-prog[hidden] { display: none; }
+#imp .imp-bar { position: absolute; left: 0; top: 0; height: 3px; border-radius: 2px; background: var(--ink); width: 0; animation: imp-look 1.1s ease-in-out forwards; }
+@keyframes imp-look { from { width: 0; } to { width: 100%; } }
+@media (prefers-reduced-motion: reduce) { #imp .imp-bar { width: 100%; animation: none; } }
+#deck-list .deck-list-imp { margin: 6px 0 4px; }
+#deck-list .deck-list-imp .pill-btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
