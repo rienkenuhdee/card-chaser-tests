@@ -4,7 +4,6 @@ const matchQ = (c, words) => { const hay = `${c.name} ${sets[c.si].name} ${c.num
 function runSearch() {
   const q = qIn.value.trim().toLowerCase();
   searchBox.classList.toggle("has", Boolean(q));
-  if (state.lens === "chase") { wl.q = q ? q.split(/\s+/) : null; state.matches = null; wl.dirty = true; drawList(); kick(); return; }
   if (!q) { state.matches = null; drawList(); kick(); return; }
   const words = q.split(/\s+/);
   const m = cards.filter((c) => matchQ(c, words));

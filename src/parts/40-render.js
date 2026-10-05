@@ -66,7 +66,6 @@ const state = { lens: "have", value: false, time: false, q: "", matches: null, f
 let view = "mosaic";
 try { const l = localStorage.getItem("wall-lens"); if (["have", "need", "chase", "trade"].includes(l)) state.lens = l; state.value = localStorage.getItem("wall-value") === "1"; } catch { /* default */ }
 function emphasis(c) {
-  if (c.away) return 0; // out on the want list: its slot in the wall is empty
   if (state.matches) return state.matches.has(c) ? 1 : 0.1;
   if (state.lens === "need") return c.owned ? 0.16 : 1;
   if (state.lens === "chase") return isChase(c) ? 1 : 0.18;
@@ -95,6 +94,9 @@ function drawTile(c, sx, sy, w, h, now, mult = 1) {
     sx += (w - w * k) / 2; sy += (h - h * k) / 2; w *= k; h *= k;
   }
   ctx.globalAlpha = alpha;
+  // A chased card out in front: while its tile is wider than it is tall it reads as a feed tile (the deal, or the
+  // most you'd pay); as it grows into the binder it becomes the card.
+  if (c.lift && !c.owned && w > h * 1.05) { drawFeedTile(c, sx, sy, w, h, alpha); ctx.globalAlpha = 1; return; }
   const value = state.value && !state.matches;
   // Marking animation: the owned face floods in from the middle.
   let flood = c.owned ? 1 : 0;
@@ -242,7 +244,7 @@ function panelStat(g) {
   const n = g.cards.length, owned = ownedNow(g.cards);
   if (state.matches) { const m = g.cards.filter((c) => state.matches.has(c)).length; return m ? `${m} found` : ""; }
   if (state.lens === "need") return `${n - owned} to go`;
-  if (state.lens === "chase") { const d = g.cards.filter(isChase).length; return d ? `${d} chasing` : ""; }
+  if (state.lens === "chase") { const d = g.cards.filter(isChase).length; return d ? `${d} to find` : "Nothing to chase"; }
   if (state.lens === "trade") { const d = g.cards.filter(isSpare).length; return d ? `${d} spare${d === 1 ? "" : "s"}` : ""; }
   if (state.value) return short(worthOf(g.cards));
   return `${owned}/${n}`;
@@ -250,7 +252,13 @@ function panelStat(g) {
 const mr = (r) => ({ x: r.x, y: r.y - mScroll, w: r.w, h: r.h });
 function drawPanel(g, now, alpha = 1, labelAlpha = 1) {
   if (!g.m) return;
-  const m = mr(g.m);
+  let m = mr(g.m);
+  // During a lens flight the panel travels too, from where it was to where it's going.
+  const T = state.trans;
+  if (T?.kind === "morph" && g.pm) {
+    const k = ease(clamp((now - T.t0 - 140) / (T.dur - 520), 0, 1)), a = mr(g.pm);
+    m = { x: a.x + (m.x - a.x) * k, y: a.y + (m.y - a.y) * k, w: a.w + (m.w - a.w) * k, h: a.h + (m.h - a.h) * k };
+  }
   if (m.y > vh || m.y + m.h < 0) return;
   ctx.globalAlpha = alpha;
   rr(m.x + PG, m.y + PG, m.w - PG * 2, m.h - PG * 2, 12);
@@ -271,21 +279,29 @@ function drawPanel(g, now, alpha = 1, labelAlpha = 1) {
   ctx.globalAlpha = 1;
 }
 function drawMosaic(now, alpha = 1, except = null) {
-  // While the want list is out the wall sits folded back and dimmed behind it.
-  const o = wl.open;
-  if (o > 0) { const k = 1 - 0.06 * o; ctx.save(); ctx.translate(vw / 2, topPad()); ctx.scale(k, k); ctx.translate(-vw / 2, -topPad()); alpha *= 1 - (theme.dark ? 0.78 : 0.84) * o; }
   for (const g of groups) {
     if (g === except) continue;
     if (g.m.y - mScroll > vh || g.m.y + g.m.h - mScroll < 0) continue;
     drawPanel(g, now, alpha);
     for (const c of g.cards) drawTile(c, c.m.x, c.m.y - mScroll, c.m.w, c.m.h, now, alpha);
   }
-  if (o > 0) ctx.restore();
 }
 // One group's binder through a camera, offset sideways (for the slide between sets).
 const binderRect = (c, C, ox = 0) => ({ x: (c.x - C.x) * C.s + ox, y: (c.y - C.y) * C.s, w: TW * c.sz * C.s, h: TH * c.sz * C.s });
 function drawSet(g, now, C = cam, ox = 0, alpha = 1) {
   drawHeader(g, now, C, ox, alpha);
+  // The lens changed inside this set: every card travels from its old slot to its new one.
+  if (shuffle && shuffle.g === g) {
+    for (const c of g.cards) {
+      if (c === state.focus) continue;
+      const k = ease(clamp((now - shuffle.t0 - c.delay) / shuffle.dur, 0, 1));
+      const x = c.px + (c.x - c.px) * k, y = c.py + (c.y - c.py) * k;
+      const r = { x: (x - C.x) * C.s + ox, y: (y - C.y) * C.s, w: TW * c.sz * C.s, h: TH * c.sz * C.s };
+      if (r.x > vw || r.x + r.w < 0 || r.y > vh || r.y + r.h < 0) continue;
+      drawTile(c, r.x, r.y, r.w, r.h, now, alpha);
+    }
+    return;
+  }
   const y0 = C.y, y1 = C.y + vh / C.s;
   const r0 = Math.max(0, Math.floor((y0 - g.head) / stepY(g))), r1 = Math.floor((y1 - g.head) / stepY(g));
   for (let k = r0 * g.cols; k < Math.min(g.cards.length, (r1 + 1) * g.cols); k++) {
@@ -314,7 +330,6 @@ function frame(now) {
   raf = 0; frameFoil = false;
   const dt = Math.min(48, now - (lastFrame || now)); lastFrame = now;
   let more = stepFly(now);
-  if (stepChaseOpen(now)) more = true;
   if (stepInertia(dt)) more = true;
   if (view === "set" && !state.trans && !fly) clampCam(state.g);
   for (const c of cards) { const t = emphasis(c); if (Math.abs(c.e - t) > 0.005) { c.e += (t - c.e) * Math.min(1, dt / 90); more = true; } else c.e = t; }
@@ -371,7 +386,7 @@ function frame(now) {
   ctx.globalAlpha = 1;
   for (const c of cards) if (c.anim) { more = true; break; }
   drawMarks();
-  if (drawChase(now)) more = true;
+  if (drawPop(now)) more = true;
   if (frameFoil) more = true; // foil keeps shimmering while a foil card is on screen
   if (state.press) more = true;
   if (state.introT0 && now - state.introT0 < 3000 && !reduced) more = true;

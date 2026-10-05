@@ -171,7 +171,7 @@ body.marking .lens { transform: translate(-50%, 160%); opacity: 0; pointer-event
 .mbtn:not(:disabled):active { transform: scale(.96); }
 
 /* Wants: the want list over the folded-back wall. Rearrange and Mark step aside; the keypad asks what you paid. */
-body.chase #arrange, body.chase #mark, body.chase .caption { display: none; }
+body.offering .caption { display: none; }
 .pay-scrim { position: fixed; inset: 0; z-index: 6; background: rgb(8 10 16 / .34); opacity: 0; pointer-events: none; transition: opacity .25s; }
 body.paying .pay-scrim { opacity: 1; pointer-events: auto; }
 .pay { position: fixed; z-index: 7; left: 50%; bottom: 0; width: min(440px, 100%); transform: translate(-50%, 110%); padding: 14px 14px calc(env(safe-area-inset-bottom, 0px) + 14px);

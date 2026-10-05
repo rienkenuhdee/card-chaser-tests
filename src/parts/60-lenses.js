@@ -15,11 +15,34 @@ function setLens(lens) {
   if (lens === "need") { const n = cards.filter((c) => !c.owned).length; toast(`${n} cards to go`); }
   if (lens === "chase") { const n = cards.filter(isChase).length, d = cards.filter((c) => isChase(c) && c.deal).length; toast(n ? `${n} on your chase list${d ? `, ${d} with a live deal` : ""}` : "Nothing on your chase list yet. Open a card and choose Chase it."); }
   if (lens === "trade") { const n = cards.filter(isSpare).length; toast(n ? `${n} spare${n === 1 ? "" : "s"} to trade` : "No spares yet. Open a card you own and choose Spare."); }
-  if (was === "chase") exitChase();
-  if (lens === "chase") enterChase();
-  layoutAll(); drawList(); updateCount(); kick();
+  if (was === "chase") closePop(true);
+  liftLayout(); drawList(); updateCount(); kick();
 }
 lensBox.querySelectorAll("button").forEach((b) => (b.onclick = () => setLens(b.dataset.lens)));
+// force: the chase list changed while it is out (Chase it, Got it, Undo), so the layout flies to its new shape.
+function liftLayout(force = false) {
+  const want = state.lens === "chase";
+  if (want === lifted && !(force && lifted)) { layoutAll(); return; }
+  const T = state.trans;
+  if (T && !(T.anim || T.t0)) { layoutAll(); return; } // fingers are holding a transition: relayout under it
+  if (T) finishTransition();
+  const now = performance.now();
+  if (view === "set" && state.g) {
+    const g = state.g;
+    if (state.focus) unfocus();
+    for (const c of g.cards) { c.px = c.x; c.py = c.y; }
+    layoutAll();
+    if (!reduced) { for (const c of g.cards) c.delay = Math.min(240, c.k * 1.4); shuffle = { g, t0: now, dur: 640, end: now + 900 }; }
+    tick(8); kick(); return;
+  }
+  for (const c of cards) c.pm = { ...c.m };
+  for (const g of groups) { g.pm = { ...g.m }; g.ripple = null; g.burst = 0; }
+  layoutAll();
+  // The chased cards leave first, so the eye follows them to the front; the rest trail in a beat behind.
+  for (const c of cards) c.delay = reduced ? 0 : Math.min(400, (c.lift ? 0 : 90) + c.g * 30 + c.k * 0.5);
+  state.trans = { kind: "morph", t0: now, dur: reduced ? 1 : 1300, done: () => { for (const g of groups) g.pm = null; kick(); } };
+  tick(10); kick();
+}
 
 // ---------- filters: Value and Time, by the search box ----------
 // They sit on top of any lens: Value colours every card by what it's worth; Time scrubs or plays through when you got

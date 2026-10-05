@@ -62,5 +62,6 @@ function setOwned(c, on, { undo = null, quiet = false } = {}) {
   if (on && owned === st.cards.length) { if (mode === "set") g.burst = now; tick(40); toast(`${st.name} complete. ${owned} of ${owned}.`, undo); }
   else if (!quiet) toast(on ? `${c.name} added. ${owned} of ${st.cards.length} in ${st.name}.` : `${c.name} taken out.`, undo);
   if (state.focus === c) fillPanel(c, 0);
+  if (lifted) liftLayout(true); // a chased card changed hands: the chase layout flies to its new shape
   updateCount(); drawList(); kick();
 }

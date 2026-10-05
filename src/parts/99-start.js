@@ -9,7 +9,6 @@ lensBox.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed",
 markFilters(); // Value is remembered; Time starts from the beginning when you pick it, so it isn't
 resize();
 started = true;
-if (state.lens === "chase") enterChase();
 setChrome();
 markMode();
 try { if (localStorage.getItem("wall-list") === "1") setListMode(true); } catch { /* fine */ }

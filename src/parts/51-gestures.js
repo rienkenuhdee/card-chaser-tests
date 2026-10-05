@@ -3,7 +3,9 @@
 // never leave a ghost finger behind (which made scrolling hit or miss). The mouse uses pointer events.
 let gesture = null, vel = { x: 0, y: 0 }, samples = [], inertia = false, firstTouch = false;
 function stepInertia(dt) {
-  if (!inertia || state.trans) return false;
+  let moving = false;
+  if (shuffle) { if (performance.now() >= shuffle.end) shuffle = null; else moving = true; }
+  if (!inertia || state.trans) return moving;
   if (view === "mosaic") {
     mScroll = clamp(mScroll - vel.y * dt, 0, mMax);
     vel.y *= Math.pow(0.95, dt / 16);
@@ -211,7 +213,11 @@ function tap(sx, sy) {
   if (state.trans) return;
   const h = hit(sx, sy);
   if (state.focus) { if (h?.card === state.focus) return; unfocus(); return; }
-  if (view === "mosaic") { if (h?.block) enterGroup(h.block); return; }
+  if (view === "mosaic") {
+    if (h?.block && lifted) { const c = liftedAt(h.block, sx, sy); if (c) return popCard(c, mr(c.m)); } // a chased card: every offer online
+    if (h?.block) enterGroup(h.block);
+    return;
+  }
   if (!h?.card) return;
   const w = TW * h.card.sz * cam.s;
   if (marking && w >= 14) return markCard(h.card, !h.card.owned); // in mark mode a tap toggles the card
