@@ -142,6 +142,7 @@ function popCard(c, from) {
   pop.c = c; pop.from = from; pop.t0 = performance.now(); pop.closing = false;
   oKind = "single"; fillOffers(c);
   offersEl.inert = false; document.body.classList.add("offering");
+  lookedAt(c); // popping a card is looking at its deal
   tick(5); kick();
 }
 function closePop(instant = false) {
@@ -207,10 +208,22 @@ function drawFeedTile(c, x, y, w, h, a, now = performance.now()) {
   ctx.globalAlpha = a;
   const tx = x + pad + mw + pad, tw = x + w - pad - tx;
   ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
-  ctx.fillStyle = deal ? theme.deal : theme.ink; font(800, 21 * s); ctx.fillText(fitText(short(c.deal ?? capOf(c)), tw), tx, y + pad + 17 * s);
+  const arrived = deal && c.dealAt > 0, price = fitText(short(c.deal ?? capOf(c)), tw);
+  ctx.fillStyle = deal ? theme.deal : theme.ink; font(800, 21 * s); ctx.fillText(price, tx, y + pad + 17 * s);
+  if (arrived && c.dealWas) { // a price drop: the old asking price, struck through
+    const pw = textW(price); font(600, 12 * s);
+    const old = short(c.dealWas), ow = textW(old), ox = tx + pw + 6 * s;
+    if (ox + ow <= tx + tw) { ctx.fillStyle = theme.muted; ctx.fillText(old, ox, y + pad + 17 * s); ctx.fillRect(ox, y + pad + 12.5 * s, ow, Math.max(1, s)); }
+  }
   ctx.fillStyle = theme.muted; font(500, 11 * s); ctx.fillText(fitText(deal ? `was ${short(c.price)}` : "the most you'd pay", tw), tx, y + pad + 31 * s);
   if (deal) { ctx.fillStyle = theme.deal; font(800, 13 * s); ctx.fillText(fitText(`${dealPct(c)}% under market`, tw), tx, y + pad + 47 * s); }
   else { ctx.fillStyle = theme.muted; font(600, 11 * s); ctx.fillText(fitText(`Market ${short(c.price)}`, tw), tx, y + pad + 47 * s); }
+  if (arrived) { // when it landed, green until you've looked; a tile that sits on screen counts as looked at
+    const ago = agoText(c.dealAt, Date.now());
+    ctx.fillStyle = c.dealSeen ? theme.muted : theme.deal; font(700, 11 * s);
+    ctx.fillText(fitText(c.dealWas ? `↓ ${ago}` : ago, tw), tx, y + pad + 62 * s);
+    if (!c.dealSeen && !state.trans && !shuffle && Date.now() - c.dealAt > 3000 && y >= topPad() - 2 && y + h <= vh - botPad() + 2) lookedAt(c);
+  }
   ctx.fillStyle = theme.ink; font(700, 14 * s, true); ctx.fillText(fitText(c.name, tw), tx, y + h - pad - 13 * s);
   ctx.fillStyle = theme.muted; font(500, 11 * s); ctx.fillText(fitText(`${st.code} ${c.num}/${st.printed}`, tw), tx, y + h - pad);
   ctx.globalAlpha = 1;

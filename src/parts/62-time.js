@@ -1,11 +1,13 @@
 // ---------- time: scrub or play through when you got each card ----------
-const T_MIN = Math.min(...cards.filter((c) => c.got).map((c) => c.got)) - 30 * 86400e3, T_MAX = () => Date.now();
+// The first date is the oldest card you got, a month early; with nothing owned yet, a year back (dates change as you mark).
+const tMin = () => { const got = cards.filter((c) => c.got).map((c) => c.got); return (got.length ? Math.min(...got) : Date.now() - 365 * 86400e3) - 30 * 86400e3; };
+const T_MAX = () => Date.now();
 const tRange = document.getElementById("t-range"), tWhen = document.getElementById("t-when"), tCount = document.getElementById("t-count"), tPlay = document.getElementById("t-play");
 state.t = Date.now();
 let lastMonth = "", playing = null;
 function setT(t, { user = false } = {}) {
-  state.t = clamp(t, T_MIN, T_MAX());
-  const p = (state.t - T_MIN) / (T_MAX() - T_MIN);
+  state.t = clamp(t, tMin(), T_MAX());
+  const p = (state.t - tMin()) / (T_MAX() - tMin());
   tRange.value = String(Math.round(p * 1000)); tRange.style.setProperty("--p", `${p * 100}%`);
   const m = monthOf(state.t);
   if (m !== lastMonth) { if (user || playing) tick(3); lastMonth = m; } // a soft detent each month
@@ -15,8 +17,8 @@ function setT(t, { user = false } = {}) {
 }
 function playTime(fromStart = false) {
   if (reduced) { setT(T_MAX()); return; }
-  const from = fromStart || state.t >= T_MAX() - 86400e3 ? T_MIN : state.t;
-  playing = { t0: performance.now(), from, dur: 7200 * (T_MAX() - from) / (T_MAX() - T_MIN) };
+  const from = fromStart || state.t >= T_MAX() - 86400e3 ? tMin() : state.t;
+  playing = { t0: performance.now(), from, dur: 7200 * (T_MAX() - from) / (T_MAX() - tMin()) };
   tPlay.setAttribute("aria-label", "Pause"); tPlay.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13M16 5.5v13" stroke-width="3"/></svg>';
   const stepT = (now) => {
     if (!playing) return;
@@ -34,12 +36,12 @@ function stopTime() {
 // The growth curve behind the slider: how many cards you had, over time.
 function drawSpark() {
   const dates = cards.filter((c) => c.owned && c.got).map((c) => c.got).sort((a, b) => a - b);
-  const N = 120, span = T_MAX() - T_MIN, pts = [];
+  const N = 120, span = T_MAX() - tMin(), pts = [];
   let k = 0;
-  for (let i = 0; i <= N; i++) { const t = T_MIN + span * i / N; while (k < dates.length && dates[k] <= t) k++; pts.push([i / N * 1000, 40 - (k / Math.max(1, dates.length)) * 38]); }
+  for (let i = 0; i <= N; i++) { const t = tMin() + span * i / N; while (k < dates.length && dates[k] <= t) k++; pts.push([i / N * 1000, 40 - (k / Math.max(1, dates.length)) * 38]); }
   const line = pts.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`).join("");
   document.getElementById("t-line").setAttribute("d", line);
   document.getElementById("t-area").setAttribute("d", `${line}L1000,40L0,40Z`);
 }
 tPlay.onclick = () => (playing ? stopTime() : playTime());
-tRange.addEventListener("input", () => { stopTime(); setT(T_MIN + (T_MAX() - T_MIN) * Number(tRange.value) / 1000, { user: true }); });
+tRange.addEventListener("input", () => { stopTime(); setT(tMin() + (T_MAX() - tMin()) * Number(tRange.value) / 1000, { user: true }); });

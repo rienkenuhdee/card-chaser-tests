@@ -10,6 +10,7 @@ function focus(c, dir = 0) {
   const S = TH * c.sz, s = Math.min(ch / S, maxS() * 1.4);
   const cy = top + avail / 2;
   flyTo({ s, x: c.x + TW * c.sz / 2 - vw / 2 / s, y: c.y + S / 2 - cy / s }, dir ? 360 : 520);
+  lookedAt(c); // bringing a card up close is looking at its deal
   tick(6);
 }
 function unfocus() {
