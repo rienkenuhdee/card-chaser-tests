@@ -84,7 +84,10 @@ scaffolding, not the idea. Dropped: the round 7 deal lift (replaced by this), th
 
 **Chrome, after round 9.** Ryan's reshuffle: the lens bar is Have, Need, Chase, Trade (Wants became Chase; Trade is your
 spares, made up for now, with Spare on any card you own). Value and Time moved up by the search box as filters that
-combine with any lens. A settings cog by the info button holds appearance, the list view and reset.
+combine with any lens. A settings cog by the info button holds appearance, the list view and reset. Chase is a feed
+rather than a list: the tiles look like the cards (the round 7 deal tile, green with the asking price and percent
+under, or the most you'd pay), two across on a phone. Tap one and the card pops up with every copy online to swipe
+through, and a Single, Pack, Box switch looks for the packs and boxes it comes in, with the odds of pulling it.
 
 ## Open questions (next rounds)
 

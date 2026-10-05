@@ -72,6 +72,13 @@
   <p class="hint">Flick the card to move along the set. Drag the wall to leave.</p>
 </section>
 <div class="toast" id="toast" role="status"></div>
+<div class="offers glass" id="offers" role="dialog" aria-labelledby="o-name" inert>
+  <div class="o-head"><div class="o-title"><b id="o-name"></b><span id="o-meta"></span></div><button class="ib" id="o-close" aria-label="Put the card back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="seg o-seg" role="group" aria-label="What to look for"><button type="button" data-kind="single" aria-pressed="true">Single</button><button type="button" data-kind="pack" aria-pressed="false">Pack</button><button type="button" data-kind="box" aria-pressed="false">Box</button></div>
+  <p class="o-sub" id="o-sub"></p>
+  <div class="o-row" id="o-row"></div>
+  <div class="o-acts"><button type="button" class="mbtn primary" id="o-got">Got it</button><button type="button" class="mbtn" id="o-flag">Chasing ✓</button></div>
+</div>
 <div class="pay-scrim" id="pay-scrim"></div>
 <div class="pay glass" id="pay" role="dialog" aria-labelledby="pay-q" inert>
   <div class="pay-head"><b id="pay-q">What did you pay?</b><span id="pay-sub"></span></div>
@@ -86,7 +93,7 @@
     <li><b>Tap a set</b> (or spread two fingers on it) to open it. Its cards grow into a binder. Scroll down it; flick sideways for the next set; pinch out or tap back to close it.</li>
     <li><b>Tap a card</b> to bring it up close. Flick it sideways to move along the set.</li>
     <li><b>Have, Need, Chase, Trade</b> at the bottom are lenses: they recolor the wall rather than taking you somewhere else.</li>
-    <li><b>Chase</b> is your chase list: the cards you're after deal out of the wall as tiles, live deals first. Tap the circle when you get one and say what you paid. <b>Chase it</b> on any card adds it; <b>Spare</b> on a card you own puts it up for trade.</li>
+    <li><b>Chase</b> is your chase list: the cards you're after deal out of the wall as a feed of tiles, live deals first. Tap one and it pops up with every copy online: swipe through them, or switch to the packs and boxes it comes in. Got it asks what you paid. <b>Chase it</b> on any card adds it; <b>Spare</b> on a card you own puts it up for trade.</li>
     <li><b>Filters</b> (top, by the search) add <b>Value</b>, the more it's worth the hotter, and <b>Time</b>: scrub or play through when you got each card.</li>
     <li><b>Search</b> flies you to the cards that match.</li>
     <li><b>Press and hold</b> any card to mark it, then keep the finger down and sweep along the row. <b>Mark</b> (top, inside a set) does the same by tapping: a handful at once, Done sums it up. <b>Tap the count</b> to see everything again.</li>

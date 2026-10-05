@@ -87,9 +87,11 @@ function gotIt(c) {
   openPay(c);
 }
 
-// ----- the list model -----
-const ROW_H = 86, ROW_GAP = 8, HEAD_H = 34, SET_GAP = 14, PW = 42, PH = Math.round(PW * TH / TW), LX = 10, CIRC = 40;
-const wl = { on: false, rows: [], heads: new Map(), items: [], ghosts: [], H: 0, Hcur: 0, scroll: 0, vel: 0, inertia: false, drag: null, q: null, dirty: false, closing: false, open: 0, from: 0, to: 0, t0: 0, last: 0 };
+// ----- the feed model: card tiles in a grid, by set -----
+// Each card you're chasing is a tile that looks like the card: the live deal in green with the asking price, "was"
+// and how far under, or the most you'd pay. Two across on a phone, more on a wide screen, scannable like a feed.
+const HEAD_H = 34, SET_GAP = 14, TILE_GAP = 8, LX = 10;
+const wl = { on: false, rows: [], heads: new Map(), items: [], ghosts: [], H: 0, Hcur: 0, scroll: 0, vel: 0, inertia: false, drag: null, q: null, dirty: false, closing: false, open: 0, from: 0, to: 0, t0: 0, last: 0, pop: null };
 const flights = [];
 let safeTop = 0, safeBot = 0;
 const readSafe = () => { const cs = getComputedStyle(document.documentElement); safeTop = parseFloat(cs.paddingTop) || 0; safeBot = parseFloat(cs.paddingBottom) || 0; };
@@ -106,12 +108,14 @@ function homeRect(c) {
   return { x: px + (r.x - px) * k, y: py + (r.y - py) * k, w: r.w * k, h: r.h * k };
 }
 const listX = () => Math.max(LX, (vw - 600) / 2), listW = () => vw - listX() * 2;
-const pocketRect = (r) => ({ x: listX() + r.dx + CIRC + 6, y: listTop() + r.ycur + (ROW_H - PH) / 2, w: PW, h: PH });
+const feedCols = () => clamp(Math.floor((listW() + TILE_GAP) / (150 + TILE_GAP)), 2, 4);
+const tileRect = (r) => ({ x: listX() + r.cx, y: listTop() + r.ycur, w: r.w, h: r.h });
 // Sets oldest first, reading down; within a set the live deals lead (best discount first), then the most you'd pay.
 const rowOrder = (a, b) => (b.c.deal ? 1 : 0) - (a.c.deal ? 1 : 0) || (a.c.deal && b.c.deal ? dealPct(b.c) - dealPct(a.c) : 0) || capOf(b.c) - capOf(a.c) || a.c.i - b.c.i;
 function layoutItems() {
   const bySet = new Map();
   for (const r of wl.rows) { if (wl.q && !matchQ(r.c, wl.q)) continue; if (!bySet.has(r.c.si)) bySet.set(r.c.si, []); bySet.get(r.c.si).push(r); }
+  const cols = feedCols(), tw = (listW() - TILE_GAP * (cols - 1)) / cols, th = Math.round(tw * 0.64);
   const items = []; let y = 0;
   for (const si of [...bySet.keys()].sort((a, b) => a - b)) {
     const rs = bySet.get(si).sort(rowOrder);
@@ -119,36 +123,41 @@ function layoutItems() {
     h.n = rs.length; h.live = rs.filter((r) => r.c.deal).length; h.cy = y; h.rows = rs; y += HEAD_H;
     if (h.ycur == null) h.ycur = h.cy;
     items.push(h);
-    for (const r of rs) { r.cy = y; if (r.ycur == null) r.ycur = r.cy; r.head = h; y += ROW_H + ROW_GAP; items.push(r); }
-    y += SET_GAP - ROW_GAP;
+    rs.forEach((r, i) => {
+      const col = i % cols, row = Math.floor(i / cols);
+      r.cx = col * (tw + TILE_GAP); r.cy = y + row * (th + TILE_GAP); r.w = tw; r.h = th;
+      if (r.ycur == null) r.ycur = r.cy; r.head = h; items.push(r);
+    });
+    y += Math.ceil(rs.length / cols) * (th + TILE_GAP) - TILE_GAP + SET_GAP;
   }
   for (const si of [...wl.heads.keys()]) if (!bySet.has(si)) wl.heads.delete(si);
-  wl.items = items; wl.H = Math.max(0, y - (SET_GAP - ROW_GAP));
+  wl.items = items; wl.H = Math.max(0, y - SET_GAP);
   if (wl.Hcur === 0 || reduced) wl.Hcur = wl.H;
   wl.scroll = clamp(wl.scroll, 0, Math.max(0, wl.H - availH()));
 }
-// The list follows the wants: a card marked owned leaves, a card wanted again deals back out.
+// The feed follows the chase list: a card marked owned leaves, a card chased again deals back out.
 function syncChase(now) {
   const want = new Set();
   for (const c of cards) if (isChase(c)) want.add(c);
   let changed = wl.dirty;
   for (const r of [...wl.rows]) if (!want.has(r.c)) { leaveRow(r, now); changed = true; }
   const have = new Set(wl.rows.map((r) => r.c)), fresh = [];
-  for (const c of want) if (!have.has(c)) { const r = { kind: "row", c, cy: 0, ycur: null, a: 0, dx: 0, armed: false }; wl.rows.push(r); fresh.push(r); c.away = true; changed = true; }
+  for (const c of want) if (!have.has(c)) { const r = { kind: "row", c, cx: 0, cy: 0, w: 0, h: 0, ycur: null, a: 0 }; wl.rows.push(r); fresh.push(r); c.away = true; changed = true; }
   if (changed) { layoutItems(); wl.dirty = false; }
-  if (fresh.length) { fresh.sort((a, b) => b.cy - a.cy); fresh.forEach((r, i) => dealRow(r, Math.min(900, i * 22))); }
+  if (fresh.length) { fresh.sort((a, b) => b.cy - a.cy || b.cx - a.cx); fresh.forEach((r, i) => dealRow(r, Math.min(900, i * 22))); }
 }
 function dealRow(r, delay) {
   const c = r.c, cur = c.flight?.cur;
-  startFlight({ c, row: r, kind: "deal", from: cur ? { ...cur } : () => homeRect(c), to: () => pocketRect(r), dur: 560, delay, lift: 28, done: () => { r.a = 1; kick(); } });
+  startFlight({ c, row: r, kind: "deal", from: cur ? { ...cur } : () => homeRect(c), to: () => tileRect(r), dur: 560, delay, lift: 28, done: () => { r.a = 1; kick(); } });
 }
 function leaveRow(r, now) {
   wl.rows.splice(wl.rows.indexOf(r), 1);
-  const from = r.c.flight?.cur ? { ...r.c.flight.cur } : pocketRect(r);
-  wl.ghosts.push({ kind: "ghost", c: r.c, y: listTop() + r.ycur, dx: r.dx, a: r.a, t0: now });
+  if (wl.pop?.c === r.c) closePop(true);
+  const from = r.c.flight?.cur ? { ...r.c.flight.cur } : tileRect(r);
+  wl.ghosts.push({ kind: "ghost", c: r.c, x: listX() + r.cx, y: listTop() + r.ycur, w: r.w, h: r.h, a: r.a, t0: now });
   startFlight({ c: r.c, kind: "home", from, to: () => homeRect(r.c), dur: 620, delay: 0, lift: 26, done: () => { r.c.away = false; kick(); } });
 }
-// ----- flights: the tile itself travelling between its panel and the list -----
+// ----- flights: the tile itself travelling between its panel and the feed -----
 function startFlight(f) {
   if (f.c.flight) flights.splice(flights.indexOf(f.c.flight), 1);
   f.t0 = performance.now() + (reduced ? 0 : f.delay || 0); f.c.flight = f; f.c.away = true;
@@ -163,7 +172,10 @@ function stepFlights(now) {
     f.cur = r;
     if (f.row) f.row.a = Math.max(f.row.a, clamp((p - 0.45) / 0.4, 0, 1));
     if (p > 0 && p < 1 && r.w > 10) { ctx.globalAlpha = 0.22; rr(r.x + 1, r.y + 2 + r.w * 0.06, r.w, r.h, r.w * 0.045); ctx.fillStyle = "#000"; ctx.fill(); }
-    const e0 = f.c.e; f.c.e = 1; ctx.globalAlpha = 1; drawTile(f.c, r.x, r.y, r.w, r.h, now); f.c.e = e0;
+    const e0 = f.c.e; f.c.e = 1; ctx.globalAlpha = 1;
+    // Landing in the feed, the card tile becomes its feed tile; leaving, it becomes the card again.
+    if (f.kind === "deal" && p > 0.55) drawFeedTile(f.c, r.x, r.y, r.w, r.h, 1); else drawTile(f.c, r.x, r.y, r.w, r.h, now);
+    f.c.e = e0;
     if (p >= 1) { flights.splice(flights.indexOf(f), 1); f.c.flight = null; f.done?.(); }
   }
   return true;
@@ -194,55 +206,120 @@ function enterChase() {
 }
 function exitChase() {
   if (!wl.on) return;
+  closePop(true);
   wl.on = false; wl.closing = true; wl.drag = null; wl.inertia = false; closePay();
   document.body.classList.remove("chase");
   wl.t0 = performance.now(); wl.from = wl.open; wl.to = 0;
-  const rows = [...wl.rows].sort((a, b) => a.cy - b.cy);
-  rows.forEach((r, i) => { const from = r.c.flight?.cur ? { ...r.c.flight.cur } : pocketRect(r); startFlight({ c: r.c, kind: "home", from, to: () => homeRect(r.c), dur: 560, delay: Math.min(500, i * 14), lift: 24, done: () => { r.c.away = false; kick(); } }); });
+  const rows = [...wl.rows].sort((a, b) => a.cy - b.cy || a.cx - b.cx);
+  rows.forEach((r, i) => { const from = r.c.flight?.cur ? { ...r.c.flight.cur } : tileRect(r); startFlight({ c: r.c, kind: "home", from, to: () => homeRect(r.c), dur: 560, delay: Math.min(500, i * 14), lift: 24, done: () => { r.c.away = false; kick(); } }); });
   wl.q = null;
   const q = qIn.value.trim().toLowerCase(); state.matches = q ? new Set(cards.filter((c) => matchQ(c, q.split(/\s+/)))) : null;
   drawList(); kick();
 }
 
-// ----- drawing the list (after the wall, every frame) -----
+// ----- offers: every copy online, for the single card, the packs it comes in, or the boxes -----
+// Made up for the demo, seeded by card id so runs compare.
+const SOURCES = ["eBay", "TCGplayer", "Card Chaser"], CONDS = ["Near mint", "Near mint", "Lightly played", "Moderately played"];
+const packOdds = (c) => [3, 9, 36, 120, 180, 400, 900][clamp(c.tier, 0, 6)];
+function offersFor(c, kind) {
+  const st = sets[c.si], r = (k) => h32(`${c.id}|${kind}|${k}`), out = [];
+  const vintage = st.year < 2010, packBase = vintage ? 160 + r("b") * 420 : 3.8 + r("b") * 5;
+  if (kind === "single") {
+    const n = 3 + Math.floor(r("n") * 4);
+    for (let i = 0; i < n; i++) out.push({ title: `${c.name} ${c.num}/${st.printed}`, price: Math.round(c.price * (0.82 + r(`p${i}`) * 0.55) * 100) / 100, src: SOURCES[Math.floor(r(`s${i}`) * 3)], cond: CONDS[Math.floor(r(`c${i}`) * 4)], ship: r(`f${i}`) < 0.4 ? 0 : Math.round((0.99 + r(`h${i}`) * 4) * 100) / 100, q: `pokemon ${c.name} ${c.num}/${st.printed} ${st.name}` });
+    if (c.deal) out.push({ title: `${c.name} ${c.num}/${st.printed}`, price: c.deal, src: "eBay", cond: "Near mint", ship: 0, q: `pokemon ${c.name} ${c.num}/${st.printed} ${st.name}`, live: true });
+    out.sort((a, b) => a.price - b.price);
+  } else if (kind === "pack") {
+    const n = 3 + Math.floor(r("n") * 2);
+    for (let i = 0; i < n; i++) out.push({ title: `${st.name} booster pack`, price: Math.round(packBase * (0.9 + r(`p${i}`) * 0.35) * 100) / 100, src: SOURCES[Math.floor(r(`s${i}`) * 3)], cond: vintage && r(`v${i}`) < 0.5 ? "Heavy pack" : "Sealed", ship: r(`f${i}`) < 0.5 ? 0 : Math.round((0.99 + r(`h${i}`) * 3) * 100) / 100, q: `${st.name} booster pack sealed`, odds: `About 1 in ${packOdds(c)} packs` });
+    out.sort((a, b) => a.price - b.price);
+  } else {
+    const boxes = Math.max(1, Math.round(packOdds(c) / 36));
+    out.push({ title: `${st.name} booster box, 36 packs`, price: Math.round(packBase * 33 * (0.92 + r("x") * 0.2)), src: SOURCES[Math.floor(r("s0") * 3)], cond: "Sealed", ship: 0, q: `${st.name} booster box sealed`, odds: `About 1 in ${boxes} box${boxes === 1 ? "" : "es"}` });
+    out.push({ title: `${st.name} booster box, 36 packs`, price: Math.round(packBase * 33 * (1.02 + r("y") * 0.25)), src: SOURCES[Math.floor(r("s1") * 3)], cond: "Sealed", ship: Math.round((4.99 + r("h1") * 10) * 100) / 100, q: `${st.name} booster box sealed`, odds: `About 1 in ${boxes} box${boxes === 1 ? "" : "es"}` });
+    if (!vintage) out.push({ title: `${st.name} elite trainer box, 9 packs`, price: Math.round(packBase * 10 * (1 + r("z") * 0.3)), src: "TCGplayer", cond: "Sealed", ship: 0, q: `${st.name} elite trainer box`, odds: `About 1 in ${Math.max(1, Math.round(packOdds(c) / 9))} boxes` });
+    if (vintage) out.push({ title: `${st.name} sealed pack lot of 6`, price: Math.round(packBase * 5.6), src: "eBay", cond: "Sealed", ship: 0, q: `${st.name} booster pack lot sealed`, odds: `About 1 in ${Math.max(1, Math.round(packOdds(c) / 6))} lots` });
+  }
+  return out;
+}
+const offersEl = document.getElementById("offers"), oName = document.getElementById("o-name"), oMeta = document.getElementById("o-meta"), oSub = document.getElementById("o-sub"), oRow = document.getElementById("o-row"), oGot = document.getElementById("o-got"), oFlag = document.getElementById("o-flag");
+let oKind = "single";
+function fillOffers(c) {
+  const st = sets[c.si], list = offersFor(c, oKind);
+  oName.textContent = c.name;
+  oMeta.textContent = `${st.name}, ${st.code} ${c.num}/${st.printed}. Market ${money(c.price)}, you'd pay up to ${money(capOf(c))}.`;
+  oSub.textContent = oKind === "single" ? `${list.length} copies online, cheapest first. Swipe through them.` : oKind === "pack" ? `${packOdds(c) > 36 ? "A long shot in a pack" : "A fair pull from a pack"}: ${list[0].odds.toLowerCase()}.` : `Sealed, with the odds of this card inside.`;
+  offersEl.querySelectorAll("[data-kind]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.kind === oKind)));
+  oRow.innerHTML = list.map((o, i) => `<article class="offer${o.live ? " live" : ""}"><b>${money(o.price)}</b><span class="osrc">${o.src}${o.live ? ", the live deal" : ""}</span><span class="ocond">${o.title}</span><span class="ocond">${o.cond}${o.ship ? `, ${money(o.ship)} shipping` : ", free shipping"}${o.odds ? `. ${o.odds}` : ""}</span><button type="button" class="mbtn obuy" data-q="${o.q.replace(/"/g, "&quot;")}">Open on ${o.src === "Card Chaser" ? "Card Chaser" : o.src}</button></article>`).join("");
+  oRow.scrollLeft = 0;
+  oFlag.textContent = isChase(c) ? "Chasing ✓" : "Chase it";
+}
+oRow.addEventListener("click", (e) => { const b = e.target.closest("[data-q]"); if (b) window.open(`https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(b.dataset.q)}&_sop=15`, "_blank", "noopener"); });
+offersEl.querySelectorAll("[data-kind]").forEach((b) => (b.onclick = () => { oKind = b.dataset.kind; tick(3); if (wl.pop) fillOffers(wl.pop.c); }));
+document.getElementById("o-close").onclick = () => closePop();
+oGot.onclick = () => { const c = wl.pop?.c; if (!c) return; closePop(true); gotIt(c); };
+oFlag.onclick = () => { const c = wl.pop?.c; if (!c) return; chasing[c.id] = !isChase(c); persistChase(); fillOffers(c); drawList(); tick(5); if (!isChase(c)) { closePop(); toast(`${c.name} off your chase list.`, () => { chasing[c.id] = true; persistChase(); kick(); }); } kick(); };
+// The card pops up out of its tile, over the dimmed feed, with the offers sheet under it.
+function popCard(r) {
+  if (wl.pop) return;
+  const from = tileRect(r);
+  wl.pop = { c: r.c, row: r, from, t0: performance.now(), closing: false };
+  oKind = "single"; fillOffers(r.c);
+  offersEl.inert = false; document.body.classList.add("offering");
+  tick(5); kick();
+}
+function closePop(instant = false) {
+  const p = wl.pop; if (!p) return;
+  offersEl.inert = true; document.body.classList.remove("offering");
+  if (instant || reduced) { wl.pop = null; kick(); return; }
+  p.closing = true; p.t0 = performance.now(); kick();
+}
+function popRect(p) {
+  const sheet = offersEl.offsetHeight || vh * 0.46, top = listTopY(), bot = vh - sheet - 14;
+  const h = Math.min((bot - top) * 0.92, vw * 0.78 * TH / TW), w = h * TW / TH;
+  return { x: (vw - w) / 2, y: top + (bot - top - h) / 2, w, h };
+}
+function drawPop(now) {
+  const p = wl.pop; if (!p) return false;
+  const k = reduced ? 1 : clamp((now - p.t0) / 360, 0, 1), e = ease(p.closing ? 1 - k : k);
+  const a = p.from, b = popRect(p);
+  const r = { x: a.x + (b.x - a.x) * e, y: a.y + (b.y - a.y) * e, w: a.w + (b.w - a.w) * e, h: a.h + (b.h - a.h) * e };
+  ctx.globalAlpha = 0.55 * e; ctx.fillStyle = theme.bg; ctx.fillRect(0, 0, vw, vh);
+  ctx.globalAlpha = 0.28 * e; rr(r.x + 2, r.y + 8, r.w, r.h, r.w * 0.045); ctx.fillStyle = "#000"; ctx.fill();
+  const e0 = p.c.e; p.c.e = 1; ctx.globalAlpha = 1;
+  if (e < 0.35) drawFeedTile(p.c, r.x, r.y, r.w, r.h, 1); else drawTile(p.c, r.x, r.y, r.w, r.h, now);
+  p.c.e = e0; ctx.globalAlpha = 1;
+  if (p.closing && k >= 1) { wl.pop = null; return false; }
+  return k < 1;
+}
+
+// ----- drawing the feed (after the wall, every frame) -----
 function stepChaseOpen(now) {
   if (wl.open === wl.to) return false;
   const p = reduced ? 1 : clamp((now - wl.t0) / 480, 0, 1);
   wl.open = wl.from + (wl.to - wl.from) * ease(p);
   return p < 1;
 }
-function drawRow(r, y, now) {
-  const a = r.a; if (a <= 0.01) return;
-  const x0 = listX(), W = listW(), c = r.c, st = sets[c.si], dx = r.dx;
-  if (Math.abs(dx) > 1) { // the "Got it" strip under a tile as it slides
-    const reveal = clamp(Math.abs(dx) / 80, 0, 1);
-    rr(x0, y, W, ROW_H, 12); ctx.globalAlpha = a * reveal; ctx.fillStyle = theme["panel-solid"]; ctx.fill();
-    ctx.globalAlpha = a * reveal * (r.armed ? 1 : 0.6); ctx.fillStyle = theme.deal; ctx.fill();
-    ctx.globalAlpha = a * reveal;
-    ctx.fillStyle = "#fff"; font(800, 18, true); ctx.textBaseline = "middle"; ctx.textAlign = dx > 0 ? "left" : "right";
-    ctx.fillText("Got it", dx > 0 ? x0 + 20 : x0 + W - 20, y + ROW_H / 2);
-  }
+let tintKey = "", tintVal = "";
+function dealTint() { const k = theme.slot + theme.deal; if (k !== tintKey) { tintKey = k; tintVal = mix(theme.slot, theme.deal, theme.dark ? 0.16 : 0.09); } return tintVal; }
+// A feed tile: the card as a deal (green: asking price, was, how far under) or as a chase (the most you'd pay).
+function drawFeedTile(c, x, y, w, h, a) {
+  const st = sets[c.si], deal = Boolean(c.deal), rad = Math.min(12, w * 0.07);
   ctx.globalAlpha = a;
-  const rx = x0 + dx;
-  rr(rx, y, W, ROW_H, 12); ctx.fillStyle = theme["panel-solid"]; ctx.fill();
-  ctx.lineWidth = 1; ctx.strokeStyle = theme["slot-line"]; ctx.stroke();
-  // The circle: tap it when you get the card (the way a reminder is ticked off).
-  ctx.beginPath(); ctx.arc(rx + CIRC / 2 + 2, y + ROW_H / 2, 11, 0, Math.PI * 2); ctx.lineWidth = 1.5; ctx.strokeStyle = r.armed ? theme.deal : theme["slot-line"]; ctx.stroke();
-  if (!c.flight) { const p = pocketRect(r); p.y = y + (ROW_H - PH) / 2; const e0 = c.e; c.e = 1; drawTile(c, p.x, p.y, p.w, p.h, now, a); c.e = e0; ctx.globalAlpha = a; }
-  const tx = rx + CIRC + PW + 18, capW = 128, tw = W - (CIRC + PW + 18) - capW - 8;
-  ctx.textBaseline = "alphabetic"; ctx.textAlign = "left"; ctx.fillStyle = theme.ink;
-  font(800, 20, true); ctx.fillText(fitText(c.name, tw), tx, y + 36);
-  font(500, 13.5); ctx.fillStyle = theme.muted;
-  ctx.fillText(fitText(`${st.code} ${c.num}/${st.printed}, ${c.rname}`, tw), tx, y + 58);
+  rr(x, y, w, h, rad); ctx.fillStyle = deal ? dealTint() : theme["panel-solid"]; ctx.fill();
+  ctx.lineWidth = deal ? 1.5 : 1; ctx.strokeStyle = deal ? theme.deal : theme["slot-line"]; ctx.stroke();
+  if (w < 60) { ctx.globalAlpha = 1; return; }
+  const pad = Math.max(8, w * 0.06), s = clamp(w / 177, 0.6, 1.3);
+  ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
+  ctx.fillStyle = deal ? theme.deal : theme.ink; font(800, 22 * s); ctx.fillText(short(c.deal ?? capOf(c)), x + pad, y + pad + 18 * s);
+  ctx.fillStyle = theme.muted; font(500, 11.5 * s); ctx.fillText(deal ? `was ${short(c.price)}` : "the most you'd pay", x + pad, y + pad + 33 * s);
   ctx.textAlign = "right";
-  if (c.deal) {
-    // A live deal: the asking price leads, with what it was and how far under.
-    ctx.fillStyle = theme.deal; font(800, 26); ctx.fillText(money(c.deal), rx + W - 14, y + 40);
-    ctx.fillStyle = theme.muted; font(600, 12); ctx.fillText(`was ${short(c.price)}, ${dealPct(c)}% under`, rx + W - 14, y + 62);
-  } else {
-    ctx.fillStyle = theme.muted; font(600, 12); ctx.fillText("Pay up to", rx + W - 14, y + 30);
-    ctx.fillStyle = theme.ink; font(800, 26); ctx.fillText(money(capOf(c)), rx + W - 14, y + 62);
-  }
+  if (deal) { ctx.fillStyle = theme.deal; font(800, 20 * s); ctx.fillText(`${dealPct(c)}%`, x + w - pad, y + pad + 18 * s); ctx.fillStyle = theme.muted; font(600, 10.5 * s); ctx.fillText("under market", x + w - pad, y + pad + 33 * s); }
+  else { ctx.fillStyle = theme.muted; font(600, 11.5 * s); ctx.fillText(`Market ${short(c.price)}`, x + w - pad, y + pad + 18 * s); }
+  ctx.textAlign = "left"; ctx.fillStyle = theme.ink;
+  font(700, 14.5 * s, true); ctx.fillText(fitText(c.name, w - pad * 2), x + pad, y + h - pad - 14 * s);
+  ctx.fillStyle = theme.muted; font(500, 11 * s); ctx.fillText(fitText(`${st.code} ${c.num}/${st.printed}, ${c.rname}`, w - pad * 2), x + pad, y + h - pad);
+  ctx.globalAlpha = 1;
 }
 function drawHead(h, y) {
   if (h.a <= 0.01) return;
@@ -262,7 +339,7 @@ function drawEmpty() {
 }
 // Returns whether another frame is needed.
 function drawChase(now) {
-  if (!(wl.on || wl.closing || flights.length || wl.ghosts.length)) return false;
+  if (!(wl.on || wl.closing || flights.length || wl.ghosts.length || wl.pop)) return false;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   const dt = Math.min(48, now - (wl.last || now)); wl.last = now;
   let more = false;
@@ -281,92 +358,84 @@ function drawChase(now) {
     if (it.kind === "row") {
       const ta = wl.closing ? 0 : it.c.flight ? it.a : 1;
       if (Math.abs(it.a - ta) > 0.01) { it.a += (ta - it.a) * (reduced ? 1 : Math.min(1, dt / 160)); more = true; } else it.a = ta;
-      if (!wl.drag || wl.drag.row !== it) { if (Math.abs(it.dx) > 0.5) { it.dx *= reduced ? 0 : Math.pow(0.8, dt / 16); more = true; } else it.dx = 0; }
     } else it.a = it.rows.reduce((m, r) => Math.max(m, r.a), 0);
-    const y = top + it.ycur, h = it.kind === "head" ? HEAD_H : ROW_H;
+    const y = top + it.ycur, h = it.kind === "head" ? HEAD_H : it.h;
     if (y > vh || y + h < topY) continue;
-    if (it.kind === "head") drawHead(it, y); else drawRow(it, y, now);
+    if (it.kind === "head") drawHead(it, y);
+    else if (it.a > 0.01 && !it.c.flight && wl.pop?.row !== it) drawFeedTile(it.c, listX() + it.cx, y, it.w, it.h, it.a);
   }
   for (const g of [...wl.ghosts]) {
-    g.a *= reduced ? 0 : Math.pow(0.75, dt / 16); g.dx += g.dx * dt * 0.01;
+    g.a *= reduced ? 0 : Math.pow(0.75, dt / 16);
     if (g.a < 0.03) { wl.ghosts.splice(wl.ghosts.indexOf(g), 1); continue; }
-    drawRow(g, g.y, now); more = true;
+    rr(g.x, g.y, g.w, g.h, 12); ctx.globalAlpha = g.a * 0.5; ctx.fillStyle = theme["panel-solid"]; ctx.fill(); ctx.globalAlpha = 1; more = true;
   }
   if (wl.on && !wl.items.length && !flights.length) drawEmpty();
   ctx.restore();
   if (stepFlights(now)) more = true;
+  if (drawPop(now)) more = true;
   if (wl.closing && wl.open <= 0 && !flights.length) { wl.closing = false; wl.rows = []; wl.items = []; wl.heads.clear(); wl.ghosts = []; wl.H = wl.Hcur = 0; }
   ctx.globalAlpha = 1;
   return more || wl.closing;
 }
 
-// ----- input: while the list is out it owns the touches that start on the canvas -----
-const ARM = () => Math.min(150, vw * 0.38);
-function rowAt(x, y) {
+// ----- input: while the feed is out it owns the touches that start on the canvas -----
+function tileAt(x, y) {
   if (y < listTopY()) return null;
-  const top = listTop();
-  for (const it of wl.items) { if (it.kind !== "row") continue; const ry = top + it.ycur; if (y >= ry && y <= ry + ROW_H && x >= listX() && x <= listX() + listW()) return it; }
+  const top = listTop(), x0 = listX();
+  for (const it of wl.items) { if (it.kind !== "row") continue; const ry = top + it.ycur, rx = x0 + it.cx; if (y >= ry && y <= ry + it.h && x >= rx && x <= rx + it.w) return it; }
   return null;
 }
 function chaseDown(x, y) {
   wl.inertia = false; hideCaption(); if (document.activeElement === qIn) qIn.blur();
-  wl.drag = { x, y, t: performance.now(), s0: wl.scroll, row: rowAt(x, y), axis: null, samples: [{ x, y, t: performance.now() }] };
+  wl.drag = { x, y, t: performance.now(), s0: wl.scroll, row: tileAt(x, y), moved: false, samples: [{ x, y, t: performance.now() }] };
 }
 function chaseMove(x, y) {
   const d = wl.drag; if (!d) return;
-  const dx = x - d.x, dy = y - d.y, now = performance.now();
+  const dy = y - d.y, now = performance.now();
   d.samples.push({ x, y, t: now }); if (d.samples.length > 8) d.samples.shift();
-  if (!d.axis) { if (Math.hypot(dx, dy) < 8) return; d.axis = d.row && Math.abs(dx) > Math.abs(dy) * 1.3 ? "x" : "y"; }
-  if (d.axis === "x") {
-    const r = d.row; r.dx = clamp(dx, -vw, vw);
-    const armed = Math.abs(r.dx) > ARM(); if (armed !== r.armed) { r.armed = armed; tick(armed ? 6 : 3); }
-  } else wl.scroll = clamp(d.s0 + dy, 0, Math.max(0, wl.H - availH()));
+  if (!d.moved && Math.hypot(x - d.x, dy) < 8) return;
+  d.moved = true;
+  wl.scroll = clamp(d.s0 + dy, 0, Math.max(0, wl.H - availH()));
   kick();
 }
 function chaseUp(x, y, cancelled) {
   const d = wl.drag; if (!d) return; wl.drag = null;
-  if (cancelled) { if (d.row) d.row.armed = false; kick(); return; }
+  if (cancelled) { kick(); return; }
   const now = performance.now();
-  const s0 = d.samples.find((s) => now - s.t < 90) || d.samples[0], last = d.samples[d.samples.length - 1];
-  const vx = s0 && s0 !== last ? (last.x - s0.x) / Math.max(1, last.t - s0.t) : 0, vy = s0 && s0 !== last ? (last.y - s0.y) / Math.max(1, last.t - s0.t) : 0;
-  if (d.axis === "x") {
-    const r = d.row, flick = Math.abs(r.dx) > 48 && Math.abs(vx) > 0.7 && Math.sign(vx) === Math.sign(r.dx);
-    r.armed = false;
-    if (Math.abs(r.dx) > ARM() || flick) gotIt(r.c);
+  if (d.moved) {
+    const s0 = d.samples.find((s) => now - s.t < 90) || d.samples[0], last = d.samples[d.samples.length - 1];
+    const vy = s0 && s0 !== last ? (last.y - s0.y) / Math.max(1, last.t - s0.t) : 0;
+    if (!reduced && Math.abs(vy) > 0.2) { wl.vel = vy; wl.inertia = true; }
     kick(); return;
   }
-  if (d.axis === "y") { if (!reduced && Math.abs(vy) > 0.2) { wl.vel = vy; wl.inertia = true; } kick(); return; }
-  // A tap: the circle means you got it; the rest of the tile says what it's worth.
-  if (d.row) {
-    const c = d.row.c;
-    if (x <= listX() + CIRC + 4) return gotIt(c);
-    tick(4); toast(`${c.name}: market ${money(c.price)}. Tap the circle when you get it.`);
-  }
+  if (d.row) popCard(d.row); // a tap: the card pops up with every offer online
 }
 const chaseOwn = () => wl.on || wl.closing;
 for (const type of ["touchstart", "touchmove", "touchend", "touchcancel"]) document.addEventListener(type, (e) => {
   if (!chaseOwn() || e.target !== canvas) return;
   e.stopImmediatePropagation(); e.preventDefault();
   if (paying() || !wl.on) return;
+  if (wl.pop) { if (type === "touchend") closePop(); return; } // a touch on the dimmed feed puts the card back
   const ts = e.touches;
   if (type === "touchstart") { if (ts.length !== 1) { chaseUp(null, null, true); return; } chaseDown(ts[0].clientX, ts[0].clientY); }
   else if (type === "touchmove") { if (ts.length !== 1) { chaseUp(null, null, true); return; } chaseMove(ts[0].clientX, ts[0].clientY); }
   else if (!ts.length) { const p = e.changedTouches[0]; chaseUp(p?.clientX, p?.clientY, type === "touchcancel"); }
 }, { capture: true, passive: false });
 let chaseMouse = false;
-document.addEventListener("pointerdown", (e) => { if (e.pointerType !== "mouse" || !chaseOwn() || e.target !== canvas) return; e.stopImmediatePropagation(); if (paying() || !wl.on) return; chaseMouse = true; chaseDown(e.clientX, e.clientY); }, true);
+document.addEventListener("pointerdown", (e) => { if (e.pointerType !== "mouse" || !chaseOwn() || e.target !== canvas) return; e.stopImmediatePropagation(); if (paying() || !wl.on) return; if (wl.pop) { closePop(); return; } chaseMouse = true; chaseDown(e.clientX, e.clientY); }, true);
 document.addEventListener("pointermove", (e) => { if (e.pointerType !== "mouse" || !chaseMouse) return; e.stopImmediatePropagation(); chaseMove(e.clientX, e.clientY); }, true);
 for (const type of ["pointerup", "pointercancel"]) document.addEventListener(type, (e) => { if (e.pointerType !== "mouse" || !chaseMouse) return; chaseMouse = false; e.stopImmediatePropagation(); chaseUp(e.clientX, e.clientY, type === "pointercancel"); }, true);
 document.addEventListener("wheel", (e) => {
   if (!chaseOwn() || e.target !== canvas) return;
   e.stopImmediatePropagation(); e.preventDefault();
-  if (!wl.on) return;
+  if (!wl.on || wl.pop) return;
   wl.scroll = clamp(wl.scroll - e.deltaY, 0, Math.max(0, wl.H - availH())); kick();
 }, { capture: true, passive: false });
 canvas.addEventListener("keydown", (e) => {
   if (!wl.on) return;
   if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.stopImmediatePropagation(); e.preventDefault(); wl.scroll = clamp(wl.scroll + (e.key === "ArrowUp" ? 120 : -120), 0, Math.max(0, wl.H - availH())); kick(); }
-  else if (e.key === "Escape" || e.key === "Backspace") { e.stopImmediatePropagation(); e.preventDefault(); setLens("have"); }
+  else if (e.key === "Escape" || e.key === "Backspace") { e.stopImmediatePropagation(); e.preventDefault(); if (wl.pop) closePop(); else setLens("have"); }
 }, true);
+addEventListener("keydown", (e) => { if (e.key === "Escape" && wl.pop && !paying()) { e.preventDefault(); closePop(); } });
 addEventListener("resize", () => { readSafe(); wl.dirty = true; kick(); });
 readSafe();
