@@ -231,12 +231,12 @@ function tap(sx, sy) {
   if (picking() && !state.focus && h?.block) return togglePick(h.block); // which sets do you collect?
   if (state.focus) { if (h?.card === state.focus) return; unfocus(); return; }
   if (view === "mosaic") {
-    const ch = chipAt(sx, sy); if (ch) return openTable(ch.t, ch); // a trader: the table
+    const ch = chipAt(sx, sy); if (ch) return startTrade(ch.t, ch); // a trader: how to trade, then the table
     if (h?.block && lifted) {
       const c = liftedAt(h.block, sx, sy);
       if (c && state.lens === "trade") { // a spare: the table with whoever wants it
         const who = wantedBy(c);
-        if (who.length) { const chip = strip?.chips.find((x) => x.t === who[0]); return openTable(who[0], chip); }
+        if (who.length) { const chip = strip?.chips.find((x) => x.t === who[0]); return startTrade(who[0], chip); }
         tick(3); return toast(`Nobody is chasing ${c.name} yet.`);
       }
       if (c) return popCard(c, mr(c.m)); // a chased card: every offer online

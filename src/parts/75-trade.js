@@ -255,6 +255,20 @@ function cardAt(x, y) {
   const c = list[col * L.rows + row];
   return c && c.spot !== "table" && !c.held ? c : null;
 }
+// Starting a trade: in person (the table) or online (coming soon). A thread already open skips the question.
+const howEl = document.getElementById("trade-how"), howHead = document.getElementById("th-head");
+let howPend = null;
+function startTrade(t, from) {
+  if (tbl.on || state.trans) return;
+  if (activeOf(t) || lastOf(t)) { openTable(t, from); return; }
+  howPend = { t, from }; howHead.textContent = `Trade with ${t.name}`; howEl.hidden = false; tick(4);
+  howEl.querySelector('[data-how="person"]').focus();
+}
+function hideHow() { howEl.hidden = true; howPend = null; }
+howEl.querySelector('[data-how="person"]').onclick = () => { const p = howPend; hideHow(); if (p) openTable(p.t, p.from); };
+howEl.querySelector('[data-how="online"]').onclick = () => { toast("Online trades are coming soon. For now, trade in person."); };
+addEventListener("pointerdown", (e) => { if (!howEl.hidden && !e.target.closest("#trade-how")) hideHow(); }, true);
+howEl.addEventListener("keydown", (e) => { if (e.key === "Escape") hideHow(); });
 function openTable(t, from) {
   if (tbl.on || state.trans) return;
   hideCaption(); cancelPress(); closePop(true);
