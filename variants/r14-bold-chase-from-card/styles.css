@@ -1,0 +1,28 @@
+/* Chase more like this: a row of one-tap rules under Chase it, on the card panel and in the Chase pop. */
+.morelike { display: grid; gap: 6px; min-width: 0; }
+.morelike[hidden] { display: none; }
+.ml-head { margin: 0; font: 700 12.5px var(--font); color: var(--muted); }
+.ml-row { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -18px; padding: 2px 18px; touch-action: pan-x; -webkit-overflow-scrolling: touch; }
+.ml-row::-webkit-scrollbar { display: none; }
+.offers .ml-row { margin: 0 -14px; padding: 2px 14px; }
+.chip { flex: none; display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 11px 0 12px; border-radius: 10px; border: 1px solid var(--line); background: none; color: var(--ink); cursor: pointer; white-space: nowrap;
+  transition: transform .15s, background .2s, border-color .2s; }
+.chip b { font: 600 13.5px var(--font); font-stretch: 90%; }
+.chip span { font: 700 12px var(--font); color: var(--muted); font-variant-numeric: tabular-nums; }
+.chip:hover { background: var(--line); }
+.chip:active { transform: scale(.96); }
+.chip[aria-pressed="true"] { border-color: var(--gold); background: color-mix(in srgb, var(--gold) 16%, transparent); }
+.chip[aria-pressed="true"] span { color: var(--gold); }
+.chip[aria-pressed="true"] b::before { content: "✓ "; color: var(--gold); }
+
+/* Your chases: rows with counts and Remove, under the four layouts in the top-left menu. */
+.chases { border-top: 1px solid var(--line); margin-top: 4px; padding-top: 4px; display: grid; gap: 2px; max-height: 42vh; overflow-y: auto; touch-action: pan-y; overscroll-behavior: contain; scrollbar-width: none; }
+.chases::-webkit-scrollbar { display: none; }
+.chases[hidden] { display: none; }
+.ch-head { margin: 0; padding: 6px 12px 2px; font: 700 11.5px var(--font); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.chrow { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px; }
+.arrange-menu .chgo { grid-template-columns: 1fr; padding: 7px 12px; min-width: 0; }
+.arrange-menu .chgo b { font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.arrange-menu .chgo small { font-size: 12.5px; }
+.arrange-menu .chrm { display: block; padding: 8px 10px; font: 600 13px var(--font); color: var(--muted); border-radius: 8px; }
+.arrange-menu .chrm:hover, .arrange-menu .chrm:focus-visible { color: var(--ink); }

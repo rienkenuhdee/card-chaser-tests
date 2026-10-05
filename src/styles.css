@@ -101,6 +101,13 @@ body.focused .panel { transform: translate(-50%, 0); }
 /* Rearrange menu */
 .arrange-menu { position: fixed; z-index: 6; top: calc(env(safe-area-inset-top, 0px) + 66px); left: max(10px, calc(50% - 310px)); width: min(290px, calc(100vw - 20px)); padding: 5px; border-radius: 14px; display: grid; gap: 2px; transform-origin: top left; }
 .arrange-menu[hidden] { display: none; }
+/* How to trade: a small choice before the table, above the lens bar. */
+.arrange-menu.tradehow { top: auto; bottom: calc(env(safe-area-inset-bottom, 0px) + 78px); left: 50%; transform: translateX(-50%); transform-origin: bottom center; width: min(320px, calc(100vw - 20px)); }
+.tradehow .th-head { margin: 0; padding: 8px 12px 4px; font: 700 13px var(--font); color: var(--muted); }
+.tradehow button[aria-disabled="true"] { cursor: default; }
+.tradehow button[aria-disabled="true"] b, .tradehow button[aria-disabled="true"] small { opacity: .55; }
+.tradehow .soon { font: 700 11px var(--font); color: var(--bg); background: var(--muted); border-radius: 8px; padding: 2px 6px; justify-self: end; width: auto; }
+.tradehow .tick { opacity: 1; color: var(--muted); font-size: 18px; }
 .arrange-menu button { display: grid; grid-template-columns: 1fr 16px; align-items: center; gap: 10px; text-align: left; border: 0; background: none; padding: 10px 12px; border-radius: 10px; cursor: pointer; }
 .arrange-menu button:hover, .arrange-menu button:focus-visible { background: var(--line); }
 .arrange-menu b { display: block; font-size: 15px; font-stretch: 85%; }
