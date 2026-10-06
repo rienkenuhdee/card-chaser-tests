@@ -21,11 +21,25 @@ function stepInertia(dt) {
 function hit(sx, sy, nearest = false) {
   if (state.trans) return null;
   if (view === "mosaic") {
+    if (room.on && room.closing) return null;
+    if (room.on && room.anim) finishRoomAnim();
     const y = sy + mScroll;
-    for (const g of groups) if (g.m && sx >= g.m.x && sx <= g.m.x + g.m.w && y >= g.m.y && y <= g.m.y + g.m.h) return { block: g };
+    if (room.on) {
+      for (const g of caseList()) {
+        if (g.fanR && inR(g.fanR, sx, y)) return { block: g.fanBtn };
+        if (g === room.fan) for (const r of fanRows(g)) if (inR(r.m, sx, y)) return { block: r };
+        if (inR(g.m, sx, y)) return { block: g };
+      }
+      if (!nearest) return null;
+      let best = null, bd = Infinity;
+      for (const g of caseList()) { const dx = Math.max(g.m.x - sx, 0, sx - g.m.x - g.m.w), dy = Math.max(g.m.y - y, 0, y - g.m.y - g.m.h), d = Math.hypot(dx, dy); if (d < bd) { bd = d; best = g; } }
+      return best && bd < 60 ? { block: best } : null;
+    }
+    if (inR(DOOR.m, sx, y)) return { block: DOOR };
+    for (const g of groups) if (g.m && !inCase(g) && inR(g.m, sx, y)) return { block: g };
     if (!nearest) return null;
     let best = null, bd = Infinity;
-    for (const g of groups) { if (!g.m) continue; const dx = Math.max(g.m.x - sx, 0, sx - g.m.x - g.m.w), dy = Math.max(g.m.y - y, 0, y - g.m.y - g.m.h), d = Math.hypot(dx, dy); if (d < bd) { bd = d; best = g; } }
+    for (const g of groups) { if (!g.m || inCase(g)) continue; const dx = Math.max(g.m.x - sx, 0, sx - g.m.x - g.m.w), dy = Math.max(g.m.y - y, 0, y - g.m.y - g.m.h), d = Math.hypot(dx, dy); if (d < bd) { bd = d; best = g; } }
     return best && bd < 60 ? { block: best } : null;
   }
   const g = state.g; if (!g) return null;
@@ -122,6 +136,14 @@ function pinchMove(a, b) {
   const g = gesture, d = dist(a, b), m = mid(a, b), r = d / g.d0, now = evT || performance.now();
   if (g.snap) return;
   if (view === "mosaic") {
+    if (room.on) {
+      if (room.pinch || (r < 1 && !state.trans)) {
+        if (!room.pinch) { room.pinch = { q0: room.q, qs: [] }; room.anim = null; }
+        room.q = clamp(room.pinch.q0 - (1 - r) / 0.55, 0, 1); room.pinch.qs.push({ q: room.q, t: now }); kick(); return;
+      }
+      if (!g.g?.done) return;
+    } else if (g.g?.door) { if (r > 1.12) { g.snap = true; openRoom(); } return; }
+    else if (g.g && (g.g.fan || g.g.pick)) return;
     if (!g.g) return;
     const q = clamp((r - 1) / 1.1, 0, 1);
     if (!state.trans && q > 0.01) state.trans = openTrans(g.g, 0, fitCam(g.g));
@@ -133,7 +155,6 @@ function pinchMove(a, b) {
   g.m = m; g.r = r;
   if (s < f.s * 0.995) {
     if (g.noClose) { Object.assign(cam, f); kick(); return; }
-    // Pinching out of a framed set closes it, under your fingers, measured from where the fingers crossed the frame.
     if (!state.trans) { Object.assign(cam, f); state.trans = openTrans(state.g, 1, f); g.closeD = d * (f.s / s); }
     if (!state.trans.anim) { const q = clamp(1 - (1 - d / (g.closeD || d)) / 0.6, 0, 1); state.trans.q = q; g.qs.push({ q, t: now }); }
     kick(); return;
@@ -150,18 +171,25 @@ function pinchMove(a, b) {
 function releasePinch() {
   const g = gesture, T = state.trans;
   if (g.snap) return;
+  if (room.pinch) {
+    const qs = room.pinch.qs, last = qs[qs.length - 1]; room.pinch = null;
+    let first = qs.find((s) => last && last.t - s.t < 160);
+    if (qs.length >= 2 && (first === last || qs.indexOf(last) - qs.indexOf(first) < 2)) first = qs[Math.max(0, qs.length - 3)];
+    const v = first && last && first !== last ? (last.q - first.q) / Math.max(8, last.t - first.t) : 0;
+    const to = Math.abs(v) > 0.0011 ? (v > 0 ? 1 : 0) : room.q > 0.5 ? 1 : 0;
+    if (to === 0) closeRoom(); else { room.anim = { from: room.q, to: 1, t0: performance.now(), dur: 160 + 300 * (1 - room.q) }; kick(); }
+    return;
+  }
   if (T?.kind === "open" && !T.anim) {
-    // Speed over the last tenth of a second of movement (at least the last two samples).
     const qs = g.qs, last = qs[qs.length - 1];
     let first = qs.find((s) => last && last.t - s.t < 160);
     if (qs.length >= 2 && (first === last || qs.indexOf(last) - qs.indexOf(first) < 2)) first = qs[Math.max(0, qs.length - 3)];
-    const v = first && last && first !== last ? (last.q - first.q) / Math.max(8, last.t - first.t) : 0; // q per ms
+    const v = first && last && first !== last ? (last.q - first.q) / Math.max(8, last.t - first.t) : 0;
     let to;
     if (Math.abs(v) > 0.0011) to = v > 0 ? 1 : 0;
     else to = T.q > (view === "mosaic" ? 0.35 : 0.65) ? 1 : 0;
     settle(to);
   } else if (view === "set" && state.g && cam.s < fitCam(state.g).s) flyTo(fitCam(state.g), 260);
-  // A spread that zooms well in lands on the card under the fingers, centred, the way a tap would.
   else if (view === "set" && state.g && !g.noClose && g.r > 1.15 && g.m && cam.s > fitCam(state.g).s * 1.8) {
     const h = hit(g.m.x, g.m.y);
     let c = h?.card || null;

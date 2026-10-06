@@ -14,7 +14,7 @@ function font(weight, size, narrow = false) {
 }
 function readTheme() {
   const cs = getComputedStyle(document.documentElement);
-  for (const k of ["bg", "slot", "slot-line", "ink", "muted", "deal", "gold", "panel", "panel-solid", "paper", "paper-ink", "plaque", "plaque-ink", "plaque-hi", "plaque-lo"]) theme[k] = cs.getPropertyValue(`--${k}`).trim();
+  for (const k of ["bg", "slot", "slot-line", "ink", "muted", "deal", "gold", "panel", "panel-solid", "paper", "paper-ink", "plaque", "plaque-ink", "plaque-hi", "plaque-lo", "door", "door-hi", "door-ink", "door-muted", "room-bg", "room-bg2", "room-wood", "room-wood-hi", "room-ink", "room-muted", "room-plaque", "room-plaque-ink", "room-plaque-lo", "room-up", "room-down"]) theme[k] = cs.getPropertyValue(`--${k}`).trim();
   theme.panelFill = cs.getPropertyValue("--panel-fill").trim();
   if (typeof heatCache !== "undefined") heatCache.clear();
   theme.dark = cs.colorScheme === "dark" || matchMedia("(prefers-color-scheme: dark)").matches && document.documentElement.dataset.theme !== "light";
@@ -293,19 +293,23 @@ const mr = (r) => ({ x: r.x, y: r.y - mScroll, w: r.w, h: r.h });
 function drawPanel(g, now, alpha = 1, labelAlpha = 1) {
   if (!g.m) return;
   let m = mr(g.m), k = 1;
-  // During a lens flight the panel travels too, from where it was to where it's going.
   const T = state.trans;
   if (T?.kind === "morph" && g.pm) {
     k = ease(clamp((now - T.t0 - 140) / (T.dur - 520), 0, 1)); const a = mr(g.pm);
     m = { x: a.x + (m.x - a.x) * k, y: a.y + (m.y - a.y) * k, w: a.w + (m.w - a.w) * k, h: a.h + (m.h - a.h) * k };
   }
   if (m.y > vh || m.y + m.h < 0) return;
-  if (g.done || g.minting) { drawPlaque(g, m, now, alpha, labelAlpha); return; } // a trophy
+  if (inCase(g)) {
+    if (room.on) { drawRoomPlaque(g, m, now, alpha, labelAlpha); return; }
+    if (k < 1 && m.h >= 30) drawPlaque(g, m, now, alpha * (1 - k), 0); // coming down from the shelf: it shrinks through the door
+    return;
+  }
+  if (g.done || g.minting) { drawPlaque(g, m, now, alpha, labelAlpha); return; }
   ctx.globalAlpha = alpha;
   rr(m.x + PG, m.y + PG, m.w - PG * 2, m.h - PG * 2, 12);
   ctx.fillStyle = theme.panelFill; ctx.fill();
   if (state.press?.g === g) { ctx.lineWidth = 1.5; ctx.strokeStyle = theme.ink; ctx.stroke(); }
-  if (g.unmint && k < 1) drawPlaque(g, m, now, alpha * (1 - k), 0); // a plaque coming back to the wall fades into its panel
+  if (g.unmint && k < 1) drawPlaque(g, m, now, alpha * (1 - k), 0);
   ctx.globalAlpha = alpha * labelAlpha;
   const x = m.x + PG + 10, w = m.w - PG * 2 - 20;
   const size = clamp(m.w * 0.075, 12, 17);
@@ -324,8 +328,7 @@ function drawPanel(g, now, alpha = 1, labelAlpha = 1) {
   drawBar(g, x, m.y + PG + 30, w, 2, now);
   ctx.globalAlpha = 1;
 }
-function drawMosaic(now, alpha = 1, except = null) {
-  // While you pick your sets, the ones you haven't ticked sit back a little once you've ticked one.
+function drawWall(now, alpha = 1, except = null) {
   const pick = picking() && wel.picks.size > 0;
   let settling = false;
   for (const g of groups) {
@@ -334,12 +337,32 @@ function drawMosaic(now, alpha = 1, except = null) {
     if (Math.abs(g.pe - t) > 0.01) { g.pe += (t - g.pe) * (reduced ? 1 : 0.16); settling = true; } else g.pe = t;
     if (g === except) continue;
     if (g.m.y - mScroll > vh || g.m.y + g.m.h - mScroll < 0) continue;
+    if (room.on && inCase(g)) continue;
     const a = alpha * g.pe;
     drawPanel(g, now, a);
+    if (inCase(g)) continue; // its strip is part of the door, drawn below the tiles
     for (const c of g.cards) drawTile(c, c.m.x, c.m.y - mScroll, c.m.w, c.m.h, now, a);
   }
-  if (!except && !state.trans) { drawNewPanel(now, alpha); drawCaseLabel(alpha); }
+  if (!except && !state.trans) { drawNewPanel(now, alpha); drawDoor(now, alpha); }
+  if (!state.trans) for (const g of groups) { if (!inCase(g) || room.on) continue; if (g.m.y - mScroll > vh || g.m.y + g.m.h - mScroll < 0) continue; for (const c of g.cards) drawTile(c, c.m.x, c.m.y - mScroll, c.m.w, c.m.h, now, alpha * g.pe); }
   if (settling) kick();
+}
+function drawMosaic(now, alpha = 1, except = null) {
+  if (!room.on) { drawWall(now, alpha, except); return; }
+  if (stepRoomAnim(now)) kick();
+  if (!room.on) { drawWall(now, alpha, except); return; } // the close just finished
+  const q = room.q;
+  if (q >= 1) { drawRoom(now, alpha, except); return; }
+  // Opening or closing: the wall slides off to the left and dims as the room slides in from the right.
+  const keep = mScroll; mScroll = room.wallScroll;
+  ctx.save(); ctx.translate(-vw * 0.3 * q, 0); drawWall(now, alpha, null); ctx.restore();
+  mScroll = keep;
+  ctx.fillStyle = `rgb(0 0 0 / ${(0.45 * q).toFixed(3)})`; ctx.fillRect(0, 0, vw, vh);
+  ctx.save(); ctx.translate(vw * (1 - q), 0);
+  ctx.shadowColor = "rgb(0 0 0 / .5)"; ctx.shadowBlur = 30; ctx.fillStyle = theme["room-bg"]; ctx.fillRect(0, 0, vw, vh); ctx.shadowBlur = 0; ctx.shadowColor = "transparent";
+  drawRoom(now, alpha, except);
+  ctx.restore();
+  kick();
 }
 // One group's binder through a camera, offset sideways (for the slide between sets).
 const binderRect = (c, C, ox = 0) => ({ x: (c.x - C.x) * C.s + ox, y: (c.y - C.y) * C.s, w: TW * c.sz * C.s, h: TH * c.sz * C.s });

@@ -15,7 +15,7 @@ const persistDone = () => { try { localStorage.setItem("wall-done", JSON.stringi
 const doneKey = (g) => (g.set ? `${g.set.id}|${scopeOf(g.set)}` : g.key);
 const finishOf = (g) => (g.set || g.chase ? done[doneKey(g)] || null : null);
 const isPut = (g) => Boolean(finishOf(g)?.put);
-const onShelf = (g) => { const f = finishOf(g); return Boolean(f?.put && Date.now() - f.at < DAY); }; // the first day on the shelf at the top; then the case
+const onShelf = (g) => { const f = finishOf(g); return Boolean(f?.put && !f.moved && Date.now() - f.at < DAY); }; // the first day on the shelf at the top (unless moved on early); then the trophy room
 const trophyName = (g) => { const s = g.set ? scopeOf(g.set) : "set"; return `${g.name}${s === "master" ? " master set" : s === "grand" ? " grand set" : ""}`; };
 
 // ----- the bar: how far along, and gold ticks for the missing cards you're after (cached until a count changes) -----
@@ -130,7 +130,7 @@ function shelfMorph(landing = null) {
 }
 
 // ----- the shelf along the top (the first day) and the trophy case at the end of the wall (after that) -----
-const PLQ_H = 72, CASE_LABEL = 26; // a plaque row, margins included (the plate is 60)
+const PLQ_H = 72; // a plaque row, margins included (the plate is 60)
 let shelf = null, trophyCase = null, shelfTimer = 0; // in mosaic coordinates
 const plateOf = (m) => ({ x: m.x + PG, y: m.y + PG, w: m.w - PG * 2, h: m.h - PG * 2 });
 function plaqueRows(list, R, y) {
@@ -148,27 +148,13 @@ function shelfLayout(R) {
   if (!dn.length) { shelf = null; syncShelfPad(); return 0; }
   const h = plaqueRows(dn, R, R.y) + 2;
   shelf = { y: R.y, h };
-  // When the newest's day is up it moves down to the case: the wall reflows on its own.
   const next = Math.min(...dn.map((g) => finishOf(g).at + DAY)) - Date.now() + 100;
-  shelfTimer = setTimeout(() => { if (view === "mosaic" && !state.trans && !gesture && !tbl.on) shelfMorph(); else { layoutAll(); kick(); } }, clamp(next, 100, 2e9));
+  shelfTimer = setTimeout(() => { if (view === "mosaic" && !state.trans && !gesture && !tbl.on && !room.on) shelfMorph(); else { layoutAll(); kick(); } }, clamp(next, 100, 2e9));
   syncShelfPad();
   return h;
 }
-function caseLayout(R, y) {
-  const dn = groups.filter((g) => g.done && !onShelf(g)).sort(byFinish);
-  if (!dn.length) { trophyCase = null; return 0; }
-  trophyCase = { x: R.x, y, w: R.w, h: CASE_LABEL };
-  return CASE_LABEL + plaqueRows(dn, R, y + CASE_LABEL) + 2;
-}
 // The toast and the deal bar live where the shelf is: while it shows, they sit just under it.
-function syncShelfPad() { document.body.style.setProperty("--shelf-h", view === "mosaic" && shelf && mode === "set" ? `${shelf.h}px` : "0px"); }
-function drawCaseLabel(alpha) {
-  const t = trophyCase; if (!t || state.trans) return;
-  const m = mr(t); if (m.y > vh || m.y + m.h < 0) return;
-  ctx.globalAlpha = alpha; ctx.fillStyle = theme.muted; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; font(700, 12.5, true);
-  ctx.fillText("Trophies", m.x + PG + 10, m.y + 19);
-  ctx.globalAlpha = 1;
-}
+function syncShelfPad() { document.body.style.setProperty("--shelf-h", view === "mosaic" && shelf && mode === "set" && !room.on ? `${shelf.h}px` : "0px"); }
 // The engraving: the group's cards packed tight as a strip of colour along the bottom of the plate. The tiles live
 // there (so opening the plaque grows them into the album, and the minting flight lands them there).
 const ENGR_H = 10;
@@ -250,19 +236,19 @@ function toggleShelf(g) {
   }
   leaveBinderThen(g, () => {
     const e = finishOf(g); if (!e) return;
-    e.put = true; persistDone(); drawList();
+    e.put = true; delete e.moved; persistDone(); drawList();
     if (view === "mosaic" && !state.trans && !reduced) mintFlight(g); else { if (view === "mosaic") mScroll = 0; layoutAll(); kick(); }
     toast(`${trophyName(g)} is on the shelf.`, () => { const x = finishOf(g); if (!x) return; x.put = false; g.unmint = true; persistDone(); if (view === "mosaic") { if (state.trans) finishTransition(); shelfMorph(); } else { layoutAll(); kick(); } drawList(); });
   });
 }
-// To the case now: a trophy on its first day goes down to the case with the rest without waiting for the day to end.
+// To the case now: a trophy on its first day goes into the trophy room without waiting for the day to end.
 function putAway(g) {
   const f = finishOf(g); if (!f?.put) return;
   tick(6);
   leaveBinderThen(g, () => {
-    f.at = Math.min(f.at, Date.now() - DAY - 1000); persistDone(); drawList();
+    f.moved = true; persistDone(); drawList();
     if (view === "mosaic" && !state.trans && !reduced) shelfMorph(); else { layoutAll(); kick(); }
-    toast(`${trophyName(g)} is in the case with the rest.`);
+    toast(`${trophyName(g)} is in the trophy room.`);
   });
 }
 const finishedText = (gs) => (gs.length === 1 ? `${trophyName(gs[0])} finished. It's on the shelf, worth ${money(worthOf(gs[0].base))}.` : `${gs.map(trophyName).join(" and ")} finished. They're on the shelf.`);
@@ -270,9 +256,9 @@ const finishedText = (gs) => (gs.length === 1 ? `${trophyName(gs[0])} finished. 
 function trophyListHTML(show, rows) {
   const fin = groups.filter((g) => g.done).sort(byFinish);
   if (!fin.length) return "";
-  return `<section class="lshelf"><h2>Trophies</h2><p class="lsub">Finished and sealed. Back to the wall puts one among the others again.</p>${fin.map((g) => {
-    const f = finishOf(g), items = g.cards.filter(show);
-    return `<h3 class="lfin">${esc(trophyName(g))}</h3><p class="lsub lfin-line"><span>Finished ${dayOf(f.at)}, worth ${money(worthOf(g.base))}.${onShelf(g) ? " On the shelf today." : ""}</span><button type="button" class="pill-btn" data-shelf="${esc(doneKey(g))}">Back to the wall</button></p>${items.length ? rows(items) : ""}`;
+  return `<section class="lshelf"><h2>Trophies</h2><p class="lsub">Finished and sealed. On the shelf for a day, then in the trophy room. Back to the wall puts one among the others again.</p>${fin.map((g) => {
+    const f = finishOf(g), items = g.cards.filter(show), s = seriesOf(g);
+    return `<h3 class="lfin">${esc(trophyName(g))}</h3><p class="lsub lfin-line"><span>Finished ${dayOf(f.at)}, worth ${money(worthOf(g.base))}. ${deltaText(s.delta)}.${onShelf(g) ? " On the shelf today." : " In the trophy room."}</span><button type="button" class="pill-btn" data-shelf="${esc(doneKey(g))}">Back to the wall</button></p>${items.length ? rows(items) : ""}`;
   }).join("")}</section>`;
 }
 document.getElementById("list").addEventListener("click", (e) => {
@@ -282,4 +268,4 @@ document.getElementById("list").addEventListener("click", (e) => {
   toast(`${trophyName(g)} is back on the wall.`, () => { const x = finishOf(g); if (!x) return; x.put = true; persistDone(); layoutAll(); drawList(); kick(); });
 });
 // Debug builds only: the tests' hook sees the shelf.
-setTimeout(() => { if (window.__w) Object.defineProperties(window.__w, { done: { get: () => done }, shelf: { get: () => shelf }, trophyCase: { get: () => trophyCase }, syncDone: { value: syncDone }, toggleShelf: { value: toggleShelf }, markAllInSet: { value: markAllInSet }, enterGroup: { value: enterGroup }, enterMark: { value: enterMark }, leaveMark: { value: leaveMark }, setOwned: { value: setOwned }, layoutAll: { value: layoutAll } }); }, 0);
+setTimeout(() => { if (window.__w) Object.defineProperties(window.__w, { done: { get: () => done }, shelf: { get: () => shelf }, trophyCase: { get: () => trophyCase }, room: { get: () => room }, openRoom: { value: openRoom }, closeRoom: { value: closeRoom }, caseList: { value: caseList }, toggleFan: { value: toggleFan }, seriesOf: { value: seriesOf }, shelfMorph: { value: shelfMorph }, syncDone: { value: syncDone }, toggleShelf: { value: toggleShelf }, markAllInSet: { value: markAllInSet }, enterGroup: { value: enterGroup }, enterMark: { value: enterMark }, leaveMark: { value: leaveMark }, setOwned: { value: setOwned }, layoutAll: { value: layoutAll } }); }, 0);

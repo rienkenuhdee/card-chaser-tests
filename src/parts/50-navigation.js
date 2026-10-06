@@ -3,9 +3,10 @@
 const backBtn = document.getElementById("back");
 function setChrome() {
   document.body.classList.toggle("inset", view === "set" || tbl.on);
-  backBtn.hidden = view !== "set" && !tbl.on;
+  backBtn.hidden = view !== "set" && !tbl.on && !room.on;
+  backBtn.setAttribute("aria-label", room.on && view !== "set" ? "Back to the wall" : "Back to everything");
   markBtn.hidden = view !== "set" || marking;
-  document.getElementById("where").textContent = tbl.on ? `Trade with ${tbl.t.name}` : view === "set" && state.g ? state.g.name : "";
+  document.getElementById("where").textContent = tbl.on ? `Trade with ${tbl.t.name}` : view === "set" && state.g ? state.g.name : room.on ? "Trophy room" : "";
   if (marking && view !== "set") leaveMark();
   syncShelfPad(); updateCount();
 }
@@ -24,15 +25,18 @@ function settled(T) {
 }
 function enterGroup(g, { then = null } = {}) {
   if (state.trans) return;
+  if (g.door) { openRoom(); return; }
+  if (g.fan) { toggleFan(g.fan); return; }
+  if (g.pick) { openScope(g.pick.g, g.pick.scope); return; }
   hideCaption(); tick(8);
   state.trans = openTrans(g, 0, fitCam(g)); state.trans.then = then;
   settle(1, 720);
 }
 function exitToMosaic() {
   if (state.trans || view !== "set") return;
+  if (room.on && state.g && !inCase(state.g)) endRoom();
   unfocus(); tick(6);
   inertia = false; fly = null;
-  // Bring the panel it came from into view first, so the cards have somewhere to land.
   const m = state.g.m; if (m.y - mScroll < topPad() || m.y + m.h - mScroll > vh - botPad()) mScroll = clamp(m.y - topPad() - 10, 0, mMax);
   state.trans = openTrans(state.g, 1, cam);
   settle(0, 620);
@@ -54,4 +58,4 @@ function bump(d) {
   flyTo({ ...cam, x: cam.x + (d * 24) / cam.s }, 130);
   setTimeout(() => flyTo(a, 240), 140);
 }
-backBtn.onclick = () => { if (tbl.on) closeTable(); else exitToMosaic(); };
+backBtn.onclick = () => { if (tbl.on) closeTable(); else if (view === "set") exitToMosaic(); else if (room.on) closeRoom(); };

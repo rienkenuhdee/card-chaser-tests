@@ -28,7 +28,7 @@ function setTheme(t) {
 prefs.querySelectorAll("[data-theme]").forEach((b) => (b.onclick = () => setTheme(b.dataset.theme)));
 
 // ---------- home: tap the count to see the whole wall ----------
-document.getElementById("count").addEventListener("click", (e) => { e.preventDefault(); if (view === "set") exitToMosaic(); });
+document.getElementById("count").addEventListener("click", (e) => { e.preventDefault(); if (view === "set") exitToMosaic(); else if (room.on) closeRoom(); });
 
 // ---------- rearrange: the sets and your chases, or price bands (under the Value filter) ----------
 function rearrange(m) {

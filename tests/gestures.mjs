@@ -43,6 +43,28 @@ for (const dpr of [1, 2]) {
   R.push(["a cancelled touch leaves no ghost finger", (await st()).my !== g0 && (await st()).view === "mosaic"]);
   g = await G(); await t.tap(g.x, g.y); await wait(200); await t.drag(195, 650, 300, 120); await wait(900);
   R.push(["a touch during the opening takes over", (await st()).view === "set" && (await st()).cy > -40]);
+  // The trophy room: a set finished two days ago sits behind the door at the end of the wall.
+  await p.evaluate(() => {
+    const g = __w.groups.filter((x) => x.set).sort((a, b) => a.base.length - b.base.length)[0], at = Date.now() - 2 * 86400e3, owned = {};
+    for (const c of g.base) owned[c.id] = { on: true, at };
+    localStorage.setItem("wall-owned", JSON.stringify(owned)); localStorage.setItem("wall-imported", "1"); localStorage.setItem("wall-welcomed", "1");
+    localStorage.setItem("wall-done", JSON.stringify({ [`${g.set.id}|set`]: { at, put: true } }));
+  });
+  await p.reload({ waitUntil: "load" }); await wait(900);
+  const u = await installTouch(p);
+  const rm = () => p.evaluate(() => ({ on: __w.room.on, q: __w.room.q, view: __w.view, my: Math.round(__w.mScroll) }));
+  const d = await p.evaluate(() => __w.trophyCase); R.push(["a trophy past its day sits behind the door", Boolean(d)]);
+  if (d) {
+    const toDoor = async () => { for (let k = 0; k < 12; k++) { const r = await p.evaluate(() => ({ y: __w.trophyCase.y - __w.mScroll })); if (r.y > 120 && r.y < 640) return r; await u.drag(200, 650, 250, 120); await wait(250); } return p.evaluate(() => ({ y: __w.trophyCase.y - __w.mScroll })); };
+    let r = await toDoor(); const wallAt = (await rm()).my;
+    await u.tap(195, r.y + 32); await wait(900); R.push(["tapping the door opens the room", (await rm()).on && (await rm()).q === 1]);
+    const pl = await p.evaluate(() => { const g = __w.caseList()[0]; return { x: g.m.x + g.m.w / 2, y: g.m.y + 40 - __w.mScroll }; });
+    await u.tap(pl.x, pl.y); await wait(1000); R.push(["a plaque in the room opens its album", (await rm()).view === "set"]);
+    await p.click("#back"); await wait(900); R.push(["back from the album returns to the room", (await rm()).on && (await rm()).view === "mosaic"]);
+    await u.pinch(195, 450, 220, 120, 90); await wait(900); R.push(["a quick pinch in the room closes it where the wall was", !(await rm()).on && Math.abs((await rm()).my - wallAt) < 4]);
+    r = await toDoor(); await u.pinch(195, r.y + 32, 40, 120, 160); await wait(900); R.push(["a spread on the door opens the room", (await rm()).on]);
+    await p.click("#back"); await wait(900); R.push(["back closes the room", !(await rm()).on]);
+  }
   R.push([`no page errors${p.errors.length ? `: ${p.errors[0]}` : ""}`, !p.errors.length]);
   failures += report(R, `[dpr ${dpr}] `);
   await p.close();
