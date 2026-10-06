@@ -148,10 +148,10 @@ function finishImport(src) {
 // Picked sets stay as panels; the rest fold to a line (every card flies to its new place, the way a lens does).
 function foldFlight(then) {
   mScroll = 0;
-  for (const c of cards) c.pm = { ...c.m };
+  for (const c of drawnCards) c.pm = { ...c.m };
   for (const g of groups) { g.pm = { ...g.m }; g.ripple = null; g.burst = 0; }
   layoutAll();
-  for (const c of cards) c.delay = reduced ? 0 : Math.min(360, c.g * 30 + c.k * 0.5);
+  for (const c of drawnCards) c.delay = reduced ? 0 : Math.min(360, c.g * 30 + c.k * 0.5);
   state.trans = { kind: "morph", t0: performance.now(), dur: reduced ? 1 : 1100, done: () => { for (const g of groups) g.pm = null; kick(); then?.(); } };
   tick(10); kick();
 }

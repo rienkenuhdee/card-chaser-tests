@@ -37,11 +37,11 @@ function liftLayout(force = false) {
     if (!reduced) { for (const c of g.cards) c.delay = Math.min(240, c.k * 1.4); shuffle = { g, t0: now, dur: 640, end: now + 900 }; }
     tick(8); kick(); return;
   }
-  for (const c of cards) c.pm = { ...c.m };
+  for (const c of drawnCards) c.pm = { ...c.m };
   for (const g of groups) { g.pm = { ...g.m }; g.ripple = null; g.burst = 0; }
   layoutAll();
   // The chased cards leave first, so the eye follows them to the front; the rest trail in a beat behind.
-  for (const c of cards) c.delay = reduced ? 0 : Math.min(400, (c.lift ? 0 : 90) + c.g * 30 + c.k * 0.5);
+  for (const c of drawnCards) c.delay = reduced ? 0 : Math.min(400, (c.lift ? 0 : 90) + c.g * 30 + c.k * 0.5);
   state.trans = { kind: "morph", t0: now, dur: reduced ? 1 : 1300, done: () => { for (const g of groups) g.pm = null; kick(); } };
   tick(10); kick();
 }

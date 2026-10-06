@@ -72,8 +72,9 @@ function glowChase() {
 }
 // You looked at it: the card popped up, or came up close, or its tile sat on screen in the Chase lens.
 function lookedAt(c) {
-  if (!c.dealAt || c.dealSeen) return;
-  c.dealSeen = true; syncBadge();
+  const b = c.base || c;
+  if (!b.dealAt || b.dealSeen) return;
+  b.dealSeen = true; syncBadge();
 }
 // Where the tile is on screen right now, or the edge it is beyond.
 function tileStart(c) {
@@ -88,7 +89,7 @@ function showArrival(c, drop) {
   const now = performance.now(), g = groups[c.g];
   // In the Chase lens the tile slides to the front of its set (a deal leads).
   if (lifted && !state.focus) { if (state.trans || live.quick) layoutAll(); else liftLayout(true); }
-  c.flash = { t0: now, drop };
+  c.flash = { t0: now, drop }; for (const t of twinsOf(c)) t.flash = { t0: now, drop };
   if (!reduced) g.ripple = { t0: now, col: c.col, row: c.row, live: true };
   g.beat = { t0: now, text: drop ? `${c.name} down to ${short(c.deal)}` : `${c.name} ${short(c.deal)}` };
   live.beat = { ...g.beat, g };

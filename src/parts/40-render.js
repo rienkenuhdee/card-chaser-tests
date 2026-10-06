@@ -67,7 +67,8 @@ let view = "mosaic";
 try { const l = localStorage.getItem("wall-lens"); if (["have", "need", "chase", "trade"].includes(l)) state.lens = l; state.value = localStorage.getItem("wall-value") === "1"; } catch { /* default */ }
 function emphasis(c) {
   if (c.away) return 0; // out on the trade table: its tile is empty
-  if (state.matches) return state.matches.has(c) ? 1 : 0.1;
+  if (preview) return preview.has(c.base || c) ? (c.owned ? 0.42 : 1) : 0.1; // the New chase form: what it would match
+  if (state.matches) return state.matches.has(c.base || c) ? 1 : 0.1;
   if (state.lens === "need") return c.owned ? 0.1 : 1;
   if (state.lens === "chase") return isChase(c) ? 1 : 0.18;
   if (state.lens === "trade") return isSpare(c) ? 1 : 0.18;
@@ -84,6 +85,13 @@ function drawTile(c, sx, sy, w, h, now, mult = 1) {
     sx += (w - w * k) / 2; sy += (h - h * k) / 2; w *= k; h *= k;
   }
   drawTile0(c, sx, sy, w, h, now, mult);
+  // Inside a set the cards people chase wear a gold corner.
+  if (c.pop && view === "set" && groups[c.g]?.set && w >= 14 && c.e > 0.3 && (!state.focus || state.focus === c)) {
+    const s = clamp(w * 0.36, 4, 18), r = w >= 26 ? w * 0.045 : 0;
+    ctx.globalAlpha = Math.min(1, mult) * c.e * 0.8; ctx.fillStyle = theme.gold;
+    ctx.beginPath(); ctx.moveTo(sx + w - s, sy); ctx.lineTo(sx + w - r, sy); ctx.lineTo(sx + w, sy + r); ctx.lineTo(sx + w, sy + s); ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
   // In the Need lens the cards you're chasing stand out further still: a gold ring.
   if (state.lens === "need" && !c.owned && w >= 5 && c.e > 0.5 && !c.lift && isChase(c)) {
     ctx.globalAlpha = Math.min(1, mult); ctx.lineWidth = Math.max(1.5, w * 0.07); ctx.strokeStyle = theme.gold;
@@ -239,11 +247,11 @@ function cardFace(c, sx, sy, w, h, now, value) {
 
 // A set's title inside the set view, drawn with whichever camera is in use (they differ mid-transition).
 function drawHeader(st, now, C = cam, ox = 0, alpha = 1) {
-  const sx = (st.x - C.x) * C.s + ox, sy = (st.y - C.y) * C.s, sw = st.w * C.s, hh = st.head * C.s;
+  const sx = (st.x - C.x) * C.s + ox, sy = (st.y - C.y) * C.s, sw = st.w * C.s;
+  const k = (st.head * C.s) / (132 + (st.popH || 0)), hh = 132 * k; // 1 at the framed zoom; the title block is 132 of the header
   const owned = ownedNow(st.cards), n = st.cards.length;
   ctx.globalAlpha = alpha * (state.focus ? 1 - state.dimAll * 0.7 : 1);
   ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-  const k = hh / 132; // 1 at the framed zoom
   const title = clamp(34 * k, 16, 64), sub = clamp(14 * k, 10, 24);
   ctx.fillStyle = theme.ink; font(800, title, true);
   ctx.fillText(fitText(st.name, sw), sx, sy + hh * 0.5);
@@ -256,6 +264,8 @@ function drawHeader(st, now, C = cam, ox = 0, alpha = 1) {
   const by = sy + hh * 0.82, bh = Math.max(1.5, 3 * k);
   ctx.fillStyle = theme["slot-line"]; ctx.fillRect(sx, by, sw, bh);
   ctx.fillStyle = owned === n ? "#E2B33C" : st.ink; ctx.fillRect(sx, by, sw * (owned / n), bh);
+  if (st.popChips) drawPopRow(st, sx, sy + hh, k, ctx.globalAlpha);
+  else if (st.chase && st.hdrBtn && k >= 0.3) { drawHdrBtn(st, sx, sy + hh + st.hdrBtn.y * k, k, ctx.globalAlpha); ctx.textBaseline = "alphabetic"; }
   if (st.burst) {
     const p = (now - st.burst) / 1400;
     if (p < 1) {
@@ -273,7 +283,7 @@ const ownedNow = (list) => (state.time ? list.filter((c) => c.owned && c.got && 
 function panelStat(g) {
   if (picking()) return "\u2003\u2003"; // the tick's place
   const n = g.cards.length, owned = ownedNow(g.cards);
-  if (state.matches) { const m = g.cards.filter((c) => state.matches.has(c)).length; return m ? `${m} found` : ""; }
+  if (state.matches) { const m = g.cards.filter((c) => state.matches.has(c.base || c)).length; return m ? `${m} found` : ""; }
   if (state.lens === "need") return `${n - owned} to go`;
   if (state.lens === "chase") { const d = g.cards.filter(isChase).length; return d ? `${d} to find` : "Nothing to chase"; }
   if (state.lens === "trade") { const d = g.cards.filter(isSpare).length; return d ? `${d} spare${d === 1 ? "" : "s"}` : ""; }
@@ -330,6 +340,7 @@ function drawMosaic(now, alpha = 1, except = null) {
     drawPanel(g, now, a);
     for (const c of g.cards) drawTile(c, c.m.x, c.m.y - mScroll, c.m.w, c.m.h, now, a);
   }
+  if (!except && !state.trans) drawNewPanel(now, alpha);
   if (settling) kick();
 }
 // One group's binder through a camera, offset sideways (for the slide between sets).
@@ -380,7 +391,7 @@ function frame(now) {
   let more = stepFly(now);
   if (stepInertia(dt)) more = true;
   if (view === "set" && !state.trans && !fly) clampCam(state.g);
-  for (const c of cards) { const t = emphasis(c); if (Math.abs(c.e - t) > 0.005) { c.e += (t - c.e) * Math.min(1, dt / 90); more = true; } else c.e = t; }
+  for (const c of drawnCards) { const t = emphasis(c); if (Math.abs(c.e - t) > 0.005) { c.e += (t - c.e) * Math.min(1, dt / 90); more = true; } else c.e = t; }
   const dimT = state.focus ? 1 : 0;
   if (Math.abs(state.dimAll - dimT) > 0.01) { state.dimAll += (dimT - state.dimAll) * Math.min(1, dt / 110); more = true; } else state.dimAll = dimT;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -410,7 +421,7 @@ function frame(now) {
     } else if (T.kind === "morph") {
       // Rearranging: every tile travels to its place in the new mosaic, a beat apart.
       for (const g of groups) drawPanel(g, now, 1, clamp((p - 0.55) / 0.45, 0, 1));
-      for (const c of cards) {
+      for (const c of drawnCards) {
         const k = ease(clamp((now - T.t0 - c.delay) / (T.dur - 520), 0, 1)), a = mr(c.pm), b2 = mr(c.m);
         drawTile(c, a.x + (b2.x - a.x) * k, a.y + (b2.y - a.y) * k, a.w + (b2.w - a.w) * k, a.h + (b2.h - a.h) * k, now);
       }
@@ -432,7 +443,7 @@ function frame(now) {
   }
   if (state.focus) { const c = state.focus, r = binderRect(c, cam); ctx.globalAlpha = 1; drawTile(c, r.x, r.y, r.w, r.h, now); if (c.anim) more = true; if (c.owned && c.tier >= 3 && !reduced) more = true; }
   ctx.globalAlpha = 1;
-  for (const c of cards) if (c.anim) { more = true; break; }
+  for (const c of drawnCards) if (c.anim) { more = true; break; }
   drawMarks(); drawPicks();
   if (drawLive(now)) more = true;
   if (drawPop(now)) more = true;

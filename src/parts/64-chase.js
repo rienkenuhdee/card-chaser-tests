@@ -124,6 +124,7 @@ function fillOffers(c) {
   oRow.innerHTML = list.map((o) => `<article class="offer${o.live ? " live" : ""}"><b>${money(o.price)}</b><span class="osrc">${o.src}${o.live ? ", the live deal" : ""}</span><span class="ocond">${o.title}</span><span class="ocond">${o.cond}${o.ship ? `, ${money(o.ship)} shipping` : ", free shipping"}${o.odds ? `. ${o.odds}` : ""}</span><button type="button" class="mbtn obuy" data-q="${o.q.replace(/"/g, "&quot;")}">Open on ${o.src}</button></article>`).join("");
   oRow.scrollLeft = 0;
   oFlag.textContent = isChase(c) ? "Chasing ✓" : "Chase it";
+  fillChips(popMore, c);
 }
 oRow.addEventListener("click", (e) => { const b = e.target.closest("[data-q]"); if (b) window.open(`https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(b.dataset.q)}&_sop=15`, "_blank", "noopener"); });
 offersEl.querySelectorAll("[data-kind]").forEach((b) => (b.onclick = () => { oKind = b.dataset.kind; tick(3); if (pop.c) fillOffers(pop.c); }));

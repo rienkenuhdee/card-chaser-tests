@@ -10,7 +10,8 @@ function binderLayout(g) {
   g.x = 0; g.y = 0;
   g.w = g.cols * stepX(g) - GAP * g.sz;
   // The title block is a fixed height on screen, whatever the card size: 132px at the framed zoom.
-  g.head = 132 / ((vw - 24) / g.w);
+  if (g.set) popLayout(g); else { g.popChips = null; g.popH = g.chase ? 30 : 0; g.hdrBtn = g.chase ? { x: vw - 24 - 118, y: 2, w: 118, h: 22 } : null; } // a chase's header: a row with Remove chase
+  g.head = (132 + (g.popH || 0)) / ((vw - 24) / g.w); // the title block, plus the People chase row in a set
   g.h = g.head + Math.ceil(g.cards.length / g.cols) * stepY(g) - GAP * g.sz;
   g.cards.forEach((c, k) => { c.sz = g.sz; c.col = k % g.cols; c.row = Math.floor(k / g.cols); c.x = c.col * stepX(g); c.y = g.head + c.row * stepY(g); });
 }
@@ -56,12 +57,15 @@ function packPanel(g) {
   g.cards.forEach((c, k) => { c.m = { x: ox + (k % best.cols) * cw, y: oy + Math.floor(k / best.cols) * ch, w: tw, h: th }; });
 }
 
-const W_FOLD = 50;
+const W_FOLD = 50, NEW_H = 56;
+let newPanel = null; // the New chase panel at the end of the wall, in mosaic coordinates
 function mosaicLayout() {
-  const fitH = vh - topPad() - botPad();
+  const newH = mode === "set" && !picking() ? NEW_H : 0;
+  newPanel = null;
+  const fitH = vh - topPad() - botPad() - newH;
   // The sets you collect share the screen; the others fold to a line beneath (picked in the welcome, or in Settings).
-  if (mode === "set" && pickedSets.size && pickedSets.size < groups.length && groups.every((g) => g.set)) {
-    const mine = groups.filter((g) => pickedSets.has(g.set.id)), rest = groups.filter((g) => !pickedSets.has(g.set.id));
+  if (mode === "set" && pickedSets.size && pickedSets.size < sets.length) {
+    const mine = groups.filter((g) => g.chase || pickedSets.has(g.set.id)), rest = groups.filter((g) => g.set && !pickedSets.has(g.set.id));
     const n = mine.reduce((a, g) => a + g.cards.length, 0);
     const R = { x: 8, y: topPad(), w: vw - 16, h: Math.max(fitH - rest.length * W_FOLD, fitH * 0.62, (n * 340) / (vw - 16)) };
     const items = mine.map((g) => ({ g, v: Math.max(g.cards.length, 45) }));
@@ -70,14 +74,16 @@ function mosaicLayout() {
     stripTreemap(items, R);
     let y = R.y + R.h;
     for (const g of rest) { g.m = { x: R.x, y, w: R.w, h: W_FOLD }; y += W_FOLD; }
+    if (newH) { newPanel = { x: R.x, y, w: R.w, h: newH }; y += newH; }
     mMax = Math.max(0, y + botPad() - vh);
     mScroll = clamp(mScroll, 0, mMax);
     for (const g of mine) packPanel(g);
     for (const g of rest) packFolded(g);
     return;
   }
-  const R = { x: 8, y: topPad(), w: vw - 16, h: Math.max(fitH, (cards.length * 340) / (vw - 16)) };
-  mMax = Math.max(0, R.y + R.h + botPad() - vh);
+  const R = { x: 8, y: topPad(), w: vw - 16, h: Math.max(fitH, (drawnCards.length * 340) / (vw - 16)) };
+  if (newH) newPanel = { x: R.x, y: R.y + R.h, w: R.w, h: newH };
+  mMax = Math.max(0, R.y + R.h + newH + botPad() - vh);
   mScroll = clamp(mScroll, 0, mMax);
   // Panel area follows card count, or, laid out by value, what the cards in the band are worth.
   const items = groups.map((g) => ({ g, v: mode === "value" ? Math.pow(g.cards.reduce((t, c) => t + c.price, 0), 0.7) : Math.max(g.cards.length, 45) }));

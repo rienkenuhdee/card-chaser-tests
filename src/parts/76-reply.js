@@ -54,7 +54,7 @@ function reasonFor(rec, t) {
 function replyEvent(rec, t, text) {
   if (tbl.on) return;
   const now = performance.now(), gs = new Map();
-  for (const c of toCards([...rec.give, ...rec.get])) { c.flash = { t0: now, gold: true }; if (!gs.has(groups[c.g])) gs.set(groups[c.g], c); }
+  for (const c of toCards([...rec.give, ...rec.get])) { c.flash = { t0: now, gold: true }; for (const t of twinsOf(c)) t.flash = { t0: now, gold: true }; if (!gs.has(groups[c.g])) gs.set(groups[c.g], c); }
   for (const [g, c] of gs) { if (!reduced) g.ripple = { t0: now, col: c.col, row: c.row, live: true, gold: true }; g.beat = { t0: now, text, col: theme.gold }; }
   const first = gs.values().next().value;
   if (first) { live.beat = { t0: now, text, g: groups[first.g], col: theme.gold }; live.until = Math.max(live.until, now + 3200); }
