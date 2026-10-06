@@ -50,8 +50,45 @@ sets.forEach((st, si) => {
     // A deal is a live copy for less than the card's price; a floor-priced common at or over market isn't one.
     let deal = !own0 && dr < 0.07 ? Math.max(0.25, Math.round(price * (0.55 + 0.3 * h32(id + "e")) * 100) / 100) : null;
     if (deal !== null && deal >= price) deal = null;
-    const c = { i: cards.length, si, k, id, name, num, rname, tier, type: t, dex: Number(dex) || 0, price, owned, got, deal, own0, artist: ARTISTS[Math.floor(h32(id + "a") * ARTISTS.length)], x: 0, y: 0, sz: 1, col: 0, row: 0, e: 1, anim: null, intro: 0 };
+    const c = { i: cards.length, si, k, n0: k, id, name, num, rname, tier, type: t, dex: Number(dex) || 0, price, owned, got, deal, own0, artist: ARTISTS[Math.floor(h32(id + "a") * ARTISTS.length)], x: 0, y: 0, sz: 1, col: 0, row: 0, e: 1, anim: null, intro: 0 };
     cards.push(c); st.cards.push(c);
   });
 });
 const TOTAL = cards.length;
+
+// ---------- printings: the master set and the grand set ----------
+// A set is one of each card. The master set adds every printing of it: 1st Edition and Shadowless for Base Set, 1st
+// Edition for the other vintage sets, reverse holos for modern commons up to rares. The grand set adds the reprints of
+// its cards elsewhere (Base Set 2, Legendary Collection, stamped promos), made up for the demo and seeded. These
+// printings live beside the cards, not among them: the wall's count is the set, and a card counts once.
+const PRINTINGS = { base1: [["1st Edition", "1st Ed", 8], ["Shadowless", "Shadowless", 2.6]], base2: [["1st Edition", "1st Ed", 4]], base3: [["1st Edition", "1st Ed", 3.2]], base5: [["1st Edition", "1st Ed", 3.5]], neo1: [["1st Edition", "1st Ed", 3]] };
+const REPRINTS = { base1: [["Base Set 2", "BS2", 0.6, 0.45], ["Legendary Collection", "LC", 0.4, 0.9]], base2: [["Base Set 2", "BS2", 0.55, 0.45], ["Legendary Collection", "LC", 0.35, 0.9]], base3: [["Base Set 2", "BS2", 0.5, 0.45], ["Legendary Collection", "LC", 0.35, 0.9]], base5: [["Legendary Collection", "LC", 0.3, 0.9]], neo1: [["Legendary Collection", "LC", 0.25, 0.9]] };
+const extras = [];
+for (const st of sets) {
+  st.master = []; st.grand = [];
+  const vintage = st.year < 2003;
+  const mk = (c, suffix, variant, tag, mult, scope) => {
+    const id = `${c.id}-${suffix}`, mark = saved[id];
+    const owned = mark == null ? false : typeof mark === "object" ? mark.on : Boolean(mark);
+    const got = owned ? (mark && typeof mark === "object" && mark.at) || Date.now() : null;
+    const v = { ...c, i: cards.length + extras.length, id, price: Math.round(c.price * mult * 100) / 100, owned, got, deal: null, own0: c.own0 && h32(id + "o") < (scope === "master" ? 0.3 : 0.2), of: c, variant, tag, scope, pop: false, anim: null, e: 1, x: 0, y: 0 };
+    extras.push(v); (scope === "master" ? st.master : st.grand).push(v);
+  };
+  for (const c of st.cards) {
+    if (vintage) for (const [variant, tag, mult] of PRINTINGS[st.id] || []) mk(c, tag.toLowerCase().replace(/\W/g, ""), variant, tag, mult, "master");
+    else if (c.tier <= 2) mk(c, "rev", "Reverse holo", "Reverse", 1.6, "master");
+    if (vintage) { for (const [variant, tag, rate, mult] of REPRINTS[st.id] || []) if (h32(c.id + tag) < rate) mk(c, tag.toLowerCase(), variant, tag, mult, "grand"); }
+    else if (h32(c.id + "promo") < 0.08) mk(c, "promo", "Stamped promo", "Promo", 2.4, "grand");
+  }
+}
+const pool = [...cards, ...extras]; // every card there is, printings included (a card's i indexes this)
+const rootOf = (c) => c.base || c.of || c; // the card itself behind a twin or a printing
+// Which view each set is in: the set, its master set, or its grand set (kept on this device).
+let scopes = {};
+try { scopes = JSON.parse(localStorage.getItem("wall-scope") || "{}") || {}; } catch { scopes = {}; }
+const scopeOf = (st) => scopes[st.id] || "set";
+function scopedCards(st) {
+  const s = scopeOf(st);
+  if (s === "set") return st.cards;
+  return [...st.cards, ...st.master, ...(s === "grand" ? st.grand : [])].sort((a, b) => a.n0 - b.n0 || (a.of ? 1 : 0) - (b.of ? 1 : 0) || a.i - b.i);
+}

@@ -40,7 +40,8 @@ button { font: inherit; color: inherit; }
 .ib[hidden] { display: none; }
 .ib:active { transform: scale(.92); }
 .ib svg { width: 19px; height: 19px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-.search { flex: 1; min-width: 0; display: flex; align-items: center; height: 40px; border-left: 1px solid var(--line); border-right: 1px solid var(--line); margin: 0 4px; }
+.search { flex: 1; min-width: 0; display: flex; align-items: center; height: 40px; border-right: 1px solid var(--line); margin: 0 4px; }
+.top .ib:not([hidden]) ~ .search, .top .mark:not([hidden]) ~ .search { border-left: 1px solid var(--line); }
 .search input { flex: 1; min-width: 0; height: 100%; border: 0; background: none; outline: none; padding: 0 10px 0 12px; font: 500 16px var(--font); color: var(--ink); }
 .search input::placeholder { color: var(--muted); }
 .search input::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
