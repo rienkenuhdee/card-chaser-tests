@@ -60,7 +60,7 @@ function setOwned(c, on, { undo = null, quiet = false } = {}) {
   for (const t of [b, ...twinsOf(b)]) { t.anim = { t0: now, to: on }; const tg = groups[t.g]; if (tg && (t === c || tg.base?.includes(t) || tg.cards.includes(t))) tg.ripple = { t0: now, col: t.col, row: t.row }; }
   tick(on ? 14 : 6);
   const st = sets[c.si], owned = ownedIn(st.cards);
-  if (on && owned === st.cards.length) { if (mode === "set") g.burst = now; tick(40); toast(`${st.name} complete. ${owned} of ${owned}.`, undo); }
+  if (on && owned === st.cards.length) { const sg = groups[b.g]; if (mode === "set" && sg?.set === st) sg.burst = now; tick(40); toast(`${st.name} complete. ${owned} of ${owned}.`, undo); }
   else if (!quiet) toast(on ? `${c.name} added. ${owned} of ${st.cards.length} in ${st.name}.` : `${c.name} taken out.`, undo);
   if (state.focus === c) fillPanel(c, 0);
   if (lifted && !quietLayout) liftLayout(true); // a chased card changed hands: the chase layout flies to its new shape
