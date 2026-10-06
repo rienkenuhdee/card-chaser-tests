@@ -83,7 +83,9 @@ function startTwo(pts) {
   const [a, b] = pts, m = mid(a, b);
   gesture = { kind: "two", d0: dist(a, b), m0: m, cam: { ...cam }, qs: [], m, r: 1 };
   // A pinch from a card up close lands on the set, never past it: closing the set takes a second pinch.
-  if (state.focus || (view === "set" && state.g && cam.s > fitCam(state.g).s * 1.6)) { if (state.focus) unfocus(); fly = null; gesture.noClose = true; }
+  // From a card, the set is already on its way: the pinch itself does nothing more.
+  if (state.focus && view === "set" && state.g) { unfocus(); gesture.noClose = true; gesture.snap = true; flyTo(fitCam(state.g), 380); return; }
+  if (view === "set" && state.g && cam.s > fitCam(state.g).s * 1.6) { fly = null; gesture.noClose = true; }
   // Spreading on (or near) a panel starts opening it, under your fingers.
   if (view === "mosaic") { const h = hit(m.x, m.y, true); if (h?.block) gesture.g = h.block; }
 }
@@ -118,6 +120,7 @@ function onMove(pts) {
 }
 function pinchMove(a, b) {
   const g = gesture, d = dist(a, b), m = mid(a, b), r = d / g.d0, now = evT || performance.now();
+  if (g.snap) return;
   if (view === "mosaic") {
     if (!g.g) return;
     const q = clamp((r - 1) / 1.1, 0, 1);
@@ -146,6 +149,7 @@ function pinchMove(a, b) {
 // to whichever end is nearer (a little more than halfway is needed to close a set, so a small pinch never does).
 function releasePinch() {
   const g = gesture, T = state.trans;
+  if (g.snap) return;
   if (T?.kind === "open" && !T.anim) {
     // Speed over the last tenth of a second of movement (at least the last two samples).
     const qs = g.qs, last = qs[qs.length - 1];
@@ -246,7 +250,7 @@ function tap(sx, sy) {
     return;
   }
   if (!h?.card) {
-    if (h?.block && !marking) { const p = headAt(h.block, sx, sy); if (p) { tick(4); if (p.seg) setScope(h.block.set, p.seg); else if (p.btn) { if (p.btn.pop) chasePopular(h.block.set); else removeChase(h.block.chase); } else focus(p.c); } }
+    if (h?.block && !marking && !fly && !shuffle) { const p = headAt(h.block, sx, sy); if (p) { tick(4); if (p.seg) setScope(h.block.set, p.seg); else if (p.btn) { if (p.btn.pop) chasePopular(h.block.set); else if (p.btn.remove) removeSet(h.block.set); else removeChase(h.block.chase); } else focus(p.c); } }
     return;
   }
   const w = TW * h.card.sz * cam.s;
