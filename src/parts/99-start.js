@@ -10,7 +10,6 @@ markFilters(); // Value is remembered; Time starts from the beginning when you p
 resize();
 started = true;
 setChrome();
-markMode();
 try { if (localStorage.getItem("wall-list") === "1") setListMode(true); } catch { /* fine */ }
 updateCount();
 placeInk();

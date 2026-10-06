@@ -1,9 +1,9 @@
 // ---------- navigation: mosaic, set, card ----------
 // The interface moves the camera. Every gesture lands on a composed view: the mosaic, a set framed to the screen, or a card.
-const backBtn = document.getElementById("back"), arrBtn0 = document.getElementById("arrange");
+const backBtn = document.getElementById("back");
 function setChrome() {
   document.body.classList.toggle("inset", view === "set" || tbl.on);
-  backBtn.hidden = view !== "set" && !tbl.on; arrBtn0.hidden = view === "set" || tbl.on;
+  backBtn.hidden = view !== "set" && !tbl.on;
   markBtn.hidden = view !== "set" || marking;
   document.getElementById("where").textContent = tbl.on ? `Trade with ${tbl.t.name}` : view === "set" && state.g ? state.g.name : "";
   if (marking && view !== "set") leaveMark();

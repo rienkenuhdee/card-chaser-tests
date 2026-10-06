@@ -51,13 +51,14 @@ function liftLayout(force = false) {
 // each card. The button lights while one is on.
 const filterBtn = document.getElementById("filter"), filterMenu = document.getElementById("filter-menu");
 function setFilterMenu(open) { filterMenu.hidden = !open; filterBtn.setAttribute("aria-expanded", String(open)); if (open) filterMenu.querySelector("[data-filter]")?.focus(); }
-filterBtn.onclick = (e) => { e.stopPropagation(); setMenu(false); setFilterMenu(filterMenu.hidden); };
+filterBtn.onclick = (e) => { e.stopPropagation(); setFilterMenu(filterMenu.hidden); };
 addEventListener("pointerdown", (e) => { if (!filterMenu.hidden && !e.target.closest("#filter-menu, #filter")) setFilterMenu(false); });
 filterMenu.addEventListener("keydown", (e) => { if (e.key === "Escape") { setFilterMenu(false); filterBtn.focus(); } });
 function markFilters() {
   filterMenu.querySelector('[data-filter="value"]').setAttribute("aria-checked", String(state.value));
   filterMenu.querySelector('[data-filter="time"]').setAttribute("aria-checked", String(state.time));
-  filterBtn.setAttribute("aria-pressed", String(state.value || state.time));
+  filterMenu.querySelector('[data-filter="bands"]').setAttribute("aria-checked", String(mode === "value"));
+  filterBtn.setAttribute("aria-pressed", String(state.value || state.time || mode === "value"));
 }
 function setValue(on) {
   state.value = on; markFilters(); tick(5);
@@ -73,5 +74,5 @@ function setTime(on) {
 }
 filterMenu.querySelectorAll("[data-filter]").forEach((b) => (b.onclick = () => {
   setFilterMenu(false);
-  if (b.dataset.filter === "value") setValue(!state.value); else setTime(!state.time);
+  if (b.dataset.filter === "value") setValue(!state.value); else if (b.dataset.filter === "bands") rearrange(mode === "value" ? "set" : "value"); else setTime(!state.time);
 }));
