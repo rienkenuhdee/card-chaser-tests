@@ -113,20 +113,24 @@ function drawTraders(now) {
 
 // ----- the spare tile: a card of yours out in front, and who wants it -----
 function drawSpareTile(c, x, y, w, h, a, now) {
-  const st = sets[c.si], who = wantedBy(c), want = who.length > 0, rad = Math.min(12, w * 0.07);
+  const st = sets[c.si], b = c.base || c, who = wantedBy(b), want = who.length > 0, rad = Math.min(12, w * 0.07);
   ctx.globalAlpha = a;
   rr(x, y, w, h, rad); ctx.fillStyle = want ? goldTint() : theme["panel-solid"]; ctx.fill();
   ctx.lineWidth = want ? 1.5 : 1; ctx.strokeStyle = want ? theme.gold : theme["slot-line"]; ctx.stroke();
   if (w < 60) { ctx.globalAlpha = 1; return; }
   const pad = Math.max(8, w * 0.05), s = clamp(w / 177, 0.6, 1.3);
   const mh = h - pad * 2, mw = mh * TW / TH;
+  miniStack(b, x + pad, y + pad, mw, mh, want); // the other copies, tucked behind the little card
   foilOff = true; cardFace(c, x + pad, y + pad, mw, mh, now, state.value && !state.matches); foilOff = false;
   ctx.globalAlpha = a;
-  const tx = x + pad + mw + pad, tw = x + w - pad - tx;
+  countPill(nOf(b), true, x + pad + 4, y + pad + 4, 10.5 * s);
+  const tx = x + pad + mw + pad + stackO(mw) * Math.min(2, nOf(b) - 1), tw = x + w - pad - tx;
   ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
   ctx.fillStyle = theme.ink; font(800, 20 * s); ctx.fillText(short(c.price), tx, y + pad + 17 * s);
-  if (want) { ctx.fillStyle = theme.gold; font(700, 11.5 * s); ctx.fillText(fitText(who.length === 1 ? `${who[0].name} wants it` : who.length === 2 ? `${who[0].name} and ${who[1].name} want it` : `${who.length} want it`, tw), tx, y + pad + 32 * s); }
-  else { ctx.fillStyle = theme.muted; font(500, 11.5 * s); ctx.fillText(fitText("No takers yet", tw), tx, y + pad + 32 * s); }
+  if (want) {
+    ctx.fillStyle = theme.muted; font(500, 11 * s); ctx.fillText(fitText("Wanted by", tw), tx, y + pad + 32 * s);
+    ctx.fillStyle = theme.gold; font(700, 12.5 * s, true); ctx.fillText(fitText(who.length <= 2 ? who.map((t) => t.name).join(", ") : `${who[0].name} +${who.length - 1}`, tw), tx, y + pad + 46 * s);
+  } else { ctx.fillStyle = theme.muted; font(500, 11 * s); ctx.fillText(fitText("No takers yet", tw), tx, y + pad + 32 * s); }
   ctx.fillStyle = theme.ink; font(700, 14 * s, true); ctx.fillText(fitText(c.name, tw), tx, y + h - pad - 13 * s);
   ctx.fillStyle = theme.muted; font(500, 11 * s); ctx.fillText(fitText(`${st.code} ${c.num}/${st.printed}`, tw), tx, y + h - pad);
   ctx.globalAlpha = 1;

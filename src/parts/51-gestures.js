@@ -74,16 +74,20 @@ function onDown(pts) {
   samples = [{ x: p.x, y: p.y, t: now }];
   const h0 = hit(p.x, p.y);
   if (view === "mosaic" && h0?.block) { state.press = { g: h0.block, t0: now, timer: 0 }; kick(); }
-  // Press and hold a card in a set to mark it; keep the finger down and sweep to mark the ones beside it.
   if (view === "set" && !state.focus && h0?.card && TW * h0.card.sz * cam.s >= 14) {
     const card = h0.card;
     gesture.card = card;
     state.press = { c: card, t0: now, timer: setTimeout(() => {
       if (gesture?.kind !== "one" || gesture.moved || state.press?.c !== card) return;
-      if (marking) { // already marking: a hold puts the card on your chase list (or, owned, up for trade)
-        gesture = null; cancelPress(); tick(8);
-        if (card.owned) { spares[card.id] = !isSpare(card); try { localStorage.setItem("wall-spares", JSON.stringify(spares)); } catch { /* fine */ } toast(spares[card.id] ? `${card.name} is a spare, up for trade.` : `${card.name} is no longer a spare.`); }
-        else { chasing[card.id] = !isChase(card); persistChase(); toast(chasing[card.id] ? `${card.name} on your chase list.` : `${card.name} off your chase list.`); }
+      if (marking) { // already marking: a hold on a card you have adds a copy (sweep on for the next ones); else it's a chase
+        cancelPress(); tick(8);
+        if (card.owned) {
+          const at = samples[samples.length - 1] || { x: gesture.x, y: gesture.y };
+          gesture.stroke = { copy: true, seen: new Set([card]), last: { x: at.x, y: at.y } }; gesture.moved = true;
+          addCopy(card); return;
+        }
+        gesture = null;
+        chasing[card.id] = !isChase(card); persistChase(); toast(chasing[card.id] ? `${card.name} on your chase list.` : `${card.name} off your chase list.`);
         drawList(); kick(); return;
       }
       enterMark();

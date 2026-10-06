@@ -85,14 +85,17 @@ function accept(rec, t, by) {
 // The bookkeeping of a done trade: the cards you gave leave your collection and stop being spares; the ones you got
 // arrive, dated now, and leave your chase list. landAt times the marking flood to a flight that is still in the air.
 function completeTrade(rec, t, landAt = 0) {
-  const give = toCards(rec.give), get = toCards(rec.get);
+  const give = toCards(rec.give), get = toCards(rec.get), still = [];
   quietLayout = true;
-  for (const c of give) { delete spares[c.id]; if (c.owned) setOwned(c, false, { quiet: true }); if (landAt) { if (c.anim) c.anim.t0 = landAt; if (groups[c.g].ripple) groups[c.g].ripple.t0 = landAt; } }
-  for (const c of get) { delete chasing[c.id]; if (!c.owned) setOwned(c, true, { quiet: true }); if (landAt) { if (c.anim) c.anim.t0 = landAt; if (groups[c.g].ripple) groups[c.g].ripple.t0 = landAt; } }
+  for (const c of give) {
+    if (nOf(c) > 1) { setN(c, nOf(c) - 1); still.push(c); } else if (c.owned) setOwned(c, false, { quiet: true });
+    if (landAt) { if (c.anim) c.anim.t0 = landAt; if (groups[c.g].ripple) groups[c.g].ripple.t0 = landAt; }
+  }
+  for (const c of get) { delete chasing[c.id]; if (!c.owned) setOwned(c, true, { quiet: true }); else setN(c, nOf(c) + 1); if (landAt) { if (c.anim) c.anim.t0 = landAt; if (groups[c.g].ripple) groups[c.g].ripple.t0 = landAt; } }
   quietLayout = false;
-  persistSpares(); persistChase(); syncBadge(); updateCount();
+  persistCopies(); persistChase(); syncBadge(); updateCount();
   rec.state = "done"; rec.doneAt = Date.now(); persistTrades(); drawList();
-  toast(`${rec.by === "them" ? `${t.name} accepted. ` : ""}${tradedText(get, give, t)}`);
+  toast(`${rec.by === "them" ? `${t.name} accepted. ` : ""}${copyTradedText(get, give, still, t)}`);
 }
 const tradedText = (get, give, t) => `${names(get)} ${get.length === 1 ? "is" : "are"} yours. ${names(give)} went to ${t.name}.`;
 
@@ -102,22 +105,26 @@ const flights = []; // { c, out, edge, slot, last, t0, dur, then }
 function crossOnWall(rec, t) {
   const give = toCards(rec.give).filter((c) => c.owned), get = toCards(rec.get).filter((c) => !c.owned);
   if (reduced || document.body.classList.contains("listmode") || crossing) { completeTrade(rec, t); if (lifted) liftLayout(true); kick(); return; }
-  crossing = { rec, t, give, get, n: give.length + get.length };
+  crossing = { rec, t, give, get, still: [], n: give.length + get.length };
   const now = performance.now(), step = () => { if (crossing && --crossing.n <= 0) finishCross(); };
   quietLayout = true;
-  give.forEach((c, i) => { delete spares[c.id]; setOwned(c, false, { quiet: true }); if (lifted) c.away = true; flyCard(c, true, now + i * 80, 720, step); });
-  quietLayout = false; persistSpares();
+  give.forEach((c, i) => {
+    if (nOf(c) > 1) { setN(c, nOf(c) - 1); crossing.still.push(c); } // a copy leaves; the card stays on the wall
+    else { setOwned(c, false, { quiet: true }); if (lifted) c.away = true; }
+    flyCard(c, true, now + i * 80, 720, step);
+  });
+  quietLayout = false; persistCopies();
   get.forEach((c, i) => flyCard(c, false, now + 260 + i * 80, 780, () => { quietLayout = true; setOwned(c, true, { quiet: true }); quietLayout = false; delete chasing[c.id]; persistChase(); step(); }));
   if (!crossing.n) finishCross();
 }
 function finishCross() {
-  const { rec, t, give, get } = crossing; crossing = null;
+  const { rec, t, give, get, still } = crossing; crossing = null;
   for (const c of give) c.away = false;
   rec.state = "done"; rec.doneAt = Date.now(); persistTrades();
   syncBadge(); updateCount(); drawList();
   if (lifted) liftLayout(true);
   tick(14); kick();
-  toast(`${rec.by === "them" ? `${t.name} accepted. ` : ""}${tradedText(get, give, t)}`);
+  toast(`${rec.by === "them" ? `${t.name} accepted. ` : ""}${copyTradedText(get, give, still || [], t)}`);
 }
 // Where the card's tile is on screen right now, or null if it isn't drawn (another set open).
 function tileRectOf(c) {
