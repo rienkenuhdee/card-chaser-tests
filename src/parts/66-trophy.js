@@ -228,7 +228,7 @@ const tight = (g) => Boolean(g.done || g.tight);
 function albumHeader(g) {
   const f = finishOf(g); if (!f) return;
   const W = vw - 24, btn = { x: W - 128, y: 2, w: 128, h: 22, shelf: true };
-  if (f.put) { g.popChips = null; g.seg = null; g.popH = 30; g.hdrBtn = btn; g.hdrBtn2 = null; }
+  if (f.put) { g.popChips = null; g.seg = null; g.popH = 30; g.hdrBtn = btn; g.hdrBtn2 = onShelf(g) ? { x: W - 128 - 8 - 112, y: 2, w: 112, h: 22, away: true } : null; } // on its first day: skip the wait
   else if (g.set) g.hdrBtn = { ...btn, y: 4 };
   else g.hdrBtn2 = { ...btn, x: W - 118 - 8 - 128 };
 }
@@ -253,6 +253,16 @@ function toggleShelf(g) {
     e.put = true; persistDone(); drawList();
     if (view === "mosaic" && !state.trans && !reduced) mintFlight(g); else { if (view === "mosaic") mScroll = 0; layoutAll(); kick(); }
     toast(`${trophyName(g)} is on the shelf.`, () => { const x = finishOf(g); if (!x) return; x.put = false; g.unmint = true; persistDone(); if (view === "mosaic") { if (state.trans) finishTransition(); shelfMorph(); } else { layoutAll(); kick(); } drawList(); });
+  });
+}
+// To the case now: a trophy on its first day goes down to the case with the rest without waiting for the day to end.
+function putAway(g) {
+  const f = finishOf(g); if (!f?.put) return;
+  tick(6);
+  leaveBinderThen(g, () => {
+    f.at = Math.min(f.at, Date.now() - DAY - 1000); persistDone(); drawList();
+    if (view === "mosaic" && !state.trans && !reduced) shelfMorph(); else { layoutAll(); kick(); }
+    toast(`${trophyName(g)} is in the case with the rest.`);
   });
 }
 const finishedText = (gs) => (gs.length === 1 ? `${trophyName(gs[0])} finished. It's on the shelf, worth ${money(worthOf(gs[0].base))}.` : `${gs.map(trophyName).join(" and ")} finished. They're on the shelf.`);
