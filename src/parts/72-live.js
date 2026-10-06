@@ -7,7 +7,7 @@
 // and a thin green line races from the card to the Chase lens button, which ticks up and glows. In the Chase lens the
 // new tile slides to the front of its set with "just now" under the price; a price drop strikes the old price through.
 // Nothing is a notification: the wall moves when the market does.
-const live = { line: null, until: 0, beat: null, quick: false, badgeN: 0 };
+const live = { line: null, until: 0, beat: null, quick: false, badgeN: 0, news: [] }; // news: the arrivals the Chase lens hasn't shown in its banner yet
 const feedOrder = (a, b) => h32(a.id + "r") - h32(b.id + "r") || a.i - b.i;
 const arrivalPrice = (c) => Math.max(0.25, Math.round(c.price * (0.55 + 0.3 * h32(c.id + "e")) * 100) / 100);
 function agoText(at, now) {
@@ -91,9 +91,9 @@ function showArrival(c, drop) {
   if (lifted && !state.focus) { if (state.trans || live.quick) layoutAll(); else liftLayout(true); }
   c.flash = { t0: now, drop }; for (const t of twinsOf(c)) t.flash = { t0: now, drop };
   if (!reduced) g.ripple = { t0: now, col: c.col, row: c.row, live: true };
-  g.beat = { t0: now, text: drop ? `${c.name} down to ${short(c.deal)}` : `${c.name} ${short(c.deal)}` };
-  live.beat = { ...g.beat, g };
   live.until = now + 3200;
+  if (!live.news.includes(c)) live.news.push(c);
+  if (state.lens === "chase" && !dealBar.hidden) showDealBar();
   if (lensShown() && !reduced) {
     const a = tileStart(c), b = chaseBtn.getBoundingClientRect();
     const x1 = b.left + b.width / 2, y1 = b.top + 3;
@@ -105,7 +105,22 @@ function showArrival(c, drop) {
 }
 
 
-// The overlay, drawn after the wall each frame: the open set's header beat, and the line racing to the Chase button.
+// The banner at the top of the Chase lens: what arrived since you last looked, one tap from the first one's offers.
+const dealBar = document.getElementById("dealbar"), dbHead = document.getElementById("db-head"), dbSub = document.getElementById("db-sub");
+function showDealBar() {
+  live.news = live.news.filter((c) => c.deal && isChase(c) && !c.owned);
+  const list = live.news.slice().sort((a, b) => (b.dealAt || 0) - (a.dealAt || 0)), c = list[0];
+  if (!c) { hideDealBar(); return; }
+  const pct = Math.round((1 - c.deal / c.price) * 100);
+  dbHead.textContent = list.length === 1 ? `New deal: ${c.name} ${short(c.deal)}` : `${list.length} new deals`;
+  dbSub.textContent = list.length === 1 ? `${pct}% under market, ${sets[c.si].name}` : `${c.name} ${short(c.deal)}, ${pct}% under, and ${list.length - 1} more`;
+  dealBar.hidden = false;
+  clearTimeout(showDealBar.t); showDealBar.t = setTimeout(hideDealBar, 9000);
+}
+function hideDealBar() { dealBar.hidden = true; clearTimeout(showDealBar.t); }
+document.getElementById("db-main").onclick = () => { const c = live.news[0]; hideDealBar(); live.news = []; if (c && view === "mosaic" && !state.trans) popCard(c, c.m ? mr(c.m) : null); };
+document.getElementById("db-x").onclick = () => { hideDealBar(); live.news = []; };
+// The overlay, drawn after the wall each frame: the line racing to the Chase button.
 function drawLive(now) {
   if (now >= live.until && !live.line) return false;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1;
