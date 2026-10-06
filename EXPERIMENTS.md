@@ -158,6 +158,20 @@ sentence is a query language, and dimming the wall to the popular cards left a v
 Popular filter, the active-chase pill, the chases list in the menu. Also: starting a trade asks In person or Online
 (coming soon).
 
+**Round 15: Finishing a chase.** Three answers to the last card landing: a checklist's finish (gold ticks on the
+progress bar for the missing cards you chase, the bar filling gold with "Complete since Oct 6", a Finished filter
+folding done panels to a line); the last card as a moment (every panel naming its next card, the final card lifting
+to the centre while "Complete" stamps the header, Keep on the wall or Put it away); and a trophy wall (finished things
+minted from their own tiles into gold plaques on a shelf along the top, a sealed album behind each, a ring gauge on
+every panel before then). Kept: the trophy wall with the safe ticks, and Ryan's rule that a trophy stays on the
+shelf at the top for a day and then moves to the trophy case at the end of the wall with the rest. A finished set or
+chase is minted where it sits, flies up, and the wall flows into the space; its album packs the cards edge to edge
+with Back to the wall; a finished group kept on the wall offers Put on the shelf. Learned: a finish wants to leave
+the working wall, and a plaque made of the group's own colours carries the memory better than a checkmark; the ring
+gauge duplicated the bar, and the stamp edged toward a toy. Dropped: the ring gauge, the Finished filter and list in
+Settings, the stamp, the next-card line (worth a return). Also fixed: completing a set threw, and Select all in a
+chase marked its twins instead of the cards.
+
 ## Open questions (next rounds)
 
 - A deal arriving off screen: one tap from the line to the offers, and whether the arrival should nudge the wall.
@@ -167,4 +181,5 @@ Popular filter, the active-chase pill, the chases list in the menu. Also: starti
 - Starting a trade: spares begin empty, so the demo needs a few marked by hand; an import option for doubles, or a hint on a spare's panel naming who wants it.
 - The import's reveal: the round 11 assembly from nothing as the flood after an import.
 - A chase's twins: should a custom panel's cards also lead in the Chase lens, or only their set's copy? And should a chase hide from the wall once it's complete?
+- Trophies: where the case lives and what a trophy can do (share it, show its worth over time, a master set beside its set), and whether a sub-chase of a finished set should fold into the set's plaque.
 - Bringing the mosaic into the real app as the Chase home.

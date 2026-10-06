@@ -7,7 +7,7 @@ function setChrome() {
   markBtn.hidden = view !== "set" || marking;
   document.getElementById("where").textContent = tbl.on ? `Trade with ${tbl.t.name}` : view === "set" && state.g ? state.g.name : "";
   if (marking && view !== "set") leaveMark();
-  updateCount();
+  syncShelfPad(); updateCount();
 }
 // Opening and closing a group are one transition with a position, q (0 is the mosaic, 1 the binder). A tap plays it;
 // a pinch holds it under your fingers; letting go settles it to whichever end is nearer.

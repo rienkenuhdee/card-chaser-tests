@@ -14,7 +14,7 @@ function font(weight, size, narrow = false) {
 }
 function readTheme() {
   const cs = getComputedStyle(document.documentElement);
-  for (const k of ["bg", "slot", "slot-line", "ink", "muted", "deal", "gold", "panel", "panel-solid", "paper", "paper-ink"]) theme[k] = cs.getPropertyValue(`--${k}`).trim();
+  for (const k of ["bg", "slot", "slot-line", "ink", "muted", "deal", "gold", "panel", "panel-solid", "paper", "paper-ink", "plaque", "plaque-ink", "plaque-hi", "plaque-lo"]) theme[k] = cs.getPropertyValue(`--${k}`).trim();
   theme.panelFill = cs.getPropertyValue("--panel-fill").trim();
   if (typeof heatCache !== "undefined") heatCache.clear();
   theme.dark = cs.colorScheme === "dark" || matchMedia("(prefers-color-scheme: dark)").matches && document.documentElement.dataset.theme !== "light";
@@ -249,23 +249,22 @@ function cardFace(c, sx, sy, w, h, now, value) {
 function drawHeader(st, now, C = cam, ox = 0, alpha = 1) {
   const sx = (st.x - C.x) * C.s + ox, sy = (st.y - C.y) * C.s, sw = st.w * C.s;
   const k = (st.head * C.s) / (132 + (st.popH || 0)), hh = 132 * k; // 1 at the framed zoom; the title block is 132 of the header
-  const owned = ownedNow(st.cards), n = st.cards.length;
+  const owned = ownedNow(st.cards), n = st.cards.length, f = finishOf(st);
   ctx.globalAlpha = alpha * (state.focus ? 1 - state.dimAll * 0.7 : 1);
   ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
   const title = clamp(34 * k, 16, 64), sub = clamp(14 * k, 10, 24);
   ctx.fillStyle = theme.ink; font(800, title, true);
-  ctx.fillText(fitText(st.name, sw), sx, sy + hh * 0.5);
+  ctx.fillText(fitText(f ? trophyName(st) : st.name, sw), sx, sy + hh * 0.5);
   const pct = `${Math.floor((owned / n) * 100)}%`;
   font(700, sub); const pw = ctx.measureText(pct).width;
-  ctx.textAlign = "right"; ctx.fillStyle = theme.ink; ctx.fillText(pct, sx + sw, sy + hh * 0.72);
+  ctx.textAlign = "right"; ctx.fillStyle = f ? theme.gold : theme.ink; ctx.fillText(pct, sx + sw, sy + hh * 0.72);
   ctx.textAlign = "left"; ctx.fillStyle = theme.muted; font(500, sub);
-  const line = state.time ? `${owned} of ${n} by ${monthOf(state.t)}` : st.sub();
+  // Finished: when, and what it's worth. Otherwise the group's own line.
+  const line = state.time ? `${owned} of ${n} by ${monthOf(state.t)}` : f ? `Finished ${dayOf(f.at)}, worth ${money(worthOf(st.base || st.cards))}.${f.put ? "" : " On the wall."}` : st.sub();
   ctx.fillText(fitText(line, sw - pw - 12), sx, sy + hh * 0.72);
-  const by = sy + hh * 0.82, bh = Math.max(1.5, 3 * k);
-  ctx.fillStyle = theme["slot-line"]; ctx.fillRect(sx, by, sw, bh);
-  ctx.fillStyle = owned === n ? "#E2B33C" : st.ink; ctx.fillRect(sx, by, sw * (owned / n), bh);
+  drawBar(st, sx, sy + hh * 0.82, sw, Math.max(1.5, 3 * k), now, k);
   if (st.popChips) drawPopRow(st, sx, sy + hh, k, ctx.globalAlpha);
-  else if (st.chase && st.hdrBtn && k >= 0.3) { drawHdrBtn(st, st.hdrBtn, sx, sy + hh + st.hdrBtn.y * k, k, ctx.globalAlpha); ctx.textBaseline = "alphabetic"; }
+  else if ((st.chase || f) && k >= 0.3) { for (const b of [st.hdrBtn, st.hdrBtn2]) if (b) drawHdrBtn(st, b, sx, sy + hh + b.y * k, k, ctx.globalAlpha); ctx.textBaseline = "alphabetic"; }
   if (st.burst) {
     const p = (now - st.burst) / 1400;
     if (p < 1) {
@@ -293,23 +292,24 @@ function panelStat(g) {
 const mr = (r) => ({ x: r.x, y: r.y - mScroll, w: r.w, h: r.h });
 function drawPanel(g, now, alpha = 1, labelAlpha = 1) {
   if (!g.m) return;
-  let m = mr(g.m);
+  let m = mr(g.m), k = 1;
   // During a lens flight the panel travels too, from where it was to where it's going.
   const T = state.trans;
   if (T?.kind === "morph" && g.pm) {
-    const k = ease(clamp((now - T.t0 - 140) / (T.dur - 520), 0, 1)), a = mr(g.pm);
+    k = ease(clamp((now - T.t0 - 140) / (T.dur - 520), 0, 1)); const a = mr(g.pm);
     m = { x: a.x + (m.x - a.x) * k, y: a.y + (m.y - a.y) * k, w: a.w + (m.w - a.w) * k, h: a.h + (m.h - a.h) * k };
   }
   if (m.y > vh || m.y + m.h < 0) return;
+  if (g.done || g.minting) { drawPlaque(g, m, now, alpha, labelAlpha); return; } // a trophy
   ctx.globalAlpha = alpha;
   rr(m.x + PG, m.y + PG, m.w - PG * 2, m.h - PG * 2, 12);
   ctx.fillStyle = theme.panelFill; ctx.fill();
   if (state.press?.g === g) { ctx.lineWidth = 1.5; ctx.strokeStyle = theme.ink; ctx.stroke(); }
+  if (g.unmint && k < 1) drawPlaque(g, m, now, alpha * (1 - k), 0); // a plaque coming back to the wall fades into its panel
   ctx.globalAlpha = alpha * labelAlpha;
   const x = m.x + PG + 10, w = m.w - PG * 2 - 20;
   const size = clamp(m.w * 0.075, 12, 17);
   ctx.textBaseline = "alphabetic"; ctx.textAlign = "left"; ctx.fillStyle = theme.ink;
-  // For three seconds after a deal arrives in this panel, its header shows the card and the price, in green.
   let beat = null;
   if (g.beat) { const p = (now - g.beat.t0) / 3000; if (p < 1) beat = { text: g.beat.text, col: g.beat.col || theme.deal, a: Math.min(1, p * 10, (1 - p) * 4) }; else g.beat = null; }
   font(beat ? 700 : 600, size * 0.82);
@@ -321,9 +321,7 @@ function drawPanel(g, now, alpha = 1, labelAlpha = 1) {
     ctx.fillText(stat, x + w, m.y + PG + 22);
     ctx.globalAlpha = alpha * labelAlpha;
   }
-  const owned = ownedNow(g.cards), n = g.cards.length;
-  ctx.fillStyle = theme["slot-line"]; ctx.fillRect(x, m.y + PG + 30, w, 2);
-  ctx.fillStyle = owned === n ? "#E2B33C" : g.ink; ctx.fillRect(x, m.y + PG + 30, w * owned / n, 2);
+  drawBar(g, x, m.y + PG + 30, w, 2, now);
   ctx.globalAlpha = 1;
 }
 function drawMosaic(now, alpha = 1, except = null) {
@@ -340,7 +338,7 @@ function drawMosaic(now, alpha = 1, except = null) {
     drawPanel(g, now, a);
     for (const c of g.cards) drawTile(c, c.m.x, c.m.y - mScroll, c.m.w, c.m.h, now, a);
   }
-  if (!except && !state.trans) drawNewPanel(now, alpha);
+  if (!except && !state.trans) { drawNewPanel(now, alpha); drawCaseLabel(alpha); }
   if (settling) kick();
 }
 // One group's binder through a camera, offset sideways (for the slide between sets).

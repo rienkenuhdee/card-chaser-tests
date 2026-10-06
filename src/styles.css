@@ -408,3 +408,17 @@ body.focused .dealbar, body.offering .dealbar, body.trading .dealbar, body.welco
 .db-main span { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .db-main:hover { background: var(--line); }
 .db-x { width: 34px; height: 34px; color: var(--muted); }
+
+/* Trophies (round 15): a gold plate, read into the canvas through theme. */
+:root { --plaque: #E6C050; --plaque-ink: #2A1E05; --plaque-hi: rgb(255 255 255 / .55); --plaque-lo: rgb(90 60 0 / .35); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --plaque: #B08A2E; --plaque-ink: #150F02; --plaque-hi: rgb(255 240 190 / .32); --plaque-lo: rgb(0 0 0 / .38); }
+}
+:root[data-theme="dark"] { --plaque: #B08A2E; --plaque-ink: #150F02; --plaque-hi: rgb(255 240 190 / .32); --plaque-lo: rgb(0 0 0 / .38); }
+/* While the shelf shows, the toast and the deal bar sit under it rather than on it. */
+.toast { top: calc(env(safe-area-inset-top, 0px) + 70px + var(--shelf-h, 0px)); }
+.dealbar { top: calc(env(safe-area-inset-top, 0px) + 62px + var(--shelf-h, 0px)); }
+/* The list: the Trophies section */
+#list .lshelf h2 { color: var(--gold); }
+#list .lfin { margin: 18px 0 2px; font: 800 17px var(--font); font-stretch: 80%; }
+#list .lfin-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; }

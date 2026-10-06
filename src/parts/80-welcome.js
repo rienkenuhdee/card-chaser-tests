@@ -139,7 +139,9 @@ function finishImport(src) {
   try { localStorage.setItem("wall-welcomed", "1"); localStorage.setItem("wall-imported", src); } catch { /* fine */ }
   document.body.classList.remove("welcoming"); welEl.classList.remove("on");
   if (marking) { session.clear(); leaveMark(); }
-  updateCount(); drawList(); if (lifted) liftLayout(true);
+  updateCount(); drawList();
+  const sync = syncDone({ quiet: true }); // anything the import completes goes straight to the shelf, under the flood
+  if (lifted && !sync) liftLayout(true);
   tick(14);
   setTimeout(() => toast(`${n.toLocaleString()} cards imported from ${src}.${chaseAll ? ` ${k.toLocaleString()} on your chase list.` : ""}`), reduced ? 100 : 500);
   kick();
@@ -165,7 +167,7 @@ function drawPicks() {
   if (!picking()) return;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1; ctx.lineCap = "round"; ctx.lineJoin = "round";
   for (const g of groups) {
-    if (!g.set || !g.m) continue;
+    if (!g.set || !g.m || g.done) continue;
     const m = mr(g.m); if (m.y > vh || m.y + m.h < 0) continue;
     const on = wel.picks.has(g.set.id), R = 10, x = m.x + m.w - PG - 10 - R, y = m.y + PG + 16;
     if (on) { ctx.lineWidth = 2; ctx.strokeStyle = g.ink; rr(m.x + PG + 1, m.y + PG + 1, m.w - PG * 2 - 2, m.h - PG * 2 - 2, 11); ctx.stroke(); }

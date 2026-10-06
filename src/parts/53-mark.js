@@ -54,8 +54,10 @@ function markAllInSet() {
   const now = performance.now();
   todo.forEach((c, i) => { const b = c.base || c; if (!session.has(c)) session.set(c, c.owned); b.owned = true; b.got = Date.now(); saved[b.id] = { on: true, at: b.got }; if (!reduced) for (const t of [b, ...twinsOf(b)]) t.anim = { t0: now + i * 5, to: true }; }); // the card itself, whichever place it was marked in
   persist(); updateBar(); updateCount(); drawList(); tick(14);
-  if (lifted) liftLayout(true);
-  if (view === "set") { g.burst = now; }
+  const sync = syncDone();
+  if (lifted && !sync) liftLayout(true);
+  if (view === "set") g.burst = now;
+  if (sync?.minted.length) { tick(40); toast(finishedText(sync.minted)); }
   kick();
 }
 document.getElementById("m-all").onclick = () => markAllInSet();
