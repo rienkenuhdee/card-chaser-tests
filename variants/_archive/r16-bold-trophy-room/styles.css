@@ -1,0 +1,11 @@
+/* r16-bold-trophy-room: the door on the wall, and the room behind it (dark in both schemes, the plaques lit). */
+:root {
+  --door: #2B1D13; --door-hi: rgb(255 220 170 / .22); --door-ink: #F3E9D8; --door-muted: #C9B59A;
+  --room-bg: #241810; --room-bg2: #140D08; --room-wood: #3B2718; --room-wood-hi: rgb(255 220 170 / .22);
+  --room-ink: #F3E9D8; --room-muted: #B7A58E; --room-plaque: #E6C050; --room-plaque-ink: #2A1E05; --room-plaque-lo: rgb(90 60 0 / .4);
+  --room-up: #8FD9A0; --room-down: #F0A08A;
+}
+/* While the room is up the lens bar and the time bar step aside, as they do under the trade table. */
+body.inroom .lens, body.inroom .timebar { transform: translate(-50%, 160%); opacity: 0; pointer-events: none; }
+body.inroom .caption { display: none; }
+body.inroom .dealbar { display: none; }

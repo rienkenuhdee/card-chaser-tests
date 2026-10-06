@@ -125,7 +125,7 @@ function reflow() {
   tick(10); kick();
 }
 function chasesChanged(lit = []) {
-  persistChases(); reflow(); flashLit(lit);
+  persistChases(); reflow(); syncDone({ quiet: true }); flashLit(lit); // a chase you already have every card of is a trophy the moment it's made
   syncBadge(); refreshChips(); updateCount(); drawList(); kick();
 }
 function addChase(r, { quiet = false } = {}) {
@@ -342,13 +342,13 @@ function headAt(g, sx, sy) {
   return null;
 }
 function drawHdrBtn(g, b, sx, by, k, alpha) {
-  const on = b.pop && Boolean(popularRule(g.set)), bx = sx + b.x * k, bw = b.w * k, bh = b.h * k;
+  const on = b.shelf || b.away || (b.pop && Boolean(popularRule(g.set))), bx = sx + b.x * k, bw = b.w * k, bh = b.h * k;
   rr(bx, by, bw, bh, 6 * k);
   if (on) { ctx.fillStyle = theme.gold; ctx.globalAlpha = alpha * 0.18; ctx.fill(); ctx.globalAlpha = alpha; ctx.lineWidth = Math.max(1, k); ctx.strokeStyle = theme.gold; ctx.stroke(); }
   else if (b.pop) { ctx.fillStyle = theme.ink; ctx.fill(); }
   else { ctx.lineWidth = Math.max(1, k); ctx.strokeStyle = theme["slot-line"]; ctx.stroke(); }
   ctx.fillStyle = on || !b.pop ? theme.ink : theme.bg; font(700, 11 * k); ctx.textAlign = "center";
-  ctx.fillText(b.pop ? (on ? "Chasing these ✓" : "Chase these") : b.remove ? "Remove set" : "Remove chase", bx + bw / 2, by + bh * 0.68);
+  ctx.fillText(b.away ? "To the case now" : b.shelf ? (finishOf(g)?.put ? "Back to the wall" : "Put on the shelf") : b.pop ? (on ? "Chasing these ✓" : "Chase these") : b.remove ? "Remove set" : "Remove chase", bx + bw / 2, by + bh * 0.68);
   ctx.textAlign = "left";
 }
 function drawPopRow(g, sx, y0, k, alpha) {

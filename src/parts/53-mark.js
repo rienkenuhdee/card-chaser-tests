@@ -11,17 +11,18 @@ const mHead = document.getElementById("m-head"), mSub = document.getElementById(
 
 // What this session has done so far: how many in, how many out, and where that leaves the set.
 function tally() {
-  let added = 0, out = 0; const setsIn = new Set();
+  let added = 0, out = 0, more = 0; const setsIn = new Set();
   for (const [c, was] of session) { if (c.owned === was) continue; if (c.owned) added++; else out++; setsIn.add(c.si); }
-  const head = [added ? `${added} added` : "", out ? `${out} taken out` : ""].filter(Boolean).join(", ");
+  for (const [b, rec] of copySession) { const was = rec && rec.got === b.got ? rec.n : 1, d = nOf(b) - was; if (d > 0) { more += d; setsIn.add(b.si); } }
+  const head = [added ? `${added} added` : "", out ? `${out} taken out` : "", more ? `${more} extra ${more === 1 ? "copy" : "copies"}` : ""].filter(Boolean).join(", ");
   const one = setsIn.size === 1 ? sets[[...setsIn][0]] : null;
   const sub = one ? `${ownedIn(one.cards)} of ${one.cards.length} in ${one.name}` : setsIn.size ? `Across ${setsIn.size} sets` : "";
-  return { n: added + out, head, sub };
+  return { n: added + out + more, head, sub };
 }
 function updateBar() {
   const t = tally();
   mHead.textContent = t.n ? t.head : "Mark cards";
-  mSub.textContent = t.n ? t.sub : "Tap a card, drag across a row, or hold one to chase it";
+  mSub.textContent = t.n ? t.sub : "Tap to mark. Hold one you have to add a copy";
   mUndo.disabled = !t.n;
 }
 function enterMark() {
@@ -35,8 +36,9 @@ function enterMark() {
 function leaveMark() {
   if (!marking) return;
   marking = false; document.body.classList.remove("marking"); markBtn.hidden = view !== "set";
-  const t = tally(), changes = [...session]; session.clear();
-  if (t.n) toast(`${t.head}.${t.sub ? ` ${t.sub}.` : ""}`, () => revert(changes));
+  const t = tally(), changes = [...session], cs = [...copySession]; session.clear(); copySession.clear();
+  if (t.n) toast(`${t.head}.${t.sub ? ` ${t.sub}.` : ""}`, () => { revert(changes); revertCopies(cs); });
+  flushLayout();
   updateCount(); kick();
 }
 function revert(changes) { for (const [c, was] of changes) if (c.owned !== was) setOwned(c, was, { quiet: true }); updateBar(); }
@@ -54,14 +56,16 @@ function markAllInSet() {
   const now = performance.now();
   todo.forEach((c, i) => { const b = c.base || c; if (!session.has(c)) session.set(c, c.owned); b.owned = true; b.got = Date.now(); saved[b.id] = { on: true, at: b.got }; if (!reduced) for (const t of [b, ...twinsOf(b)]) t.anim = { t0: now + i * 5, to: true }; }); // the card itself, whichever place it was marked in
   persist(); updateBar(); updateCount(); drawList(); tick(14);
-  if (lifted) liftLayout(true);
-  if (view === "set") { g.burst = now; }
+  const sync = syncDone();
+  if (lifted && !sync) liftLayout(true);
+  if (view === "set") g.burst = now;
+  if (sync?.minted.length) { tick(40); toast(finishedText(sync.minted)); }
   kick();
 }
 document.getElementById("m-all").onclick = () => markAllInSet();
 markBtn.onclick = () => enterMark();
 document.getElementById("m-done").onclick = () => leaveMark();
-mUndo.onclick = () => { if (!session.size) return; revert([...session]); session.clear(); updateBar(); tick(6); toast("Put back as it was"); };
+mUndo.onclick = () => { if (!session.size && !copySession.size) return; revert([...session]); revertCopies([...copySession]); session.clear(); copySession.clear(); updateBar(); tick(6); toast("Put back as it was"); };
 
 // A stroke across cards: the first card decides whether it adds or takes out.
 function beginStroke(card, p) {
@@ -76,7 +80,7 @@ function paintTo(p) {
   const s = gesture.stroke, a = s.last, n = Math.max(1, Math.ceil(Math.hypot(p.x - a.x, p.y - a.y) / 10));
   for (let i = 1; i <= n; i++) {
     const h = hit(a.x + (p.x - a.x) * i / n, a.y + (p.y - a.y) * i / n);
-    if (h?.card && !s.seen.has(h.card)) { s.seen.add(h.card); markCard(h.card, s.on); }
+    if (h?.card && !s.seen.has(h.card)) { s.seen.add(h.card); if (s.copy) { if (h.card.owned) addCopy(h.card); } else markCard(h.card, s.on); }
   }
   s.last = { x: p.x, y: p.y };
 }

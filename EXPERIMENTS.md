@@ -158,13 +158,57 @@ sentence is a query language, and dimming the wall to the popular cards left a v
 Popular filter, the active-chase pill, the chases list in the menu. Also: starting a trade asks In person or Online
 (coming soon).
 
+**Round 15: Finishing a chase.** Three answers to the last card landing: a checklist's finish (gold ticks on the
+progress bar for the missing cards you chase, the bar filling gold with "Complete since Oct 6", a Finished filter
+folding done panels to a line); the last card as a moment (every panel naming its next card, the final card lifting
+to the centre while "Complete" stamps the header, Keep on the wall or Put it away); and a trophy wall (finished things
+minted from their own tiles into gold plaques on a shelf along the top, a sealed album behind each, a ring gauge on
+every panel before then). Kept: the trophy wall with the safe ticks, and Ryan's rule that a trophy stays on the
+shelf at the top for a day and then moves to the trophy case at the end of the wall with the rest. A finished set or
+chase is minted where it sits, flies up, and the wall flows into the space; its album packs the cards edge to edge
+with Back to the wall; a finished group kept on the wall offers Put on the shelf. Learned: a finish wants to leave
+the working wall, and a plaque made of the group's own colours carries the memory better than a checkmark; the ring
+gauge duplicated the bar, and the stamp edged toward a toy. Dropped: the ring gauge, the Finished filter and list in
+Settings, the stamp, the next-card line (worth a return). Also fixed: completing a set threw, and Select all in a
+chase marked its twins instead of the cards.
+
+**Round 16: Where trophies live.** Three homes for a trophy after its day on the shelf: a trophy case at the end of
+the wall (a header with the count, the total and a sort, plaques with a plain third line, a set's master and grand set
+tucked under it, Share as a picture card); a trophy room behind a door at the end of the wall (one dark row with every
+plaque's colours, tapping it slides the wall away for lit plaques on wood shelves, each with its worth over the year as
+a thin line and the header summing the room, a set's other views stacked behind it and fanned on a tap); and a
+timeline one level above the wall (pinch the mosaic and it shrinks to "Today" with the trophies hung on a line of dates
+beside a growth curve). Kept: the room, whole. A pinch in the room or Back returns to the wall where you were; Back from
+an album opened in the room returns to the room. Also: a trophy on its first day has To the case now in its album,
+which sends it into the room without waiting the day (it keeps its real finish date). Learned: the room reads as an
+achievement because it leaves the working wall entirely, and a worth line turns a trophy from a record into something
+that is still doing something; the case's families and the timeline's history were good ideas that cost more to read.
+Dropped: the sort, Share, the ghost plaques, the timeline. On a phone, safe's case didn't show a moved trophy for Ryan
+(not chased down, since it was dropped).
+
+**Round 17: Your spares.** How doubles get onto the wall and how a spare finds someone. All three gave every card a
+copy count, with the import seeding doubles by card id (mostly commons and uncommons), and a done trade taking one
+copy rather than the card. Safe: a stepper on the card panel ("You have 2"), every copy past the first a spare unless
+you keep it, and a line saying who wants it with Trade with Maya. Bold: copies drawn as stacks at every level, and a
+flick up off the stack to put one up for trade. Radical: a nine-pocket trade binder of your spares, most wanted first
+with who chases each pocket, and Show mode, a dark full-screen spread handed across a table, whose picks become a trade.
+Kept (the critic's mix): safe's counts, stepper and "Wanted by" line; the binder as a level behind a cover at the top
+of the Trade lens, with Show mode into the table and a new Someone new that gives the picks away with Undo; bold's
+copies stacked behind the mini card in spare tiles. The Trade lift stays, most wanted first. Learned: the empty Trade
+lens was a data problem, not a layout one, and once copies exist a spare is just arithmetic; a binder handed across a
+table is the most natural trading object we've tried. Dropped: the flick and the drag into the binder (a vertical drag
+on a close-up meaning something new, depending on state you can't see), the far-out stack slivers (they read as
+misdrawn tiles), the likely-doubles review (a seeded guess dressed as a review), Mark's Into the trade binder. Also
+fixed: the import toast counted printings, so it disagreed with the counter.
+
 ## Open questions (next rounds)
 
 - A deal arriving off screen: one tap from the line to the offers, and whether the arrival should nudge the wall.
 - Painting past the screen's edge: should a sweep scroll the binder as it goes?
 - At the show: does the Wants lens alone carry a vendor table, or does the verdict (NEED IT, pay up to) earn a place when a card is looked up?
 - Trading: a real other side (the twelve-second reply is a stand-in), more than one card per counter, and whether a done trade should fall off the chip after a day.
-- Starting a trade: spares begin empty, so the demo needs a few marked by hand; an import option for doubles, or a hint on a spare's panel naming who wants it.
+- Spares: Show mode's Someone new gives cards away with nothing back; a stranger at a show might want to offer a card, which needs their side of the table without an account.
 - The import's reveal: the round 11 assembly from nothing as the flood after an import.
 - A chase's twins: should a custom panel's cards also lead in the Chase lens, or only their set's copy? And should a chase hide from the wall once it's complete?
+- Trophies: the worth line is a made-up year; real data would start at the finish date ("Up $27 since you finished"). Sharing a trophy (safe's picture card), and whether a sub-chase of a finished set should fold into the set's plaque. The room hides the lenses; Value could recolour the engravings.
 - Bringing the mosaic into the real app as the Chase home.

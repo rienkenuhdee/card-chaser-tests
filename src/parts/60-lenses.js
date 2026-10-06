@@ -11,11 +11,11 @@ function setLens(lens) {
   const was = state.lens;
   state.lens = lens; placeInk(); tick(5); hideCaption();
   try { localStorage.setItem("wall-lens", lens); } catch { /* fine */ }
-  if (lens === "have") { const n = cards.filter((c) => c.owned).length; toast(`${n.toLocaleString()} of ${TOTAL.toLocaleString()} in your collection`); }
+  if (lens === "have") { const n = cards.filter((c) => c.owned).length, s = spareCount(); toast(`${n.toLocaleString()} of ${TOTAL.toLocaleString()} in your collection${s ? `, ${s} spare${s === 1 ? "" : "s"}` : ""}`); }
   if (lens === "need") { const n = cards.filter((c) => !c.owned).length; toast(`${n} cards to go`); }
-  const news = lens === "chase" && live.news.some((c) => c.deal && isChase(c) && !c.owned); // the banner says what's new instead of the toast
+  const news = lens === "chase" && live.news.some((c) => c.deal && isChase(c) && !c.owned);
   if (lens === "chase" && !news) { const n = cards.filter(isChase).length, d = cards.filter((c) => isChase(c) && c.deal).length; toast(n ? `${n} on your chase list${d ? `, ${d} with a live deal` : ""}` : "Nothing on your chase list yet. Open a card and choose Chase it."); }
-  if (lens === "trade") { const n = cards.filter(isSpare).length; toast(n ? `${n} spare${n === 1 ? "" : "s"} to trade` : "No spares yet. Open a card you own and choose Spare."); }
+  if (lens === "trade") tradeToast();
   if (was === "chase") closePop(true);
   if (news) showDealBar(); else hideDealBar();
   liftLayout(); drawList(); updateCount(); kick();
@@ -26,7 +26,7 @@ function liftLayout(force = false) {
   const want = state.lens === "chase" || state.lens === "trade";
   const same = want === lifted && (!want || state.lens === liftKey); // Chase to Trade is a flight too
   if (same && !(force && lifted)) { layoutAll(); return; }
-  if (tbl.on) { layoutAll(); kick(); return; } // nothing of the wall shows under the table: no flight to watch
+  if (tbl.on || bnd.on) { layoutAll(); kick(); return; } // nothing of the wall shows under the table or the binder: no flight to watch
   const T = state.trans;
   if (T && !(T.anim || T.t0)) { layoutAll(); return; } // fingers are holding a transition: relayout under it
   if (T) finishTransition();

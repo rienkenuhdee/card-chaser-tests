@@ -2,17 +2,18 @@
 // Two layouts for the same cards. The mosaic: every group a panel, the panels tiling the screen, each packed with its
 // cards. The binder: one group at a time, ten across (fewer when cards are bigger), read top to bottom.
 const TW = 63, TH = 88, GAP = 10, COLS = 10, HEAD = 176;
-const stepX = (g) => (TW + GAP) * g.sz, stepY = (g) => (TH + GAP) * g.sz;
+const stepX = (g) => (tight(g) ? TW : TW + GAP) * g.sz, stepY = (g) => (tight(g) ? TH : TH + GAP) * g.sz; // a sealed album packs edge to edge
 function binderLayout(g) {
   // As many across as stay readable: five on a phone, up to ten on a wide screen; bigger cards, fewer across.
   const base = clamp(Math.floor((vw - 24) / 74), 4, COLS);
   g.cols = Math.max(1, Math.floor(base / g.sz));
   g.x = 0; g.y = 0;
-  g.w = g.cols * stepX(g) - GAP * g.sz;
+  g.w = g.cols * stepX(g) - (tight(g) ? 0 : GAP * g.sz);
   // The title block is a fixed height on screen, whatever the card size: 132px at the framed zoom.
-  if (g.set) popLayout(g); else { g.popChips = null; g.popH = g.chase ? 30 : 0; g.hdrBtn = g.chase ? { x: vw - 24 - 118, y: 2, w: 118, h: 22 } : null; } // a chase's header: a row with Remove chase
+  if (g.set) popLayout(g); else { g.popChips = null; g.popH = g.chase ? 30 : 0; g.hdrBtn = g.chase ? { x: vw - 24 - 118, y: 2, w: 118, h: 22 } : null; g.hdrBtn2 = null; } // a chase's header: a row with Remove chase
+  albumHeader(g); // a finished group's header: Back to the wall, or Put on the shelf
   g.head = (132 + (g.popH || 0)) / ((vw - 24) / g.w); // the title block, plus the People chase row in a set
-  g.h = g.head + Math.ceil(g.cards.length / g.cols) * stepY(g) - GAP * g.sz;
+  g.h = g.head + Math.ceil(g.cards.length / g.cols) * stepY(g) - (tight(g) ? 0 : GAP * g.sz);
   g.cards.forEach((c, k) => { c.sz = g.sz; c.col = k % g.cols; c.row = Math.floor(k / g.cols); c.x = c.col * stepX(g); c.y = g.head + c.row * stepY(g); });
 }
 let vw = innerWidth, vh = innerHeight;
@@ -60,37 +61,43 @@ function packPanel(g) {
 const W_FOLD = 50, NEW_H = 56;
 let newPanel = null; // the New chase panel at the end of the wall, in mosaic coordinates
 function mosaicLayout() {
+  const R0 = { x: 8, y: topPad(), w: vw - 16 }, top = R0.y + shelfLayout(R0); // the shelf first: trophies finished today
+  const live = groups.filter((g) => !g.done);
   const newH = mode === "set" && !picking() ? NEW_H : 0;
-  newPanel = null;
-  const fitH = vh - topPad() - botPad() - newH;
+  newPanel = null; trophyCase = null; COVER.m = null;
+  const fitH = vh - top - botPad() - newH;
   // The sets you collect share the screen; the others fold to a line beneath (picked in the welcome, or in Settings).
   if (mode === "set" && pickedSets.size && pickedSets.size < sets.length) {
-    const mine = groups.filter((g) => g.chase || pickedSets.has(g.set.id)), rest = groups.filter((g) => g.set && !pickedSets.has(g.set.id));
+    const mine = live.filter((g) => g.chase || pickedSets.has(g.set.id)), rest = live.filter((g) => g.set && !pickedSets.has(g.set.id));
     const n = mine.reduce((a, g) => a + g.cards.length, 0);
-    const R = { x: 8, y: topPad(), w: vw - 16, h: Math.max(fitH - rest.length * W_FOLD, fitH * 0.62, (n * 340) / (vw - 16)) };
+    const R = { x: R0.x, y: top, w: R0.w, h: mine.length ? Math.max(fitH - rest.length * W_FOLD, fitH * 0.62, (n * 340) / (vw - 16)) : 0 };
     const items = mine.map((g) => ({ g, v: Math.max(g.cards.length, 45) }));
     const floor = items.reduce((t, i) => t + i.v, 0) * 0.06;
     for (const i of items) i.v = Math.max(i.v, floor);
-    stripTreemap(items, R);
+    if (items.length) stripTreemap(items, R);
     let y = R.y + R.h;
     for (const g of rest) { g.m = { x: R.x, y, w: R.w, h: W_FOLD }; y += W_FOLD; }
     if (newH) { newPanel = { x: R.x, y, w: R.w, h: newH }; y += newH; }
+    y += caseLayout(R0, y); // the trophy case: everything finished before today
     mMax = Math.max(0, y + botPad() - vh);
     mScroll = clamp(mScroll, 0, mMax);
     for (const g of mine) packPanel(g);
     for (const g of rest) packFolded(g);
     return;
   }
-  const R = { x: 8, y: topPad(), w: vw - 16, h: Math.max(fitH, (drawnCards.length * 340) / (vw - 16)) };
-  if (newH) newPanel = { x: R.x, y: R.y + R.h, w: R.w, h: newH };
-  mMax = Math.max(0, R.y + R.h + newH + botPad() - vh);
+  const n = live.reduce((a, g) => a + g.cards.length, 0);
+  const R = { x: R0.x, y: top, w: R0.w, h: live.length ? Math.max(fitH, (n * 340) / (vw - 16)) : 0 };
+  let y = R.y + R.h;
+  if (newH) { newPanel = { x: R.x, y, w: R.w, h: newH }; y += newH; }
+  y += caseLayout(R0, y);
+  mMax = Math.max(0, y + botPad() - vh);
   mScroll = clamp(mScroll, 0, mMax);
   // Panel area follows card count, or, laid out by value, what the cards in the band are worth.
-  const items = groups.map((g) => ({ g, v: mode === "value" ? Math.pow(g.cards.reduce((t, c) => t + c.price, 0), 0.7) : Math.max(g.cards.length, 45) }));
+  const items = live.map((g) => ({ g, v: mode === "value" ? Math.pow(g.cards.reduce((t, c) => t + c.price, 0), 0.7) : Math.max(g.cards.length, 45) }));
   const floor = items.reduce((t, i) => t + i.v, 0) * 0.06;
   for (const i of items) i.v = Math.max(i.v, floor);
-  stripTreemap(items, R);
-  for (const g of groups) packPanel(g);
+  if (items.length) stripTreemap(items, R);
+  for (const g of live) packPanel(g);
 }
 // ---------- chase lead ----------
 // With the Chase lens on the layout changes as well as the colour (rounds 7 and 9): every panel with something to
@@ -136,9 +143,10 @@ function packFolded(g) {
 }
 function liftedLayout() {
   const R = { x: 8, y: topPad(), w: vw - 16 };
-  const live = groups.filter((g) => g.lead.length), folded = groups.filter((g) => !g.lead.length);
-  let y = R.y;
-  if (state.lens === "trade") y += stripLayout(R); else strip = null; // the traders along the top
+  let y = R.y + shelfLayout(R);
+  const live = groups.filter((g) => !g.done && g.lead.length), folded = groups.filter((g) => !g.done && !g.lead.length);
+  COVER.m = null;
+  if (state.lens === "trade") { y += coverLayout({ x: R.x, y, w: R.w }); y += stripLayout({ x: R.x, y, w: R.w }); } else strip = null; // the trade binder's cover, then the traders
   // On a wide screen two live panels sit side by side; on a phone they stack.
   const across = R.w >= 900 ? 2 : 1, pw = R.w / across;
   for (let i = 0; i < live.length; i += across) {
@@ -147,11 +155,20 @@ function liftedLayout() {
     y += h;
   }
   for (const g of folded) { g.m = { x: R.x, y, w: R.w, h: FOLD }; y += FOLD; }
+  y += caseLayout(R, y);
   mMax = Math.max(0, y + botPad() - vh);
   mScroll = clamp(mScroll, 0, mMax);
-  for (const g of groups) if (g.lead.length) packLifted(g); else packFolded(g);
+  for (const g of groups) { if (g.done) continue; if (g.lead.length) packLifted(g); else packFolded(g); }
 }
-function layoutAll() { lifted = state.lens === "chase" || state.lens === "trade"; liftKey = lifted ? state.lens : null; for (const g of groups) orderGroup(g); groups.forEach(binderLayout); if (lifted) { newPanel = null; liftedLayout(); } else mosaicLayout(); }
+function layoutAll() {
+  lifted = state.lens === "chase" || state.lens === "trade"; liftKey = lifted ? state.lens : null;
+  for (const g of groups) { orderGroup(g); g.done = mode === "set" && isPut(g); }
+  groups.forEach(binderLayout);
+  const keep = mScroll;
+  if (lifted) { newPanel = null; liftedLayout(); } else mosaicLayout();
+  if (room.on) { if (!caseList().length) { endRoom(); return; } if (room.fan && !inCase(room.fan)) room.fan = null; mScroll = keep; strip = null; roomLayout(); }
+  if (bnd.on) { bnd.L = tbGeom(bnd.show); bnd.vi = clamp(bnd.vi, 0, tbViews() - 1); } // the binder fits the new screen
+}
 
 // ---------- camera (inside a set) ----------
 const cam = { x: 0, y: 0, s: 1 };

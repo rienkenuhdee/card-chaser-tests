@@ -21,11 +21,26 @@ function stepInertia(dt) {
 function hit(sx, sy, nearest = false) {
   if (state.trans) return null;
   if (view === "mosaic") {
+    if (room.on && room.closing) return null;
+    if (room.on && room.anim) finishRoomAnim();
     const y = sy + mScroll;
-    for (const g of groups) if (g.m && sx >= g.m.x && sx <= g.m.x + g.m.w && y >= g.m.y && y <= g.m.y + g.m.h) return { block: g };
+    if (room.on) {
+      for (const g of caseList()) {
+        if (g.fanR && inR(g.fanR, sx, y)) return { block: g.fanBtn };
+        if (g === room.fan) for (const r of fanRows(g)) if (inR(r.m, sx, y)) return { block: r };
+        if (inR(g.m, sx, y)) return { block: g };
+      }
+      if (!nearest) return null;
+      let best = null, bd = Infinity;
+      for (const g of caseList()) { const dx = Math.max(g.m.x - sx, 0, sx - g.m.x - g.m.w), dy = Math.max(g.m.y - y, 0, y - g.m.y - g.m.h), d = Math.hypot(dx, dy); if (d < bd) { bd = d; best = g; } }
+      return best && bd < 60 ? { block: best } : null;
+    }
+    if (COVER.m && inR(COVER.m, sx, y)) return { block: COVER }; // the trade binder, at the top of the Trade lens
+    if (inR(DOOR.m, sx, y)) return { block: DOOR };
+    for (const g of groups) if (g.m && !inCase(g) && inR(g.m, sx, y)) return { block: g };
     if (!nearest) return null;
     let best = null, bd = Infinity;
-    for (const g of groups) { if (!g.m) continue; const dx = Math.max(g.m.x - sx, 0, sx - g.m.x - g.m.w), dy = Math.max(g.m.y - y, 0, y - g.m.y - g.m.h), d = Math.hypot(dx, dy); if (d < bd) { bd = d; best = g; } }
+    for (const g of groups) { if (!g.m || inCase(g)) continue; const dx = Math.max(g.m.x - sx, 0, sx - g.m.x - g.m.w), dy = Math.max(g.m.y - y, 0, y - g.m.y - g.m.h), d = Math.hypot(dx, dy); if (d < bd) { bd = d; best = g; } }
     return best && bd < 60 ? { block: best } : null;
   }
   const g = state.g; if (!g) return null;
@@ -60,16 +75,20 @@ function onDown(pts) {
   samples = [{ x: p.x, y: p.y, t: now }];
   const h0 = hit(p.x, p.y);
   if (view === "mosaic" && h0?.block) { state.press = { g: h0.block, t0: now, timer: 0 }; kick(); }
-  // Press and hold a card in a set to mark it; keep the finger down and sweep to mark the ones beside it.
   if (view === "set" && !state.focus && h0?.card && TW * h0.card.sz * cam.s >= 14) {
     const card = h0.card;
     gesture.card = card;
     state.press = { c: card, t0: now, timer: setTimeout(() => {
       if (gesture?.kind !== "one" || gesture.moved || state.press?.c !== card) return;
-      if (marking) { // already marking: a hold puts the card on your chase list (or, owned, up for trade)
-        gesture = null; cancelPress(); tick(8);
-        if (card.owned) { spares[card.id] = !isSpare(card); try { localStorage.setItem("wall-spares", JSON.stringify(spares)); } catch { /* fine */ } toast(spares[card.id] ? `${card.name} is a spare, up for trade.` : `${card.name} is no longer a spare.`); }
-        else { chasing[card.id] = !isChase(card); persistChase(); toast(chasing[card.id] ? `${card.name} on your chase list.` : `${card.name} off your chase list.`); }
+      if (marking) { // already marking: a hold on a card you have adds a copy (sweep on for the next ones); else it's a chase
+        cancelPress(); tick(8);
+        if (card.owned) {
+          const at = samples[samples.length - 1] || { x: gesture.x, y: gesture.y };
+          gesture.stroke = { copy: true, seen: new Set([card]), last: { x: at.x, y: at.y } }; gesture.moved = true;
+          addCopy(card); return;
+        }
+        gesture = null;
+        chasing[card.id] = !isChase(card); persistChase(); toast(chasing[card.id] ? `${card.name} on your chase list.` : `${card.name} off your chase list.`);
         drawList(); kick(); return;
       }
       enterMark();
@@ -122,6 +141,15 @@ function pinchMove(a, b) {
   const g = gesture, d = dist(a, b), m = mid(a, b), r = d / g.d0, now = evT || performance.now();
   if (g.snap) return;
   if (view === "mosaic") {
+    if (room.on) {
+      if (room.pinch || (r < 1 && !state.trans)) {
+        if (!room.pinch) { room.pinch = { q0: room.q, qs: [] }; room.anim = null; }
+        room.q = clamp(room.pinch.q0 - (1 - r) / 0.55, 0, 1); room.pinch.qs.push({ q: room.q, t: now }); kick(); return;
+      }
+      if (!g.g?.done) return;
+    } else if (g.g?.door) { if (r > 1.12) { g.snap = true; openRoom(); } return; }
+    else if (g.g?.tbCover) { if (r > 1.12) { g.snap = true; openBinder(); } return; }
+    else if (g.g && (g.g.fan || g.g.pick)) return;
     if (!g.g) return;
     const q = clamp((r - 1) / 1.1, 0, 1);
     if (!state.trans && q > 0.01) state.trans = openTrans(g.g, 0, fitCam(g.g));
@@ -133,7 +161,6 @@ function pinchMove(a, b) {
   g.m = m; g.r = r;
   if (s < f.s * 0.995) {
     if (g.noClose) { Object.assign(cam, f); kick(); return; }
-    // Pinching out of a framed set closes it, under your fingers, measured from where the fingers crossed the frame.
     if (!state.trans) { Object.assign(cam, f); state.trans = openTrans(state.g, 1, f); g.closeD = d * (f.s / s); }
     if (!state.trans.anim) { const q = clamp(1 - (1 - d / (g.closeD || d)) / 0.6, 0, 1); state.trans.q = q; g.qs.push({ q, t: now }); }
     kick(); return;
@@ -150,18 +177,25 @@ function pinchMove(a, b) {
 function releasePinch() {
   const g = gesture, T = state.trans;
   if (g.snap) return;
+  if (room.pinch) {
+    const qs = room.pinch.qs, last = qs[qs.length - 1]; room.pinch = null;
+    let first = qs.find((s) => last && last.t - s.t < 160);
+    if (qs.length >= 2 && (first === last || qs.indexOf(last) - qs.indexOf(first) < 2)) first = qs[Math.max(0, qs.length - 3)];
+    const v = first && last && first !== last ? (last.q - first.q) / Math.max(8, last.t - first.t) : 0;
+    const to = Math.abs(v) > 0.0011 ? (v > 0 ? 1 : 0) : room.q > 0.5 ? 1 : 0;
+    if (to === 0) closeRoom(); else { room.anim = { from: room.q, to: 1, t0: performance.now(), dur: 160 + 300 * (1 - room.q) }; kick(); }
+    return;
+  }
   if (T?.kind === "open" && !T.anim) {
-    // Speed over the last tenth of a second of movement (at least the last two samples).
     const qs = g.qs, last = qs[qs.length - 1];
     let first = qs.find((s) => last && last.t - s.t < 160);
     if (qs.length >= 2 && (first === last || qs.indexOf(last) - qs.indexOf(first) < 2)) first = qs[Math.max(0, qs.length - 3)];
-    const v = first && last && first !== last ? (last.q - first.q) / Math.max(8, last.t - first.t) : 0; // q per ms
+    const v = first && last && first !== last ? (last.q - first.q) / Math.max(8, last.t - first.t) : 0;
     let to;
     if (Math.abs(v) > 0.0011) to = v > 0 ? 1 : 0;
     else to = T.q > (view === "mosaic" ? 0.35 : 0.65) ? 1 : 0;
     settle(to);
   } else if (view === "set" && state.g && cam.s < fitCam(state.g).s) flyTo(fitCam(state.g), 260);
-  // A spread that zooms well in lands on the card under the fingers, centred, the way a tap would.
   else if (view === "set" && state.g && !g.noClose && g.r > 1.15 && g.m && cam.s > fitCam(state.g).s * 1.8) {
     const h = hit(g.m.x, g.m.y);
     let c = h?.card || null;
@@ -236,7 +270,7 @@ function tap(sx, sy) {
   if (state.focus) { if (h?.card === state.focus) return; unfocus(); return; }
   if (view === "mosaic") {
     const ch = chipAt(sx, sy); if (ch) return startTrade(ch.t, ch); // a trader: how to trade, then the table
-    if (h?.block && lifted) {
+    if (h?.block && lifted && !h.block.done) { // a plaque is sealed: a tap opens the album, never a tile in its engraving
       const c = liftedAt(h.block, sx, sy);
       if (c && state.lens === "trade") { // a spare: the table with whoever wants it
         const who = wantedBy(c);
@@ -250,7 +284,7 @@ function tap(sx, sy) {
     return;
   }
   if (!h?.card) {
-    if (h?.block && !marking && !fly && !shuffle) { const p = headAt(h.block, sx, sy); if (p) { tick(4); if (p.seg) setScope(h.block.set, p.seg); else if (p.btn) { if (p.btn.pop) chasePopular(h.block.set); else if (p.btn.remove) removeSet(h.block.set); else removeChase(h.block.chase); } else focus(p.c); } }
+    if (h?.block && !marking && !fly && !shuffle) { const p = headAt(h.block, sx, sy); if (p) { tick(4); if (p.seg) setScope(h.block.set, p.seg); else if (p.btn) { if (p.btn.shelf) toggleShelf(h.block); else if (p.btn.away) putAway(h.block); else if (p.btn.pop) chasePopular(h.block.set); else if (p.btn.remove) removeSet(h.block.set); else removeChase(h.block.chase); } else focus(p.c); } }
     return;
   }
   const w = TW * h.card.sz * cam.s;

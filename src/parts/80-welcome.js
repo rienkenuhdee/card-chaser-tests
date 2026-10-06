@@ -128,20 +128,25 @@ function startImport(src) {
 function finishImport(src) {
   if (!wel.on) return;
   const now = performance.now(), chaseAll = wChase.checked;
-  let n = 0, k = 0;
+  let n = 0, k = 0, d = 0;
   for (const c of pool) {
     if (c.owned || !c.own0) { if (chaseAll && !c.owned) { chasing[c.id] = true; k++; } continue; }
-    c.owned = true; c.got = seededGot(c); saved[c.id] = { on: true, at: c.got }; n++;
+    c.owned = true; c.got = seededGot(c); saved[c.id] = { on: true, at: c.got }; if (!c.of) n++; // the count says cards, as the counter does (printings ride along)
+    if (!c.of) { const x = importCopies(c); if (x > 1) { copies[c.id] = { n: x, got: c.got }; d++; } }
     if (!reduced) c.anim = { t0: now + 200 + c.g * 140 + c.k * 2.2, to: true };
   }
-  persist(); if (chaseAll) persistChase();
+  copiesKey++; persist(); persistCopies(); if (chaseAll) persistChase();
   wel.on = false; wel.step = 0; wel.imp = null; wel.key = "";
   try { localStorage.setItem("wall-welcomed", "1"); localStorage.setItem("wall-imported", src); } catch { /* fine */ }
   document.body.classList.remove("welcoming"); welEl.classList.remove("on");
   if (marking) { session.clear(); leaveMark(); }
-  updateCount(); drawList(); if (lifted) liftLayout(true);
+  updateCount(); drawList();
+  const sync = syncDone({ quiet: true });
+  if (lifted && !sync) liftLayout(true);
   tick(14);
-  setTimeout(() => toast(`${n.toLocaleString()} cards imported from ${src}.${chaseAll ? ` ${k.toLocaleString()} on your chase list.` : ""}`), reduced ? 100 : 500);
+  // The spares went into the trade binder: Open goes to the Trade lens and opens it. (Kept to two lines.)
+  const said = d ? `${n.toLocaleString()} cards imported${chaseAll ? `, ${k.toLocaleString()} to chase` : ""}. ${d} with spares are in your trade binder.` : `${n.toLocaleString()} cards imported from ${src}.${chaseAll ? ` ${k.toLocaleString()} on your chase list.` : ""}`;
+  setTimeout(() => toast(said, d ? () => tbOpenFromAnywhere() : null, "Open"), reduced ? 100 : 500);
   kick();
 }
 
@@ -162,10 +167,11 @@ function togglePick(g) {
 }
 // The ticks on the panels while you pick, drawn over the mosaic after everything else.
 function drawPicks() {
+  drawCopies();
   if (!picking()) return;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1; ctx.lineCap = "round"; ctx.lineJoin = "round";
   for (const g of groups) {
-    if (!g.set || !g.m) continue;
+    if (!g.set || !g.m || g.done) continue;
     const m = mr(g.m); if (m.y > vh || m.y + m.h < 0) continue;
     const on = wel.picks.has(g.set.id), R = 10, x = m.x + m.w - PG - 10 - R, y = m.y + PG + 16;
     if (on) { ctx.lineWidth = 2; ctx.strokeStyle = g.ink; rr(m.x + PG + 1, m.y + PG + 1, m.w - PG * 2 - 2, m.h - PG * 2 - 2, 11); ctx.stroke(); }

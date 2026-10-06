@@ -408,3 +408,76 @@ body.focused .dealbar, body.offering .dealbar, body.trading .dealbar, body.welco
 .db-main span { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .db-main:hover { background: var(--line); }
 .db-x { width: 34px; height: 34px; color: var(--muted); }
+
+/* Trophies (round 15): a gold plate, read into the canvas through theme. */
+:root { --plaque: #E6C050; --plaque-ink: #2A1E05; --plaque-hi: rgb(255 255 255 / .55); --plaque-lo: rgb(90 60 0 / .35); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --plaque: #B08A2E; --plaque-ink: #150F02; --plaque-hi: rgb(255 240 190 / .32); --plaque-lo: rgb(0 0 0 / .38); }
+}
+:root[data-theme="dark"] { --plaque: #B08A2E; --plaque-ink: #150F02; --plaque-hi: rgb(255 240 190 / .32); --plaque-lo: rgb(0 0 0 / .38); }
+/* While the shelf shows, the toast and the deal bar sit under it rather than on it. */
+.toast { top: calc(env(safe-area-inset-top, 0px) + 70px + var(--shelf-h, 0px)); }
+.dealbar { top: calc(env(safe-area-inset-top, 0px) + 62px + var(--shelf-h, 0px)); }
+/* The list: the Trophies section */
+#list .lshelf h2 { color: var(--gold); }
+#list .lfin { margin: 18px 0 2px; font: 800 17px var(--font); font-stretch: 80%; }
+#list .lfin-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+/* The trophy room: the door on the wall, and the room behind it (dark in both schemes, the plaques lit). */
+:root {
+  --door: #2B1D13; --door-hi: rgb(255 220 170 / .22); --door-ink: #F3E9D8; --door-muted: #C9B59A;
+  --room-bg: #241810; --room-bg2: #140D08; --room-wood: #3B2718; --room-wood-hi: rgb(255 220 170 / .22);
+  --room-ink: #F3E9D8; --room-muted: #B7A58E; --room-plaque: #E6C050; --room-plaque-ink: #2A1E05; --room-plaque-lo: rgb(90 60 0 / .4);
+  --room-up: #8FD9A0; --room-down: #F0A08A;
+}
+/* While the room is up the lens bar and the time bar step aside, as they do under the trade table. */
+body.inroom .lens, body.inroom .timebar { transform: translate(-50%, 160%); opacity: 0; pointer-events: none; }
+body.inroom .caption { display: none; }
+body.inroom .dealbar { display: none; }
+
+/* Copies: the stepper takes Chase it's place on a card you own; a line under the buttons says who wants the spare. */
+.panel .acts:has(#p-copies:not([hidden])) #p-own { grid-column: auto; }
+.copies { display: flex; align-items: center; height: 50px; border-radius: 12px; border: 1px solid var(--line); overflow: hidden; transition: border-color .2s, background .2s; }
+.copies[hidden] { display: none; }
+.copies.spare { border-color: var(--gold); background: color-mix(in srgb, var(--gold) 12%, transparent); }
+.copies output { flex: 1; min-width: 0; text-align: center; font: 700 15.5px var(--font); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cbtn { flex: none; width: 46px; height: 100%; border: 0; background: none; color: var(--ink); font: 600 22px/1 var(--font); cursor: pointer; transition: background .15s, opacity .2s; }
+.cbtn:not(:disabled):hover, .cbtn:not(:disabled):active { background: var(--line); }
+.cbtn:disabled { opacity: .3; cursor: default; }
+.spareline { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; margin-top: -2px; }
+.spareline[hidden] { display: none; }
+.spareline p { flex: 1 1 180px; margin: 0; font-size: 14px; line-height: 1.35; color: var(--muted); }
+.spareline p b { color: var(--ink); }
+.sl-acts { display: flex; gap: 6px; }
+.sl-acts .pill-btn { height: 36px; padding: 0 12px; font-size: 14px; color: var(--ink); }
+.sl-acts .pill-btn.primary { background: var(--gold); border-color: var(--gold); color: #fff; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .sl-acts .pill-btn.primary { color: #171920; } }
+:root[data-theme="dark"] .sl-acts .pill-btn.primary { color: #171920; }
+.sl-acts .pill-btn[hidden] { display: none; }
+
+/* The trade binder (round 17): its bar, and Show mode's bar and prices switch. */
+#tb-safe { position: fixed; top: env(safe-area-inset-top, 0px); bottom: env(safe-area-inset-bottom, 0px); left: 0; width: 0; pointer-events: none; visibility: hidden; }
+.bbar { position: fixed; z-index: 3; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); transform: translate(-50%, 160%); opacity: 0; pointer-events: none;
+  width: min(460px, calc(100vw - 20px)); display: flex; align-items: center; gap: 6px; padding: 5px 5px 5px 14px; border-radius: 14px;
+  transition: transform .4s cubic-bezier(.2,.9,.25,1.04), opacity .3s; }
+body.inbinder:not(.showing):not(.trading) .bbar { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
+.bbar .mtext, .showbar .mtext { flex: 1; min-width: 0; display: grid; gap: 1px; line-height: 1.2; }
+.bbar b { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.bbar span { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.inbinder .lens, body.inbinder .timebar { transform: translate(-50%, 160%); opacity: 0; pointer-events: none; }
+body.inbinder .dealbar, body.inbinder .caption { display: none; }
+body.showing .top, body.showing .toast { opacity: 0; pointer-events: none; }
+
+/* Show mode: dark, full screen, nothing but the pages, the picks and Done. */
+.showbar { position: fixed; z-index: 3; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 12px; padding: 12px 16px calc(env(safe-area-inset-bottom, 0px) + 16px);
+  color: #fff; opacity: 0; pointer-events: none; transform: translateY(24px); transition: transform .35s cubic-bezier(.2,.9,.25,1.04), opacity .25s; }
+body.showing .showbar { opacity: 1; pointer-events: auto; transform: none; }
+.showbar b { font: 800 21px/1.1 var(--font); font-stretch: 85%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.showbar span { font-size: 13.5px; color: rgb(255 255 255 / .62); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.showbar .mbtn { height: 48px; padding: 0 24px; color: #0B0C0F; background: #fff; border-color: #fff; font-size: 16px; }
+.showbar .mbtn:not(:disabled):hover { background: #fff; }
+.showpill { position: fixed; z-index: 3; top: calc(env(safe-area-inset-top, 0px) + 18px); right: 12px; height: 34px; padding: 0 14px; border-radius: 17px;
+  border: 1px solid rgb(255 255 255 / .32); background: none; color: #fff; font: 700 13.5px var(--font); cursor: pointer; opacity: 0; pointer-events: none; transition: opacity .25s, background .2s; }
+.showpill[aria-pressed="false"] { color: rgb(255 255 255 / .66); border-style: dashed; }
+body.showing .showpill { opacity: 1; pointer-events: auto; }
+@media (prefers-reduced-motion: reduce) { .bbar, .showbar, .showpill { transition: none; } }

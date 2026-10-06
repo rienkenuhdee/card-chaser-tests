@@ -1,0 +1,12 @@
+/* r16-safe-trophy-case: the list's Trophies section mirrors the case: a sort row, families with the kids inset. */
+#list .lsort { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
+#list .lsort .pill-btn { height: 34px; padding: 0 12px; font-size: 13.5px; }
+#list .lfam { margin-top: 6px; }
+#list .lkid { margin: 4px 0 0 14px; padding-left: 12px; border-left: 2px solid var(--line); }
+#list .lkid .lfin { margin-top: 12px; font-size: 16px; }
+#list .lbtns { display: flex; flex: none; gap: 6px; }
+#list .lfin-line .pill-btn { height: 34px; padding: 0 12px; font-size: 13.5px; }
+@media (max-width: 420px) {
+  #list .lfin-line { flex-wrap: wrap; }
+  #list .lbtns { width: 100%; justify-content: flex-end; }
+}

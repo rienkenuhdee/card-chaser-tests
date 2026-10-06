@@ -17,8 +17,8 @@ function unfocus() {
   if (!state.focus) return;
   state.focus = null;
   document.body.classList.remove("focused");
-  // Back to where the card sits, at a comfortable size.
-  if (view === "set" && state.g) { const f = fitCam(state.g); if (cam.s > f.s * 1.02) flyTo(f, 380); } // straight back to the set, nothing in between
+  if (view === "set" && state.g) { const f = fitCam(state.g); if (cam.s > f.s * 1.02) flyTo(f, 380); }
+  flushLayout();
   kick();
 }
 function step(d) {
@@ -60,9 +60,12 @@ function setOwned(c, on, { undo = null, quiet = false } = {}) {
   for (const t of [b, ...twinsOf(b)]) { t.anim = { t0: now, to: on }; const tg = groups[t.g]; if (tg && (t === c || tg.base?.includes(t) || tg.cards.includes(t))) tg.ripple = { t0: now, col: t.col, row: t.row }; }
   tick(on ? 14 : 6);
   const st = sets[c.si], owned = ownedIn(st.cards);
-  if (on && owned === st.cards.length) { const sg = groups[b.g]; if (mode === "set" && sg?.set === st) sg.burst = now; tick(40); toast(`${st.name} complete. ${owned} of ${owned}.`, undo); }
+  let sync = null;
+  if (quietLayout) doneDirty = true; else sync = syncDone(); // did that finish something, or undo a finish?
+  if (sync?.minted.length) { tick(40); toast(finishedText(sync.minted), undo); }
+  else if (sync?.freed.length) toast(`${c.name} taken out. ${sync.freed.map(trophyName).join(" and ")} ${sync.freed.length === 1 ? "is" : "are"} back on the wall.`, undo);
   else if (!quiet) toast(on ? `${c.name} added. ${owned} of ${st.cards.length} in ${st.name}.` : `${c.name} taken out.`, undo);
   if (state.focus === c) fillPanel(c, 0);
-  if (lifted && !quietLayout) liftLayout(true); // a chased card changed hands: the chase layout flies to its new shape
+  if (lifted && !quietLayout && !sync) liftLayout(true); // a chased card changed hands: the chase layout flies to its new shape
   updateCount(); drawList(); kick();
 }

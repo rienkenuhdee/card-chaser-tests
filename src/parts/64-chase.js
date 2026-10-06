@@ -17,21 +17,33 @@ try { spares = JSON.parse(localStorage.getItem("wall-spares") || "{}") || {}; } 
 for (const c of cards) c.spare0 = false; // so do your spares
 const isSpare = (c) => c.owned && (spares[c.id] ?? c.spare0);
 
-// ----- Chase it (or, on a card you own, Spare), next to I have it on the card panel -----
+// ----- Chase it, next to I have it on the card panel (on a card you own, the copies stepper takes its place) -----
 const flagBtn = document.getElementById("p-want");
 function updateFlag(c) {
-  const on = c.owned ? isSpare(c) : isChase(c);
-  flagBtn.textContent = c.owned ? (on ? "Spare ✓" : "Spare") : (on ? "Chasing ✓" : "Chase it");
-  flagBtn.classList.toggle("on", on); flagBtn.setAttribute("aria-pressed", String(on));
+  const owned = c.owned;
+  flagBtn.hidden = owned; stepEl.hidden = !owned;
+  if (!owned) {
+    const on = isChase(c);
+    flagBtn.textContent = on ? "Chasing ✓" : "Chase it"; flagBtn.classList.toggle("on", on); flagBtn.setAttribute("aria-pressed", String(on));
+    spareEl.hidden = true; return;
+  }
+  const meta = document.getElementById("p-meta"); meta.textContent = meta.textContent.replace(" You have a spare.", "");
+  const b = c.base || c, n = nOf(b), s = sparesOf(b), who = wantedBy(b);
+  pN.textContent = `You have ${n}`; pLess.disabled = n <= 1; pMore.disabled = n >= 99;
+  stepEl.classList.toggle("spare", s > 0);
+  let text = "", trade = null, keep = "";
+  if (n <= 1) { if (who.length) text = `${people(who)} ${who.length === 1 ? "wants" : "want"} this. Got a double? Tap +.`; }
+  else if (s) {
+    text = `<b>${s === 1 ? "1 spare" : `${s} spares`}</b>, up for trade. ${who.length ? `Wanted by ${people(who)}.` : "Nobody's after it yet."}`;
+    trade = who[0] || null; keep = n === 2 ? "Keep both" : `Keep all ${n}`;
+  } else { text = `Keeping ${n === 2 ? "both" : `all ${n}`}, not up for trade.`; keep = n === 2 ? "Trade the extra" : "Trade the extras"; }
+  spareEl.hidden = !text;
+  pSpareT.innerHTML = text;
+  pTrade.hidden = !trade; if (trade) { pTrade.textContent = `Trade with ${trade.name}`; pTrade.dataset.t = trade.id; }
+  pKeep.hidden = !keep; pKeep.textContent = keep;
 }
 flagBtn.onclick = () => {
-  const c = state.focus; if (!c) return;
-  if (c.owned) {
-    spares[c.id] = !isSpare(c); try { localStorage.setItem("wall-spares", JSON.stringify(spares)); } catch { /* fine */ }
-    updateFlag(c); tick(5); drawList(); if (lifted) liftLayout(true); kick();
-    toast(spares[c.id] ? `${c.name} is a spare, up for trade.` : `${c.name} is no longer a spare.`);
-    return;
-  }
+  const c = state.focus; if (!c || c.owned) return;
   chasing[c.id] = !isChase(c); persistChase(); updateFlag(c); tick(5); drawList(); if (lifted) liftLayout(true); kick();
   toast(chasing[c.id] ? `${c.name} on your chase list. Pay up to ${money(capOf(c))}.` : `${c.name} off your chase list.`);
 };

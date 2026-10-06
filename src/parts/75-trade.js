@@ -1,6 +1,6 @@
 // ---------- trade: the table, your spares meeting someone else's wants ----------
-// The Trade lens lifts your spares out in front (the chase lift, keyed on spares) and puts a strip of traders along
-// the top of the mosaic: each one wants something of yours. Tap a trader and the screen becomes a table between you:
+// The Trade lens lifts your spares out in front (the chase lift, keyed on spares) and puts the trade binder's cover
+// (78-trade-binder.js) and a strip of traders along the top of the mosaic: each one wants something of yours. Tap a trader and the screen becomes a table between you:
 // their spares along the top (the ones you chase lit green), yours along the bottom (the ones they chase lit gold),
 // and the table between. Drag a card from either side onto the table and it stays there; the strip keeps both
 // totals and the balance. Shake hands sends the offer: the cards gather in the trader's hands and the trade bar grows
@@ -54,7 +54,8 @@ function moveText(rec, t) {
 }
 
 // ----- the Trade lens lifts spares, the way Chase lifts the chase list (the layout is in 30-layout.js) -----
-const spareOrder = (a, b) => wantedBy(b).length - wantedBy(a).length || b.price - a.price || a.i - b.i;
+// Most wanted first (how many traders chase it), then the dearest. The trade binder keeps the same order.
+const spareOrder = (a, b) => wantedBy(rootOf(b)).length - wantedBy(rootOf(a)).length || b.price - a.price || a.i - b.i;
 // The strip of traders along the top of the mosaic, above the lifted panels. It scrolls with the mosaic. A trader
 // with a thread stays in it; one with something to answer sorts first.
 const CHIP_H = 66, CHIP_GAP = 6;
@@ -99,7 +100,7 @@ function drawChip(ch, now, alpha) {
   ctx.globalAlpha = 1;
 }
 function drawTraders(now) {
-  if (!strip || view !== "mosaic" || state.lens !== "trade") return;
+  if (view !== "mosaic" || state.lens !== "trade" || bnd.on || room.on) return;
   const T = state.trans;
   let alpha = 1;
   if (T?.kind === "morph") alpha = ease(clamp((now - T.t0 - 140) / (T.dur - 520), 0, 1));
@@ -108,25 +109,30 @@ function drawTraders(now) {
   if (tbl.on) alpha *= 1 - tbl.q;
   if (alpha <= 0.01) return;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  for (const ch of strip.chips) drawChip(ch, now, alpha);
+  drawCover(now, alpha); // the trade binder, above the traders
+  if (strip) for (const ch of strip.chips) drawChip(ch, now, alpha);
 }
 
 // ----- the spare tile: a card of yours out in front, and who wants it -----
 function drawSpareTile(c, x, y, w, h, a, now) {
-  const st = sets[c.si], who = wantedBy(c), want = who.length > 0, rad = Math.min(12, w * 0.07);
+  const st = sets[c.si], b = c.base || c, who = wantedBy(b), want = who.length > 0, rad = Math.min(12, w * 0.07);
   ctx.globalAlpha = a;
   rr(x, y, w, h, rad); ctx.fillStyle = want ? goldTint() : theme["panel-solid"]; ctx.fill();
   ctx.lineWidth = want ? 1.5 : 1; ctx.strokeStyle = want ? theme.gold : theme["slot-line"]; ctx.stroke();
   if (w < 60) { ctx.globalAlpha = 1; return; }
   const pad = Math.max(8, w * 0.05), s = clamp(w / 177, 0.6, 1.3);
   const mh = h - pad * 2, mw = mh * TW / TH;
+  miniStack(b, x + pad, y + pad, mw, mh, want); // the other copies, tucked behind the little card
   foilOff = true; cardFace(c, x + pad, y + pad, mw, mh, now, state.value && !state.matches); foilOff = false;
   ctx.globalAlpha = a;
-  const tx = x + pad + mw + pad, tw = x + w - pad - tx;
+  countPill(nOf(b), true, x + pad + 4, y + pad + 4, 10.5 * s);
+  const tx = x + pad + mw + pad + stackO(mw) * Math.min(2, nOf(b) - 1), tw = x + w - pad - tx;
   ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
   ctx.fillStyle = theme.ink; font(800, 20 * s); ctx.fillText(short(c.price), tx, y + pad + 17 * s);
-  if (want) { ctx.fillStyle = theme.gold; font(700, 11.5 * s); ctx.fillText(fitText(who.length === 1 ? `${who[0].name} wants it` : who.length === 2 ? `${who[0].name} and ${who[1].name} want it` : `${who.length} want it`, tw), tx, y + pad + 32 * s); }
-  else { ctx.fillStyle = theme.muted; font(500, 11.5 * s); ctx.fillText(fitText("No takers yet", tw), tx, y + pad + 32 * s); }
+  if (want) {
+    ctx.fillStyle = theme.muted; font(500, 11 * s); ctx.fillText(fitText("Wanted by", tw), tx, y + pad + 32 * s);
+    ctx.fillStyle = theme.gold; font(700, 12.5 * s, true); ctx.fillText(fitText(who.length <= 2 ? who.map((t) => t.name).join(", ") : `${who[0].name} +${who.length - 1}`, tw), tx, y + pad + 46 * s);
+  } else { ctx.fillStyle = theme.muted; font(500, 11 * s); ctx.fillText(fitText("No takers yet", tw), tx, y + pad + 32 * s); }
   ctx.fillStyle = theme.ink; font(700, 14 * s, true); ctx.fillText(fitText(c.name, tw), tx, y + h - pad - 13 * s);
   ctx.fillStyle = theme.muted; font(500, 11 * s); ctx.fillText(fitText(`${st.code} ${c.num}/${st.printed}`, tw), tx, y + h - pad);
   ctx.globalAlpha = 1;
@@ -269,7 +275,8 @@ howEl.querySelector('[data-how="person"]').onclick = () => { const p = howPend; 
 howEl.querySelector('[data-how="online"]').onclick = () => { toast("Online trades are coming soon. For now, trade in person."); };
 addEventListener("pointerdown", (e) => { if (!howEl.hidden && !e.target.closest("#trade-how")) hideHow(); }, true);
 howEl.addEventListener("keydown", (e) => { if (e.key === "Escape") hideHow(); });
-function openTable(t, from) {
+// give: cards of yours to put on the table as it opens (from the trade binder: a pocket, or Show mode's picks).
+function openTable(t, from, give = null) {
   if (tbl.on || state.trans) return;
   hideCaption(); cancelPress(); closePop(true);
   tbl.on = true; tbl.t = t; tbl.q = 0; tbl.give = []; tbl.get = []; tbl.flights = []; tbl.shake = null; tbl.drag = null; tbl.pend = null; tbl.pinch = null;
@@ -281,16 +288,19 @@ function openTable(t, from) {
   tbl.yours = cards.filter(isSpare).sort((a, b) => (t.chaseSet.has(b) ? 1 : 0) - (t.chaseSet.has(a) ? 1 : 0) || b.price - a.price || a.i - b.i);
   tbl.origin = from ? { x: from.x + 11, y: from.y - mScroll + 17, w: 32, h: 32 } : { x: vw / 2 - 18, y: topPad(), w: 36, h: 36 };
   for (const c of tbl.theirs) { c.spot = "binder"; c.held = false; c.tcur = null; c.handed = false; }
-  for (const c of tbl.yours) { c.spot = "binder"; c.held = false; c.tcur = null; c.handed = false; c.away = true; c.e = 0; c.o = mr(c.m); }
+  for (const c of tbl.yours) { c.spot = "binder"; c.held = false; c.tcur = null; c.handed = false; c.away = true; c.e = 0; c.o = tbHome(c); }
   // A thread in progress with this collector comes back as it was: the offer in their hands, or their counter.
   const rec = activeOf(t), last = lastOf(t);
   if (rec) {
     tbl.rec = rec;
     for (const c of toCards(rec.get)) if (tbl.theirs.includes(c)) { c.spot = "table"; tbl.get.push(c); }
-    for (const c of toCards(rec.give)) { if (!tbl.yours.includes(c)) { tbl.yours.push(c); c.held = false; c.tcur = null; c.handed = false; c.away = true; c.e = 0; c.o = mr(c.m); } c.spot = "table"; tbl.give.push(c); }
+    for (const c of toCards(rec.give)) { if (!tbl.yours.includes(c)) { tbl.yours.push(c); c.held = false; c.tcur = null; c.handed = false; c.away = true; c.e = 0; c.o = tbHome(c); } c.spot = "table"; tbl.give.push(c); }
     tbl.phase = rec.state === "countered" ? "countered" : "waiting";
     if (rec.state === "proposed") scheduleReply(rec);
-  } else if (last?.state === "declined" && last.by === "them" && last.reason) tbl.note = last.reason;
+  } else {
+    if (last?.state === "declined" && last.by === "them" && last.reason) tbl.note = last.reason;
+    for (const c of give || []) if (tbl.yours.includes(c) && c.spot !== "table") { c.spot = "table"; tbl.give.push(c); }
+  }
   document.body.classList.add("trading"); setChrome(); updateTradeBar();
   tbl.anim = reduced ? null : { from: 0, to: 1, t0: performance.now(), dur: 680 };
   if (reduced) tbl.q = 1;
@@ -302,7 +312,7 @@ function syncTableTo(rec) {
   for (const x of tbl.get.slice()) if (!get.includes(x)) place(x, false, curRect(x));
   for (const x of tbl.give.slice()) if (!give.includes(x)) place(x, false, curRect(x));
   for (const c of get) if (!tbl.get.includes(c) && tbl.theirs.includes(c)) place(c, true, curRect(c));
-  for (const c of give) { if (tbl.give.includes(c)) continue; if (!tbl.yours.includes(c)) { tbl.yours.push(c); c.spot = "binder"; c.held = false; c.tcur = null; c.handed = false; c.away = true; c.e = 0; c.o = mr(c.m); } place(c, true, curRect(c)); }
+  for (const c of give) { if (tbl.give.includes(c)) continue; if (!tbl.yours.includes(c)) { tbl.yours.push(c); c.spot = "binder"; c.held = false; c.tcur = null; c.handed = false; c.away = true; c.e = 0; c.o = tbHome(c); } place(c, true, curRect(c)); }
 }
 function closeTable(instant = false) {
   if (!tbl.on || tbl.closing) return;
@@ -380,7 +390,7 @@ function settleTrade(instant = false) {
   const closeDur = instant || reduced ? 0 : 180 + 400 * tbl.q;
   if (rec) completeTrade(rec, t, performance.now() + closeDur);
   layoutAll();
-  for (const c of tbl.yours) c.o = mr(c.m); // the close flight lands on the new wall
+  for (const c of tbl.yours) c.o = tbHome(c); // the close flight lands on the new wall (or the binder's pockets)
   tbl.rec = null;
   closeTable(instant);
 }
@@ -634,7 +644,12 @@ const recOf = (h) => trades.find((r) => recKey(r) === h) || null;
 function tradeListHTML() {
   const now = Date.now();
   const ts = TRADERS.filter((t) => wantsOf(t).length || threadOf(t).length).sort((a, b) => (activeOf(b) ? 1 : 0) - (activeOf(a) ? 1 : 0) || wantsOf(b).length - wantsOf(a).length);
-  return `<section><h2>Trade with</h2><p class="lsub">Collectors who want something of yours, and what they have that you chase. Each trade is a thread.</p><ul>${ts.map((t) => {
+  // The trade binder first, in its order: what you have spare, the most wanted first.
+  const bl = tbList(), binder = `<section><h2>Trade binder</h2><p class="lsub">${bl.length ? `${bl.length} ${bl.length === 1 ? "card" : "cards"} you have a spare of, the most wanted first.` : "Empty for now. On a card you have, + adds a spare."}</p><ul>${bl.map((c) => {
+    const st = sets[c.si], who = wantedBy(c), s = sparesOf(c);
+    return `<li class="lwrow"><div class="lrow"><span class="lname">${esc(c.name)}</span><span class="lmeta">${esc(st.name)} #${c.num}, ${c.rname}</span><span class="lprice">${money(c.price)}</span><span class="lstate">${s > 1 ? `${s} spares. ` : ""}${who.length ? `${people(who)} ${who.length === 1 ? "wants" : "want"} it` : "No takers yet"}</span></div></li>`;
+  }).join("")}</ul></section>`;
+  return binder + `<section><h2>Trade with</h2><p class="lsub">Collectors who want something of yours, and what they have that you chase. Each trade is a thread.</p><ul>${ts.map((t) => {
     const want = wantsOf(t), has = offersOf(t), rec = activeOf(t), recs = threadOf(t);
     const thread = recs.length ? `<ul class="lthread">${recs.map((r) => rowsOf(r, t).map((row) => rowHTML(row, t, now, "li")).join("")).join("")}</ul>` : "";
     const acts = rec?.state === "proposed" ? `<button type="button" class="pill-btn" data-back="${recKey(rec)}">Take back</button>`
