@@ -13,7 +13,7 @@ function toast(t, action = null, label = "Undo") {
 const about = document.getElementById("about");
 document.getElementById("info").onclick = () => about.showModal();
 document.getElementById("about-close").onclick = () => about.close();
-document.getElementById("reset").onclick = () => { saved = {}; persist(); try { for (const k of ["wall-chase", "wall-chases", "wall-spares", "wall-paid", "wall-trades", "wall-welcomed", "wall-imported", "wall-sets", "wall-lens", "wall-mode", "wall-value"]) localStorage.removeItem(k); } catch { /* fine */ } location.reload(); };
+document.getElementById("reset").onclick = () => { saved = {}; persist(); try { for (const k of ["wall-chase", "wall-chases", "wall-scope", "wall-spares", "wall-paid", "wall-trades", "wall-welcomed", "wall-imported", "wall-sets", "wall-lens", "wall-mode", "wall-value"]) localStorage.removeItem(k); } catch { /* fine */ } location.reload(); };
 
 // ---------- settings: appearance, the list, reset ----------
 const prefs = document.getElementById("prefs");
@@ -54,7 +54,7 @@ function rearrange(m) {
 const listEl = document.getElementById("list");
 function drawList() {
   if (!document.body.classList.contains("listmode")) return;
-  const show = (c) => (state.matches ? state.matches.has(c.base || c) : state.lens === "need" ? !c.owned : state.lens === "chase" ? isChase(c) : state.lens === "trade" ? isSpare(c) : true);
+  const show = (c) => (state.matches ? state.matches.has(rootOf(c)) : state.lens === "need" ? !c.owned : state.lens === "chase" ? isChase(c) : state.lens === "trade" ? isSpare(c) : true);
   let top = "";
   if (state.lens === "chase") {
     const ws = cards.filter((c) => isChase(c) && (!state.matches || state.matches.has(c))).sort((a, b) => a.si - b.si || (b.deal ? 1 : 0) - (a.deal ? 1 : 0) || capOf(b) - capOf(a));
@@ -73,8 +73,8 @@ function drawList() {
     }).join("")}</ul></section>`;
   }).join("") || `<p class="lsub">Nothing here with this lens.</p>`;
 }
-listEl.addEventListener("click", (e) => { const b = e.target.closest("[data-got]"); if (b) gotIt(cards[Number(b.dataset.got)]); });
-listEl.addEventListener("click", (e) => { const b = e.target.closest("[data-i]"); if (!b) return; const c = cards[Number(b.dataset.i)]; setOwned(c, !c.owned, { undo: () => setOwned(c, !c.owned, { quiet: true }) }); });
+listEl.addEventListener("click", (e) => { const b = e.target.closest("[data-got]"); if (b) gotIt(pool[Number(b.dataset.got)]); });
+listEl.addEventListener("click", (e) => { const b = e.target.closest("[data-i]"); if (!b) return; const c = pool[Number(b.dataset.i)]; setOwned(c, !c.owned, { undo: () => setOwned(c, !c.owned, { quiet: true }) }); });
 function setListMode(on) {
   if (on) leaveMark(); // the list has its own way to mark (tap a row)
   document.body.classList.toggle("listmode", on);

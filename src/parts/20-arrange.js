@@ -11,8 +11,8 @@ function arrange(m) {
   mode = m;
   if (m === "set") {
     // The set panels are the same objects every time (an open binder stays valid); your chases follow them as panels of their own.
-    setGroups ||= sets.map((st) => ({ key: st.id, name: st.name, ink: st.ink, cards: st.cards, set: st,
-      sub: () => state.value ? `${st.year}. Yours is worth ${money(worthOf(st.cards))}` : state.lens === "need" ? `${st.year}. ${st.cards.length - ownedIn(st.cards)} to go` : `${st.year}. ${ownedIn(st.cards)} of ${st.cards.length}` }));
+    setGroups ||= sets.map((st) => { const g = { key: st.id, name: st.name, ink: st.ink, cards: st.cards, base: st.cards, set: st }; g.sub = () => { const list = g.base, view = scopeOf(st) === "set" ? "" : scopeOf(st) === "master" ? " Master set." : " Grand set."; return state.value ? `${st.year}.${view} Yours is worth ${money(worthOf(list))}` : state.lens === "need" ? `${st.year}.${view} ${list.length - ownedIn(list)} to go` : `${st.year}.${view} ${ownedIn(list)} of ${list.length}`; }; return g; });
+    for (const g of setGroups) g.cards = g.base = scopedCards(g.set); // the set, its master set, or its grand set
     groups = [...setGroups, ...chases.map((r, i) => chaseGroup(r, i))];
   } else {
     // Size is worth: the cards that cost the most take up the most wall.
@@ -20,6 +20,6 @@ function arrange(m) {
     for (const g of groups) g.sub = () => `${ownedIn(g.cards)} of ${g.cards.length}. Yours is worth ${money(worthOf(g.cards))}`;
   }
   groups.forEach((g, gi) => { g.gi = gi; g.sz ||= 1; g.cols = Math.max(1, Math.floor(COLS / g.sz)); g.cards.forEach((c, k) => { c.g = gi; c.k = k; }); });
-  drawnCards = m === "set" && chases.length ? groups.flatMap((g) => g.base || g.cards) : cards;
+  drawnCards = m === "set" ? groups.flatMap((g) => g.base || g.cards) : cards;
   try { localStorage.setItem("wall-mode", m); } catch { /* fine */ }
 }
