@@ -1,0 +1,66 @@
+/* Round 20, safe: the import's summary sheet. */
+
+/* While the collection floods in and the summary is up, the wall has the screen: the lens bar, the deal bar and the
+   celebration card wait (in place, so the lens bar can rise into view when the sheet goes). */
+body.arriving .lens, body.arriving .markbar { opacity: 0; pointer-events: none; transform: translate(-50%, 12px); }
+body.arriving .dealbar, body.arriving .mpop { display: none; }
+
+.ar-scrim { position: fixed; inset: 0; z-index: 8; background: rgb(8 10 16 / .42); opacity: 0; pointer-events: none; transition: opacity .35s; }
+body.arrived-sheet .ar-scrim { opacity: 1; pointer-events: auto; }
+
+.arrival { position: fixed; z-index: 9; left: 50%; bottom: 0; width: min(520px, 100%); max-height: min(92dvh, 760px); transform: translate(-50%, 110%);
+  border: 1px solid var(--line); border-bottom: 0; border-radius: 18px 18px 0 0; background: var(--panel-solid); color: var(--ink); box-shadow: var(--shadow);
+  display: grid; grid-template-rows: minmax(0, 1fr) auto; pointer-events: none; visibility: hidden;
+  transition: transform .45s cubic-bezier(.2,.9,.25,1.02), visibility 0s .45s; }
+body.arrived-sheet .arrival { transform: translate(-50%, 0); pointer-events: auto; visibility: visible; transition: transform .45s cubic-bezier(.2,.9,.25,1.02); }
+@media (min-width: 720px) { .arrival { bottom: 16px; border-radius: 18px; border-bottom: 1px solid var(--line); } }
+
+.ar-scroll { overflow-y: auto; touch-action: pan-y; overscroll-behavior: contain; padding: 20px 18px 4px; }
+.ar-kick { margin: 0; font: 700 11.5px var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--deal); display: flex; align-items: center; gap: 6px; }
+.ar-kick::before { content: ""; width: 14px; height: 14px; border-radius: 50%; background: var(--deal) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M3.6 7.2l2.2 2.2 4.6-4.8' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 14px no-repeat; }
+.arrival h2 { margin: 6px 0 0; font: 800 27px/1.05 var(--font); font-stretch: 78%; letter-spacing: -0.01em; }
+.ar-line { margin: 6px 0 0; font-size: 14.5px; line-height: 1.35; color: var(--muted); }
+.ar-line b { color: var(--ink); font-weight: 800; font-variant-numeric: tabular-nums; }
+
+.ar-rows { list-style: none; margin: 14px 0 0; padding: 0; border-top: 1px solid var(--line); }
+.ar-rows li { border-bottom: 1px solid var(--line); }
+.ar-rows li:last-child { border-bottom: 0; }
+.ar-row { width: 100%; display: grid; grid-template-columns: 52px minmax(0, 1fr) 18px; align-items: center; column-gap: 12px; padding: 10px 2px; border: 0; background: none;
+  text-align: left; font: inherit; color: var(--ink); cursor: pointer; border-radius: 10px; transition: background .15s; }
+.ar-row:focus-visible { background: var(--line); outline: none; }
+@media (hover: hover) { .ar-row:hover { background: var(--line); } }
+.ar-row:active { background: var(--line); }
+.ar-text { display: grid; gap: 2px; min-width: 0; }
+.ar-text b { font: 800 17px/1.15 var(--font); font-stretch: 82%; }
+.ar-text > span { font-size: 13px; line-height: 1.3; color: var(--muted); }
+.ar-text .rank-tag { font-size: 9.5px; padding: 2px 6px; vertical-align: 2px; margin-left: 2px; }
+.ar-chev { width: 18px; height: 18px; fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* The leads: 52 wide, drawn from the cards themselves. */
+.ar-lead { width: 52px; height: 48px; display: grid; place-items: center; position: relative; }
+.ar-set canvas, .ar-dex canvas { display: block; border-radius: 3px; }
+.ar-dex canvas { box-shadow: 0 0 0 1.5px color-mix(in srgb, #D9483B 70%, transparent); }
+.ar-plate { width: 52px; height: 34px; border-radius: 5px; background: var(--plaque); position: relative; box-shadow: inset 0 1px 0 var(--plaque-hi), inset 0 -1px 0 var(--plaque-lo), 0 2px 0 var(--slot-line); }
+.ar-plate::before { content: ""; position: absolute; inset: 3px; border: 1px solid var(--plaque-lo); border-radius: 3px; }
+.ar-plate::after { content: ""; position: absolute; left: 7px; top: 8px; width: 24px; height: 3px; border-radius: 2px; background: var(--plaque-ink); opacity: .7; }
+.ar-engr { position: absolute; left: 7px; right: 7px; bottom: 7px; height: 6px; box-shadow: 0 0 0 1px rgb(0 0 0 / .22); }
+.ar-medals { display: flex; justify-content: center; }
+.ar-medal { display: block; width: 26px; margin: 0 -5px; }
+.ar-medals.n1 .ar-medal { width: 36px; }
+.ar-medal .medal { display: block; width: 100%; }
+.ar-medal:nth-child(2) { transform: translateY(-3px); z-index: 1; }
+.ar-spares { display: block; }
+.ar-card { position: absolute; left: 50%; top: 50%; width: 26px; height: 36px; margin: -18px 0 0 -13px; border-radius: 3px; background: var(--tc);
+  transform: rotate(var(--r)) translateY(-1px); transform-origin: 50% 120%; box-shadow: 0 1px 3px rgb(0 0 0 / .25); }
+.ar-card span { position: absolute; left: 2px; right: 2px; bottom: 2px; height: 8px; border-radius: 1px; background: var(--paper); }
+
+.ar-foot { padding: 10px 16px calc(env(safe-area-inset-bottom, 0px) + 14px); }
+.ar-foot .mbtn { width: 100%; height: 52px; font-size: 16px; }
+
+/* The rows come in one after another as the sheet rises. */
+body.arrived-sheet .ar-rows li { animation: ar-in .4s cubic-bezier(.2,.9,.25,1) both; animation-delay: calc(.18s + var(--i) * .06s); }
+@keyframes ar-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .arrival, body.arrived-sheet .arrival, .ar-scrim { transition: none; }
+  body.arrived-sheet .ar-rows li { animation: none; }
+}
