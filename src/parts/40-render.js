@@ -265,7 +265,7 @@ function drawHeader(st, now, C = cam, ox = 0, alpha = 1) {
   ctx.fillStyle = theme["slot-line"]; ctx.fillRect(sx, by, sw, bh);
   ctx.fillStyle = owned === n ? "#E2B33C" : st.ink; ctx.fillRect(sx, by, sw * (owned / n), bh);
   if (st.popChips) drawPopRow(st, sx, sy + hh, k, ctx.globalAlpha);
-  else if (st.chase && st.hdrBtn && k >= 0.3) { drawHdrBtn(st, sx, sy + hh + st.hdrBtn.y * k, k, ctx.globalAlpha); ctx.textBaseline = "alphabetic"; }
+  else if (st.chase && st.hdrBtn && k >= 0.3) { drawHdrBtn(st, st.hdrBtn, sx, sy + hh + st.hdrBtn.y * k, k, ctx.globalAlpha); ctx.textBaseline = "alphabetic"; }
   if (st.burst) {
     const p = (now - st.burst) / 1400;
     if (p < 1) {

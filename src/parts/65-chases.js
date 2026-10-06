@@ -147,8 +147,7 @@ function removeChase(r, { quiet = false } = {}) {
     applyRules(); tick(5); chasesChanged();
     if (!quiet) toast(`${r.label} taken off the wall.`, () => { chases.splice(Math.min(i, chases.length), 0, r); applyRules(); chasesChanged(); });
   };
-  if (view === "set" && state.g === g) { exitToMosaic(); const T = state.trans; if (T) { const d = T.done; T.done = (x) => { d?.(x); go(); }; } else go(); }
-  else go();
+  leaveBinderThen(g, go);
 }
 function toggleRule(r) { const had = findRule(r); if (had) removeChase(had); else addChase(r); }
 // Chase the cards people chase in a set, from its "People chase" row. Tapping again takes the chase off.
@@ -283,6 +282,7 @@ function popLayout(g) {
   g.seg = st.master.length || st.grand.length ? SCOPES.map(([key, label], i) => ({ key, label, x: i * (SEG_W + 2), y: 2, w: SEG_W, h: SEG_H })) : null;
   g.hdrBtn = { x: W - 112, y: 4, w: 112, h: 22, pop: true };
   const top = g.seg ? 46 : 0;
+  g.hdrBtn2 = { x: W - 96, y: top + 2, w: 96, h: 22, remove: true }; // Remove set, on the People chase line
   let x = 0, row = 0, more = 0;
   for (const c of st.pop) {
     const price = short(c.price), w = Math.min(W, Math.round(c.name.length * 6.1 + price.length * 6.4 + 26));
@@ -312,25 +312,43 @@ function setScope(st, key) {
   tick(5); toast(key === "set" ? `${st.name}: the set, ${n} cards.` : key === "master" ? `${st.name} master set: every printing, ${n} cards.` : `${st.name} grand set: every printing and reprint, ${n} cards.`);
   updateCount(); drawList(); kick();
 }
+// Leaving a binder before its group changes under you: framed first, then the close flight, then the change.
+function leaveBinderThen(g, fn) {
+  if (view === "set" && state.g === g) {
+    if (state.focus) unfocus();
+    Object.assign(cam, fitCam(g)); fly = null; inertia = false;
+    exitToMosaic();
+    const T = state.trans;
+    if (T) { const d = T.done; T.done = (x) => { d?.(x); fn(); }; } else fn();
+  } else fn();
+}
+// Taking a set off the wall: it folds to a line beneath the others (Settings has your sets), with Undo.
+function removeSet(st) {
+  const shown = pickedSets.size ? [...pickedSets] : sets.map((s) => s.id);
+  if (shown.length <= 1) { toast(`${st.name} is the last set on your wall.`); return; }
+  const was = [...pickedSets];
+  const apply = (ids) => { pickedSets.clear(); for (const id of ids) pickedSets.add(id); persistSets(); };
+  const go = () => { apply(shown.filter((id) => id !== st.id)); foldFlight(); drawList(); toast(`${st.name} taken off the wall.`, () => { apply(was); foldFlight(); drawList(); }); };
+  leaveBinderThen(groups.find((g) => g.set === st), go);
+}
 // The chip or the button under a point in a binder's header, in framed pixels.
 function headAt(g, sx, sy) {
   const p = toWorld(sx, sy), k = (vw - 24) / g.w, fx = (p.x - g.x) * k, fy = (p.y - g.y) * k;
-  const b = g.hdrBtn;
-  if (b) { const by = 132 + b.y; if (fx >= b.x - 6 && fx <= b.x + b.w + 6 && fy >= by - 4 && fy <= by + b.h + 4) return { btn: b }; }
+  for (const b of [g.hdrBtn, g.hdrBtn2]) if (b) { const by = 132 + b.y; if (fx >= b.x - 6 && fx <= b.x + b.w + 6 && fy >= by - 4 && fy <= by + b.h + 4) return { btn: b }; }
   if (!g.popChips) return null;
   const py = fy - 132; if (py < 0 || py > g.popH) return null;
   if (g.seg) for (const s of g.seg) if (fx >= s.x && fx <= s.x + s.w && py >= s.y - 3 && py <= s.y + s.h + 3) return { seg: s.key };
   for (const ch of g.popChips) if (fx >= ch.x && fx <= ch.x + ch.w && py >= ch.y - 3 && py <= ch.y + ch.h + 3) return { c: ch.c };
   return null;
 }
-function drawHdrBtn(g, sx, by, k, alpha) {
-  const b = g.hdrBtn, on = b.pop && Boolean(popularRule(g.set)), bx = sx + b.x * k, bw = b.w * k, bh = b.h * k;
+function drawHdrBtn(g, b, sx, by, k, alpha) {
+  const on = b.pop && Boolean(popularRule(g.set)), bx = sx + b.x * k, bw = b.w * k, bh = b.h * k;
   rr(bx, by, bw, bh, 6 * k);
   if (on) { ctx.fillStyle = theme.gold; ctx.globalAlpha = alpha * 0.18; ctx.fill(); ctx.globalAlpha = alpha; ctx.lineWidth = Math.max(1, k); ctx.strokeStyle = theme.gold; ctx.stroke(); }
   else if (b.pop) { ctx.fillStyle = theme.ink; ctx.fill(); }
   else { ctx.lineWidth = Math.max(1, k); ctx.strokeStyle = theme["slot-line"]; ctx.stroke(); }
   ctx.fillStyle = on || !b.pop ? theme.ink : theme.bg; font(700, 11 * k); ctx.textAlign = "center";
-  ctx.fillText(b.pop ? (on ? "Chasing these ✓" : "Chase these") : "Remove chase", bx + bw / 2, by + bh * 0.68);
+  ctx.fillText(b.pop ? (on ? "Chasing these ✓" : "Chase these") : b.remove ? "Remove set" : "Remove chase", bx + bw / 2, by + bh * 0.68);
   ctx.textAlign = "left";
 }
 function drawPopRow(g, sx, y0, k, alpha) {
@@ -347,7 +365,8 @@ function drawPopRow(g, sx, y0, k, alpha) {
     ctx.textAlign = "left";
   }
   ctx.fillStyle = theme.muted; font(600, 11 * k); ctx.fillText("People chase", sx, y0 + (g.popTop + 16) * k);
-  drawHdrBtn(g, sx, y0 + g.hdrBtn.y * k, k, alpha);
+  drawHdrBtn(g, g.hdrBtn, sx, y0 + g.hdrBtn.y * k, k, alpha);
+  if (g.hdrBtn2) drawHdrBtn(g, g.hdrBtn2, sx, y0 + g.hdrBtn2.y * k, k, alpha);
   for (const ch of g.popChips) {
     const x = sx + ch.x * k, y = y0 + ch.y * k, w = ch.w * k, h = ch.h * k, c = ch.c;
     rr(x, y, w, h, 6 * k); ctx.fillStyle = theme["panel-solid"]; ctx.fill();

@@ -18,7 +18,7 @@ function unfocus() {
   state.focus = null;
   document.body.classList.remove("focused");
   // Back to where the card sits, at a comfortable size.
-  if (view === "set" && state.g) { const f = fitCam(state.g); if (cam.s > f.s * 2.2) { const s = f.s * 2.2, cx = cam.x + vw / 2 / cam.s, cy = cam.y + vh / 2 / cam.s; flyTo({ s, x: cx - vw / 2 / s, y: cy - vh / 2 / s }, 380); } }
+  if (view === "set" && state.g) { const f = fitCam(state.g); if (cam.s > f.s * 1.02) flyTo(f, 380); } // straight back to the set, nothing in between
   kick();
 }
 function step(d) {
