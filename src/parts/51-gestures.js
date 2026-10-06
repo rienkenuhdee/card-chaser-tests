@@ -242,9 +242,13 @@ function tap(sx, sy) {
       if (c) return popCard(c, mr(c.m)); // a chased card: every offer online
     }
     if (h?.block) enterGroup(h.block);
+    else if (newPanelAt(sx, sy)) { tick(4); openSheet(); }
     return;
   }
-  if (!h?.card) return;
+  if (!h?.card) {
+    if (h?.block && !marking) { const p = headAt(h.block, sx, sy); if (p) { tick(4); if (p.btn) { if (p.btn.pop) chasePopular(h.block.set); else removeChase(h.block.chase); } else focus(p.c); } }
+    return;
+  }
   const w = TW * h.card.sz * cam.s;
   if (marking && w >= 14) return markCard(h.card, !h.card.owned); // in mark mode a tap toggles the card
   if (w >= 34) return focus(h.card);

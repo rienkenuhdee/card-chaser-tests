@@ -141,6 +141,23 @@ and lean read as a glitch. Dropped: the threads and the lean, the press-and-hold
 lens bar. Also fixed: a deal arriving while the table was up started a wall morph that froze under it; the wall now
 takes its new shape at once under the table.
 
+**Round 14: Defining a chase, and what people chase in a set.** Three ways to say what you're after: a saved
+search (a New chase form behind the top-left menu, with Set, Pokémon, Artist, Dex and Custom and a live count); one-tap
+rules made from the card in hand ("Chase more like this": Every Venusaur, Everything by this artist, Full art in 151,
+the artist's Venusaurs, Popular in 151, All of 151); and a sentence typed into search ("arita full art") that becomes a
+chase with one tap. Each set's popular cards came from one shared rule (rarity, price and a seed, the top 6%). Kept,
+with Ryan's direction that a chase belongs on the wall with the real sets: a saved chase is now a panel of its own at
+the end of the wall, with its binder, count and progress bar, made of twins of the cards in their sets (marking one
+marks both). Chases come from the card's "Chase more like this" chips (bold), from a New chase panel at the end of the
+wall that opens one plain form with every picker and a live count, the wall dimming to the match (safe's sheet,
+untabbed), and from a set's "People chase" row of name-and-price chips under its title with Chase these (safe). The
+top-left menu is just the arrangement again: By set, By Pokémon, By artist, By value. Full art is tier 4 and up; rules
+are one shape folded into the card's default chase flag, so a hand-picked off still wins. Learned: a chase reads as a
+set of your own once it sits beside the sets, and the card in hand is the fastest way to say "more like this"; a
+sentence is a query language, and dimming the wall to the popular cards left a void. Dropped: the chase sentence, the
+Popular filter, the active-chase pill, the chases list in the menu. Also: starting a trade asks In person or Online
+(coming soon).
+
 ## Open questions (next rounds)
 
 - A deal arriving off screen: one tap from the line to the offers, and whether the arrival should nudge the wall.
@@ -149,4 +166,5 @@ takes its new shape at once under the table.
 - Trading: a real other side (the twelve-second reply is a stand-in), more than one card per counter, and whether a done trade should fall off the chip after a day.
 - Starting a trade: spares begin empty, so the demo needs a few marked by hand; an import option for doubles, or a hint on a spare's panel naming who wants it.
 - The import's reveal: the round 11 assembly from nothing as the flood after an import.
+- A chase's twins: should a custom panel's cards also lead in the Chase lens, or only their set's copy? And should a chase hide from the wall once it's complete?
 - Bringing the mosaic into the real app as the Chase home.

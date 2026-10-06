@@ -13,7 +13,7 @@ function toast(t, action = null, label = "Undo") {
 const about = document.getElementById("about");
 document.getElementById("info").onclick = () => about.showModal();
 document.getElementById("about-close").onclick = () => about.close();
-document.getElementById("reset").onclick = () => { saved = {}; persist(); try { for (const k of ["wall-chase", "wall-spares", "wall-paid", "wall-trades", "wall-welcomed", "wall-imported", "wall-sets", "wall-lens", "wall-mode", "wall-value"]) localStorage.removeItem(k); } catch { /* fine */ } location.reload(); };
+document.getElementById("reset").onclick = () => { saved = {}; persist(); try { for (const k of ["wall-chase", "wall-chases", "wall-spares", "wall-paid", "wall-trades", "wall-welcomed", "wall-imported", "wall-sets", "wall-lens", "wall-mode", "wall-value"]) localStorage.removeItem(k); } catch { /* fine */ } location.reload(); };
 
 // ---------- settings: appearance, the list, reset ----------
 const prefs = document.getElementById("prefs");
@@ -42,9 +42,11 @@ function rearrange(m) {
   if (m === mode || state.trans) return;
   unfocus(); hideCaption();
   const run = () => {
-    for (const c of cards) c.pm = { ...c.m };
+    for (const c of drawnCards) c.pm = { ...c.m };
+    const was = new Set(drawnCards);
     arrange(m); layoutAll(); markMode();
-    for (const c of cards) c.delay = reduced ? 0 : Math.min(520, c.g * 60 + c.k * 0.7);
+    for (const c of drawnCards) { if (!was.has(c)) c.pm = { ...(c.base?.pm || c.m) }; }
+    for (const c of drawnCards) c.delay = reduced ? 0 : Math.min(520, c.g * 60 + c.k * 0.7);
     for (const g of groups) { g.ripple = null; g.burst = 0; }
     state.trans = { kind: "morph", t0: performance.now(), dur: reduced ? 1 : 1300, done: () => kick() };
     tick(10);
@@ -59,14 +61,14 @@ function rearrange(m) {
 const listEl = document.getElementById("list");
 function drawList() {
   if (!document.body.classList.contains("listmode")) return;
-  const show = (c) => (state.matches ? state.matches.has(c) : state.lens === "need" ? !c.owned : state.lens === "chase" ? isChase(c) : state.lens === "trade" ? isSpare(c) : true);
+  const show = (c) => (state.matches ? state.matches.has(c.base || c) : state.lens === "need" ? !c.owned : state.lens === "chase" ? isChase(c) : state.lens === "trade" ? isSpare(c) : true);
   let top = "";
   if (state.lens === "chase") {
     const ws = cards.filter((c) => isChase(c) && (!state.matches || state.matches.has(c))).sort((a, b) => a.si - b.si || (b.deal ? 1 : 0) - (a.deal ? 1 : 0) || capOf(b) - capOf(a));
     top = `<section><h2>Your chase list</h2><p class="lsub">${ws.length} to find. Live deals first.</p><ul>${ws.map((c) => {
       const st = sets[c.si];
       return `<li class="lwrow"><div class="lrow"><span class="lname">${c.name}</span><span class="lmeta">${st.name} #${c.num}, ${c.rname}</span><span class="lprice">${c.deal ? `<b class="ldeal">Live ${money(c.deal)}</b>` : `Pay up to ${money(capOf(c))}`}</span><span class="lstate">Market ${money(c.price)}</span></div><button type="button" class="pill-btn lgot" data-got="${c.i}">Got it</button></li>`;
-    }).join("")}</ul>${ws.length ? "" : `<p class="lsub">Nothing to find yet.</p>`}</section>`;
+    }).join("")}</ul>${ws.length ? "" : `<p class="lsub">Nothing to find yet.</p>`}<p class="lsub"><button type="button" class="pill-btn" data-lnew>New chase</button></p></section>`;
   }
   if (state.lens === "trade") top = tradeListHTML();
   listEl.querySelector("#list-body").innerHTML = top + groups.map((g) => {

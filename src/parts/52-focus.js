@@ -42,6 +42,7 @@ function fillPanel(c, dir) {
     own.setAttribute("aria-pressed", String(c.owned));
     buy.textContent = c.owned ? "Back to the set" : c.deal && isChase(c) ? `Buy for ${money(c.deal)}` : "Find a copy";
     updateFlag(c);
+    fillChips(panelMore, c);
   };
   if (dir && !reduced) { swap.classList.add("out"); setTimeout(() => { put(); swap.classList.remove("out"); }, 140); } else put();
 }
@@ -54,11 +55,9 @@ document.getElementById("p-buy").onclick = () => {
 };
 let quietLayout = false; // a trade changes several cards at once: one relayout at the end, not one per card
 function setOwned(c, on, { undo = null, quiet = false } = {}) {
-  const now = performance.now();
-  c.owned = on; c.got = on ? Date.now() : null; saved[c.id] = { on, at: c.got }; persist();
-  c.anim = { t0: now, to: on };
-  const g = groups[c.g];
-  g.ripple = { t0: now, col: c.col, row: c.row };
+  const now = performance.now(), b = c.base || c;
+  b.owned = on; b.got = on ? Date.now() : null; saved[b.id] = { on, at: b.got }; persist();
+  for (const t of [b, ...twinsOf(b)]) { t.anim = { t0: now, to: on }; const tg = groups[t.g]; if (tg && (t === c || tg.base?.includes(t) || tg.cards.includes(t))) tg.ripple = { t0: now, col: t.col, row: t.row }; }
   tick(on ? 14 : 6);
   const st = sets[c.si], owned = ownedIn(st.cards);
   if (on && owned === st.cards.length) { if (mode === "set") g.burst = now; tick(40); toast(`${st.name} complete. ${owned} of ${owned}.`, undo); }
