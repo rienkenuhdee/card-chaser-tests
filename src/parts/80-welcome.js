@@ -129,7 +129,7 @@ function finishImport(src) {
   if (!wel.on) return;
   const now = performance.now(), chaseAll = wChase.checked;
   let n = 0, k = 0;
-  for (const c of cards) {
+  for (const c of pool) {
     if (c.owned || !c.own0) { if (chaseAll && !c.owned) { chasing[c.id] = true; k++; } continue; }
     c.owned = true; c.got = seededGot(c); saved[c.id] = { on: true, at: c.got }; n++;
     if (!reduced) c.anim = { t0: now + 200 + c.g * 140 + c.k * 2.2, to: true };

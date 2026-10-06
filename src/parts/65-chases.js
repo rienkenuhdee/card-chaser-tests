@@ -13,6 +13,8 @@
 const HOLO = 3, FULL = 4; // tiers: Rare Holo is 3; VMAX, Ultra, Illustration rares and up are 4
 let chases = [];
 try { chases = (JSON.parse(localStorage.getItem("wall-chases") || "[]") || []).filter((r) => r && typeof r === "object" && r.id); } catch { chases = []; }
+let firstChases = false;
+try { firstChases = localStorage.getItem("wall-chases") === null; } catch { /* fine */ }
 const persistChases = () => { try { localStorage.setItem("wall-chases", JSON.stringify(chases)); } catch { /* private mode */ } };
 // A Pokémon is its Dex number. Its name is the plainest card name for it (no Dark, Galarian, V or ex).
 const baseName = (n) => n.replace(/^(Dark|Light|Galarian|Alolan|Hisuian|Paldean|Shining|Mega|M|Team Rocket's|Rocket's|Brock's|Misty's|Erika's|Sabrina's|Koga's|Blaine's|Giovanni's|Lt\. Surge's) /, "").replace(/ (V|VMAX|VSTAR|ex|EX|GX|BREAK|Prime|LEGEND|LV\.X)$/, "");
@@ -61,6 +63,11 @@ function applyRules() {
   const lit = [];
   for (const c of cards) { const was = isChase(c); c.chase0 = chases.some((r) => matchRule(r, c)); if (!was && isChase(c)) lit.push(c); }
   return lit;
+}
+// A wall that has never had a chase starts with a few, so the shape is there to see: a Pokémon, an artist, a rarity in a set, a set's popular cards.
+if (firstChases) {
+  chases = [{ kind: "pokemon", dex: 6 }, { kind: "artist", artist: "Mitsuhiro Arita" }, { kind: "dex", set: "sv3pt5", rarity: FULL }, { kind: "popular", set: "base1", popular: true }].map((r, i) => ({ ...r, id: `seed${i}`, label: labelOf(r) }));
+  persistChases();
 }
 applyRules();
 
@@ -268,21 +275,42 @@ document.getElementById("list").addEventListener("click", (e) => { const n = e.t
 
 // ----- the "People chase" row under a set's title, and the Remove chase button on a chase's -----
 // Laid out in framed pixels (1 = the set framed to the screen), so the header's height is known before anything is measured.
-const POP_CHIP = 24, POP_GAP = 6, POP_ROWS = 3;
+const POP_CHIP = 24, POP_GAP = 6, POP_ROWS = 3, SEG_W = 72, SEG_H = 26;
+const SCOPES = [["set", "Set"], ["master", "Master set"], ["grand", "Grand set"]];
 function popLayout(g) {
   const st = g.set, W = vw - 24, chips = [];
+  // line one: the view (Set, Master set, Grand set) and Chase these; then People chase and its chips
+  g.seg = st.master.length || st.grand.length ? SCOPES.map(([key, label], i) => ({ key, label, x: i * (SEG_W + 2), y: 2, w: SEG_W, h: SEG_H })) : null;
+  g.hdrBtn = { x: W - 112, y: 4, w: 112, h: 22, pop: true };
+  const top = g.seg ? 46 : 0;
   let x = 0, row = 0, more = 0;
   for (const c of st.pop) {
     const price = short(c.price), w = Math.min(W, Math.round(c.name.length * 6.1 + price.length * 6.4 + 26));
     if (x + w > W && x > 0) { row++; x = 0; }
     if (row >= POP_ROWS) { more++; continue; }
-    chips.push({ c, x, y: 30 + row * (POP_CHIP + POP_GAP), w, h: POP_CHIP, price });
+    chips.push({ c, x, y: top + 30 + row * (POP_CHIP + POP_GAP), w, h: POP_CHIP, price });
     x += w + POP_GAP;
   }
   const rows = chips.length ? Math.min(POP_ROWS, row + 1) : 0;
-  g.popChips = chips; g.popMore = more;
-  g.popH = 32 + rows * (POP_CHIP + POP_GAP) + 2;
-  g.hdrBtn = { x: W - 112, y: 3, w: 112, h: 22, pop: true };
+  g.popChips = chips; g.popMore = more; g.popTop = top;
+  g.popH = top + 32 + rows * (POP_CHIP + POP_GAP) + 2;
+}
+// The set, its master set (every printing), or its grand set (the reprints too): the binder reshuffles, the new
+// printings springing out of the cards they print.
+function setScope(st, key) {
+  if (scopeOf(st) === key) return;
+  scopes[st.id] = key; try { localStorage.setItem("wall-scope", JSON.stringify(scopes)); } catch { /* fine */ }
+  const g = state.g && state.g.set === st ? state.g : null, now = performance.now();
+  if (g) {
+    const old = new Set(g.base);
+    for (const c of g.base) { c.px = c.x; c.py = c.y; }
+    arrange(mode); layoutAll(); clampCam(g);
+    for (const c of g.cards) if (!old.has(c)) { const o = c.of || c; c.px = o.x; c.py = o.y; }
+    if (!reduced && !state.focus && !state.trans) { for (const c of g.cards) c.delay = Math.min(240, c.k * 1.2); shuffle = { g, t0: now, dur: 640, end: now + 900 }; }
+  } else { arrange(mode); layoutAll(); }
+  const n = scopedCards(st).length;
+  tick(5); toast(key === "set" ? `${st.name}: the set, ${n} cards.` : key === "master" ? `${st.name} master set: every printing, ${n} cards.` : `${st.name} grand set: every printing and reprint, ${n} cards.`);
+  updateCount(); drawList(); kick();
 }
 // The chip or the button under a point in a binder's header, in framed pixels.
 function headAt(g, sx, sy) {
@@ -291,6 +319,7 @@ function headAt(g, sx, sy) {
   if (b) { const by = 132 + b.y; if (fx >= b.x - 6 && fx <= b.x + b.w + 6 && fy >= by - 4 && fy <= by + b.h + 4) return { btn: b }; }
   if (!g.popChips) return null;
   const py = fy - 132; if (py < 0 || py > g.popH) return null;
+  if (g.seg) for (const s of g.seg) if (fx >= s.x && fx <= s.x + s.w && py >= s.y - 3 && py <= s.y + s.h + 3) return { seg: s.key };
   for (const ch of g.popChips) if (fx >= ch.x && fx <= ch.x + ch.w && py >= ch.y - 3 && py <= ch.y + ch.h + 3) return { c: ch.c };
   return null;
 }
@@ -307,7 +336,17 @@ function drawHdrBtn(g, sx, by, k, alpha) {
 function drawPopRow(g, sx, y0, k, alpha) {
   if (k < 0.3 || !g.popChips) return;
   ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
-  ctx.fillStyle = theme.muted; font(600, 11 * k); ctx.fillText("People chase", sx, y0 + 16 * k);
+  if (g.seg) { // the view: Set, Master set, Grand set
+    const cur = scopeOf(g.set);
+    for (const s of g.seg) {
+      const x = sx + s.x * k, y = y0 + s.y * k, w = s.w * k, h = s.h * k, on = s.key === cur;
+      rr(x, y, w, h, 7 * k);
+      if (on) { ctx.fillStyle = theme.ink; ctx.fill(); } else { ctx.fillStyle = theme["panel-solid"]; ctx.fill(); ctx.lineWidth = Math.max(1, k * 0.8); ctx.strokeStyle = theme["slot-line"]; ctx.stroke(); }
+      ctx.fillStyle = on ? theme.bg : theme.muted; font(700, 10.5 * k); ctx.textAlign = "center"; ctx.fillText(s.label, x + w / 2, y + h * 0.66);
+    }
+    ctx.textAlign = "left";
+  }
+  ctx.fillStyle = theme.muted; font(600, 11 * k); ctx.fillText("People chase", sx, y0 + (g.popTop + 16) * k);
   drawHdrBtn(g, sx, y0 + g.hdrBtn.y * k, k, alpha);
   for (const ch of g.popChips) {
     const x = sx + ch.x * k, y = y0 + ch.y * k, w = ch.w * k, h = ch.h * k, c = ch.c;

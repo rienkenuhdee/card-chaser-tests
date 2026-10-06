@@ -68,7 +68,7 @@ try { const l = localStorage.getItem("wall-lens"); if (["have", "need", "chase",
 function emphasis(c) {
   if (c.away) return 0; // out on the trade table: its tile is empty
   if (preview) return preview.has(c.base || c) ? (c.owned ? 0.42 : 1) : 0.1; // the New chase form: what it would match
-  if (state.matches) return state.matches.has(c.base || c) ? 1 : 0.1;
+  if (state.matches) return state.matches.has(rootOf(c)) ? 1 : 0.1;
   if (state.lens === "need") return c.owned ? 0.1 : 1;
   if (state.lens === "chase") return isChase(c) ? 1 : 0.18;
   if (state.lens === "trade") return isSpare(c) ? 1 : 0.18;
@@ -202,7 +202,7 @@ function emptyPocket(c, sx, sy, w, h, value) {
   // label, bottom left
   ctx.textAlign = "left"; ctx.fillStyle = theme.muted;
   font(700, w * 0.088, true); ctx.fillText(fitText(c.name, w - pad * 2), sx + pad, sy + h - pad - w * 0.075);
-  font(500, w * 0.064); ctx.fillText(`${sets[c.si].code} ${c.num}/${sets[c.si].printed}`, sx + pad, sy + h - pad);
+  font(500, w * 0.064); ctx.fillText(fitText(`${sets[c.si].code} ${c.num}/${sets[c.si].printed}${c.tag ? ` ${c.tag}` : ""}`, w - pad * 2), sx + pad, sy + h - pad);
 }
 
 // A card you own: a full-bleed colour chip with a printed label strip, like a specimen in a catalogue.
@@ -239,7 +239,7 @@ function cardFace(c, sx, sy, w, h, now, value) {
   ctx.textBaseline = "alphabetic"; ctx.textAlign = "left"; ctx.fillStyle = theme["paper-ink"];
   font(800, w * 0.092, true); ctx.fillText(fitText(c.name, w * 0.84), sx + pad, ly + lh * 0.46);
   font(500, w * 0.064); ctx.globalAlpha *= 0.7;
-  ctx.fillText(`${st.code} ${c.num}/${st.printed}`, sx + pad, ly + lh * 0.82);
+  ctx.fillText(fitText(`${st.code} ${c.num}/${st.printed}${c.tag ? ` ${c.tag}` : ""}`, w * 0.6), sx + pad, ly + lh * 0.82);
   ctx.textAlign = "right"; ctx.fillText(GLYPH[c.tier], sx + w - pad, ly + lh * 0.82);
   ctx.globalAlpha /= 0.7;
   if (value || w > 110) { ctx.textAlign = "right"; ctx.fillStyle = "rgb(255 255 255 / .92)"; font(700, w * 0.078); ctx.fillText(short(c.price), sx + w - pad, sy + pad + w * 0.07); }
@@ -283,7 +283,7 @@ const ownedNow = (list) => (state.time ? list.filter((c) => c.owned && c.got && 
 function panelStat(g) {
   if (picking()) return "\u2003\u2003"; // the tick's place
   const n = g.cards.length, owned = ownedNow(g.cards);
-  if (state.matches) { const m = g.cards.filter((c) => state.matches.has(c.base || c)).length; return m ? `${m} found` : ""; }
+  if (state.matches) { const m = g.cards.filter((c) => state.matches.has(rootOf(c))).length; return m ? `${m} found` : ""; }
   if (state.lens === "need") return `${n - owned} to go`;
   if (state.lens === "chase") { const d = g.cards.filter(isChase).length; return d ? `${d} to find` : "Nothing to chase"; }
   if (state.lens === "trade") { const d = g.cards.filter(isSpare).length; return d ? `${d} spare${d === 1 ? "" : "s"}` : ""; }
