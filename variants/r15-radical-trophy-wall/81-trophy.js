@@ -477,7 +477,7 @@ function markAllInSet() {
   const g = state.g; if (!g || !marking) return;
   const todo = g.cards.filter((c) => !c.owned); if (!todo.length) { toast("You have all of them already."); return; }
   const now = performance.now();
-  todo.forEach((c, i) => { if (!session.has(c)) session.set(c, c.owned); c.owned = true; c.got = Date.now(); saved[c.id] = { on: true, at: c.got }; if (!reduced) c.anim = { t0: now + i * 5, to: true }; });
+  todo.forEach((c, i) => { const b = c.base || c; if (!session.has(c)) session.set(c, c.owned); b.owned = true; b.got = Date.now(); saved[b.id] = { on: true, at: b.got }; if (!reduced) for (const t of [b, ...twinsOf(b)]) t.anim = { t0: now + i * 5, to: true }; });
   persist(); updateBar(); updateCount(); drawList(); tick(14);
   const sync = syncDone();
   if (lifted && !sync) liftLayout(true);
