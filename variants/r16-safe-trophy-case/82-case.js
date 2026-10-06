@@ -221,19 +221,19 @@ function albumHeader(g) {
     const top = g.seg ? 34 : 0;
     g.popChips = []; g.popMore = 0; g.popTop = top; // the row draws (the switch, the buttons) with nothing to chase
     g.hdrBtn = { ...back, y: top + 2 };
-    g.hdrBtn2 = { x: W - 128 - 8 - 72, y: top + 2, w: 72, h: 22, share: true };
+    g.hdrBtn2 = onShelf(g) ? { x: W - 128 - 8 - 112, y: top + 2, w: 112, h: 22, away: true } : { x: W - 128 - 8 - 72, y: top + 2, w: 72, h: 22, share: true }; // its first day: skip the wait; after that, Share
     g.popH = top + 30;
   } else if (g.set) g.hdrBtn = { ...back, y: 4 };
   else g.hdrBtn2 = { ...back, x: W - 118 - 8 - 128 };
 }
 function drawHdrBtn(g, b, sx, by, k, alpha) {
-  const on = b.shelf || (b.pop && Boolean(popularRule(g.set))), bx = sx + b.x * k, bw = b.w * k, bh = b.h * k;
+  const on = b.shelf || b.away || (b.pop && Boolean(popularRule(g.set))), bx = sx + b.x * k, bw = b.w * k, bh = b.h * k;
   rr(bx, by, bw, bh, 6 * k);
   if (on) { ctx.fillStyle = theme.gold; ctx.globalAlpha = alpha * 0.18; ctx.fill(); ctx.globalAlpha = alpha; ctx.lineWidth = Math.max(1, k); ctx.strokeStyle = theme.gold; ctx.stroke(); }
   else if (b.pop || b.share) { ctx.fillStyle = theme.ink; ctx.fill(); }
   else { ctx.lineWidth = Math.max(1, k); ctx.strokeStyle = theme["slot-line"]; ctx.stroke(); }
   ctx.fillStyle = on || !(b.pop || b.share) ? theme.ink : theme.bg; font(700, 11 * k); ctx.textAlign = "center";
-  ctx.fillText(b.shelf ? (finishOf(g)?.put ? "Back to the wall" : "Put on the shelf") : b.share ? "Share" : b.pop ? (on ? "Chasing these ✓" : "Chase these") : b.remove ? "Remove set" : "Remove chase", bx + bw / 2, by + bh * 0.68);
+  ctx.fillText(b.away ? "To the case now" : b.shelf ? (finishOf(g)?.put ? "Back to the wall" : "Put on the shelf") : b.share ? "Share" : b.pop ? (on ? "Chasing these ✓" : "Chase these") : b.remove ? "Remove set" : "Remove chase", bx + bw / 2, by + bh * 0.68);
   ctx.textAlign = "left";
 }
 function drawPopRow(g, sx, y0, k, alpha) {
