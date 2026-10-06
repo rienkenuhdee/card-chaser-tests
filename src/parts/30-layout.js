@@ -151,7 +151,7 @@ function liftedLayout() {
   mScroll = clamp(mScroll, 0, mMax);
   for (const g of groups) if (g.lead.length) packLifted(g); else packFolded(g);
 }
-function layoutAll() { lifted = state.lens === "chase" || state.lens === "trade"; liftKey = lifted ? state.lens : null; for (const g of groups) orderGroup(g); groups.forEach(binderLayout); if (lifted) liftedLayout(); else mosaicLayout(); }
+function layoutAll() { lifted = state.lens === "chase" || state.lens === "trade"; liftKey = lifted ? state.lens : null; for (const g of groups) orderGroup(g); groups.forEach(binderLayout); if (lifted) { newPanel = null; liftedLayout(); } else mosaicLayout(); }
 
 // ---------- camera (inside a set) ----------
 const cam = { x: 0, y: 0, s: 1 };
