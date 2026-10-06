@@ -151,7 +151,7 @@ the end of the wall, with its binder, count and progress bar, made of twins of t
 marks both). Chases come from the card's "Chase more like this" chips (bold), from a New chase panel at the end of the
 wall that opens one plain form with every picker and a live count, the wall dimming to the match (safe's sheet,
 untabbed), and from a set's "People chase" row of name-and-price chips under its title with Chase these (safe). The
-top-left menu is just the arrangement again: By set, By Pokémon, By artist, By value. Full art is tier 4 and up; rules
+top-left menu is gone: a Pokémon or an artist is a chase now, and the price-band layout sits under the Value filter. Full art is tier 4 and up; rules
 are one shape folded into the card's default chase flag, so a hand-picked off still wins. Learned: a chase reads as a
 set of your own once it sits beside the sets, and the card in hand is the fastest way to say "more like this"; a
 sentence is a query language, and dimming the wall to the popular cards left a void. Dropped: the chase sentence, the

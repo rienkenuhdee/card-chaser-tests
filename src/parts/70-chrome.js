@@ -30,27 +30,20 @@ prefs.querySelectorAll("[data-theme]").forEach((b) => (b.onclick = () => setThem
 // ---------- home: tap the count to see the whole wall ----------
 document.getElementById("count").addEventListener("click", (e) => { e.preventDefault(); if (view === "set") exitToMosaic(); });
 
-// ---------- rearrange: by set, by Pokémon, by value ----------
-const arrBtn = document.getElementById("arrange"), arrMenu = document.getElementById("arrange-menu");
-function setMenu(open) { arrMenu.hidden = !open; arrBtn.setAttribute("aria-expanded", String(open)); if (open) arrMenu.querySelector(`[data-mode="${mode}"]`)?.focus(); }
-arrBtn.onclick = (e) => { e.stopPropagation(); setMenu(arrMenu.hidden); };
-addEventListener("pointerdown", (e) => { if (!arrMenu.hidden && !e.target.closest("#arrange-menu, #arrange")) setMenu(false); });
-arrMenu.addEventListener("keydown", (e) => { if (e.key === "Escape") { setMenu(false); arrBtn.focus(); } });
-function markMode() { arrMenu.querySelectorAll("[data-mode]").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.mode === mode))); }
-arrMenu.querySelectorAll("[data-mode]").forEach((b) => (b.onclick = () => { setMenu(false); rearrange(b.dataset.mode); }));
+// ---------- rearrange: the sets and your chases, or price bands (under the Value filter) ----------
 function rearrange(m) {
   if (m === mode || state.trans) return;
   unfocus(); hideCaption();
   const run = () => {
     for (const c of drawnCards) c.pm = { ...c.m };
     const was = new Set(drawnCards);
-    arrange(m); layoutAll(); markMode();
+    arrange(m); layoutAll(); markFilters();
     for (const c of drawnCards) { if (!was.has(c)) c.pm = { ...(c.base?.pm || c.m) }; }
     for (const c of drawnCards) c.delay = reduced ? 0 : Math.min(520, c.g * 60 + c.k * 0.7);
     for (const g of groups) { g.ripple = null; g.burst = 0; }
     state.trans = { kind: "morph", t0: performance.now(), dur: reduced ? 1 : 1300, done: () => kick() };
     tick(10);
-    toast(m === "set" ? "Set chase: every set, oldest first" : m === "pokemon" ? "Pokémon chase: your Dex, region by region" : m === "artist" ? "Artist chase: every illustrator's cards together" : "By value: the more it's worth, the bigger");
+    toast(m === "set" ? "Your sets and chases, oldest first" : "Grouped by price: the more it's worth, the bigger");
     drawList(); kick();
   };
   if (view === "set") { view = "mosaic"; state.g = null; setChrome(); }

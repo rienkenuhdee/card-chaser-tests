@@ -16,7 +16,6 @@
 <div class="top">
   <div class="strip glass">
     <button class="ib" id="back" aria-label="Back to everything" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
-    <button class="ib" id="arrange" aria-haspopup="menu" aria-expanded="false" aria-controls="arrange-menu" aria-label="Arrange the wall: by set, Pokémon, artist or value"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg></button>
     <button class="mark" id="mark" aria-label="Mark several cards" hidden>Mark</button>
     <label class="search" id="search"><span class="sr">Find a card</span>
       <input id="q" type="search" placeholder="Search cards" autocomplete="off" enterkeyhint="search">
@@ -45,15 +44,10 @@
   <button data-lens="chase" aria-pressed="false">Chase<i class="lbadge" aria-hidden="true" hidden></i></button>
   <button data-lens="trade" aria-pressed="false">Trade</button>
 </div>
-<div class="arrange-menu glass" id="arrange-menu" role="menu" aria-label="Arrange the wall" hidden>
-  <button role="menuitemradio" data-mode="set" aria-checked="true"><span><b>By set</b><small>Every set, oldest first, and your chases</small></span><span class="tick" aria-hidden="true">✓</span></button>
-  <button role="menuitemradio" data-mode="pokemon" aria-checked="false"><span><b>By Pokémon</b><small>Your Dex, region by region</small></span><span class="tick" aria-hidden="true">✓</span></button>
-  <button role="menuitemradio" data-mode="artist" aria-checked="false"><span><b>By artist</b><small>Every illustrator's cards together</small></span><span class="tick" aria-hidden="true">✓</span></button>
-  <button role="menuitemradio" data-mode="value" aria-checked="false"><span><b>By value</b><small>The more it's worth, the bigger it is</small></span><span class="tick" aria-hidden="true">✓</span></button>
-</div>
 <div class="arrange-menu tradehow glass" id="trade-how" role="menu" aria-label="How to trade" hidden><p class="th-head" id="th-head">Trade with Maya</p><button role="menuitem" data-how="person"><span><b>In person</b><small>Across the table, card for card</small></span><span class="tick" aria-hidden="true">›</span></button><button role="menuitem" data-how="online" aria-disabled="true"><span><b>Online</b><small>Send an offer and ship the cards</small></span><span class="soon">Soon</span></button></div>
 <div class="arrange-menu right glass" id="filter-menu" role="menu" aria-label="Filters" hidden>
   <button role="menuitemcheckbox" data-filter="value" aria-checked="false"><span><b>Value</b><small>The more it's worth, the hotter</small></span><span class="tick" aria-hidden="true">✓</span></button>
+  <button role="menuitemcheckbox" data-filter="bands" aria-checked="false"><span><b>Group by price</b><small>Price bands, the dearest biggest</small></span><span class="tick" aria-hidden="true">✓</span></button>
   <button role="menuitemcheckbox" data-filter="time" aria-checked="false"><span><b>Time</b><small>Play through when you got each card</small></span><span class="tick" aria-hidden="true">✓</span></button>
 </div>
 <main id="list" aria-label="Your collection as a list">
