@@ -172,6 +172,20 @@ gauge duplicated the bar, and the stamp edged toward a toy. Dropped: the ring ga
 Settings, the stamp, the next-card line (worth a return). Also fixed: completing a set threw, and Select all in a
 chase marked its twins instead of the cards.
 
+**Round 16: Where trophies live.** Three homes for a trophy after its day on the shelf: a trophy case at the end of
+the wall (a header with the count, the total and a sort, plaques with a plain third line, a set's master and grand set
+tucked under it, Share as a picture card); a trophy room behind a door at the end of the wall (one dark row with every
+plaque's colours, tapping it slides the wall away for lit plaques on wood shelves, each with its worth over the year as
+a thin line and the header summing the room, a set's other views stacked behind it and fanned on a tap); and a
+timeline one level above the wall (pinch the mosaic and it shrinks to "Today" with the trophies hung on a line of dates
+beside a growth curve). Kept: the room, whole. A pinch in the room or Back returns to the wall where you were; Back from
+an album opened in the room returns to the room. Also: a trophy on its first day has To the case now in its album,
+which sends it into the room without waiting the day (it keeps its real finish date). Learned: the room reads as an
+achievement because it leaves the working wall entirely, and a worth line turns a trophy from a record into something
+that is still doing something; the case's families and the timeline's history were good ideas that cost more to read.
+Dropped: the sort, Share, the ghost plaques, the timeline. On a phone, safe's case didn't show a moved trophy for Ryan
+(not chased down, since it was dropped).
+
 ## Open questions (next rounds)
 
 - A deal arriving off screen: one tap from the line to the offers, and whether the arrival should nudge the wall.
@@ -181,5 +195,5 @@ chase marked its twins instead of the cards.
 - Starting a trade: spares begin empty, so the demo needs a few marked by hand; an import option for doubles, or a hint on a spare's panel naming who wants it.
 - The import's reveal: the round 11 assembly from nothing as the flood after an import.
 - A chase's twins: should a custom panel's cards also lead in the Chase lens, or only their set's copy? And should a chase hide from the wall once it's complete?
-- Trophies: where the case lives and what a trophy can do (share it, show its worth over time, a master set beside its set), and whether a sub-chase of a finished set should fold into the set's plaque.
+- Trophies: the worth line is a made-up year; real data would start at the finish date ("Up $27 since you finished"). Sharing a trophy (safe's picture card), and whether a sub-chase of a finished set should fold into the set's plaque. The room hides the lenses; Value could recolour the engravings.
 - Bringing the mosaic into the real app as the Chase home.
