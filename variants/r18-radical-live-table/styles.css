@@ -1,0 +1,29 @@
+/* Round 18, radical: the live table. Two handshake buttons under the line, theirs in their ink, yours to hold. */
+.lv-hands { display: grid; grid-template-columns: 1fr 1.2fr; gap: 6px; padding: 7px 0 0; }
+.lv-hands[hidden] { display: none; }
+.lv-hand { position: relative; overflow: hidden; display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 12px; border-radius: 10px;
+  border: 1px solid var(--line); background: none; text-align: left; font: inherit; color: var(--ink); transition: background .2s, border-color .2s, color .2s; }
+.tradebar .lv-hand span { display: grid; gap: 1px; min-width: 0; line-height: 1.15; font-size: inherit; color: inherit; white-space: normal; overflow: visible; }
+.tradebar .lv-hand b { font-size: 14px; font-weight: 700; }
+.lv-hand small { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lv-tip { flex: none; width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--tink, var(--muted)); background: color-mix(in srgb, var(--tink, var(--muted)) 16%, transparent); }
+.lv-hand.them.reach { border-color: color-mix(in srgb, var(--tink) 60%, transparent); }
+.lv-hand.them.on { border-color: var(--tink); background: color-mix(in srgb, var(--tink) 14%, transparent); }
+.lv-hand.them.on .lv-tip { background: var(--tink); border-color: #fff; box-shadow: 0 0 0 3px var(--tink); }
+.lv-hand.them.on small { color: var(--ink); }
+.lv-hand.you { cursor: pointer; touch-action: none; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+.lv-hand.you .lv-tip { border-color: var(--ink); background: none; }
+.lv-hand.you.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.lv-hand.you.on small { color: color-mix(in srgb, var(--bg) 72%, transparent); }
+.lv-hand.you.on .lv-tip { background: var(--bg); border-color: var(--bg); }
+/* both held: a bar fills along the bottom of both buttons; at the end of it, the shake */
+.lv-hand::after { content: ""; position: absolute; left: 0; bottom: 0; height: 3px; width: 0; background: var(--deal); }
+.lv-hands.both .lv-hand::after { width: 100%; transition: width .65s linear; }
+@media (prefers-reduced-motion: no-preference) {
+  .lv-hand.them.on .lv-tip { animation: lv-hold 1.3s ease-in-out infinite; }
+  @keyframes lv-hold { 50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--tink) 30%, transparent); } }
+}
+@media (prefers-reduced-motion: reduce) { .lv-hands.both .lv-hand::after { transition: none; } }
+/* Settings: Skip a day */
+.lv-skiprow { justify-content: space-between !important; align-items: center; flex-wrap: nowrap !important; }
+.lv-skipnote { flex: 1; font-size: 13.5px; color: var(--muted); line-height: 1.35; }
