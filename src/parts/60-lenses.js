@@ -16,6 +16,7 @@ function setLens(lens) {
   if (lens === "chase") { const n = cards.filter(isChase).length, d = cards.filter((c) => isChase(c) && c.deal).length; toast(n ? `${n} on your chase list${d ? `, ${d} with a live deal` : ""}` : "Nothing on your chase list yet. Open a card and choose Chase it."); }
   if (lens === "trade") { const n = cards.filter(isSpare).length; toast(n ? `${n} spare${n === 1 ? "" : "s"} to trade` : "No spares yet. Open a card you own and choose Spare."); }
   if (was === "chase") closePop(true);
+  if (lens === "chase" && live.news.length) showDealBar(); else hideDealBar();
   liftLayout(); drawList(); updateCount(); kick();
 }
 lensBox.querySelectorAll("button").forEach((b) => (b.onclick = () => setLens(b.dataset.lens)));

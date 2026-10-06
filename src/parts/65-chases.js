@@ -351,7 +351,7 @@ function drawPopRow(g, sx, y0, k, alpha) {
   for (const ch of g.popChips) {
     const x = sx + ch.x * k, y = y0 + ch.y * k, w = ch.w * k, h = ch.h * k, c = ch.c;
     rr(x, y, w, h, 6 * k); ctx.fillStyle = theme["panel-solid"]; ctx.fill();
-    ctx.lineWidth = Math.max(1, k * 0.8); ctx.strokeStyle = c.owned ? theme["slot-line"] : theme.gold; ctx.stroke();
+    ctx.lineWidth = Math.max(1, k * 0.8); ctx.strokeStyle = isChase(c) ? theme.gold : theme["slot-line"]; ctx.stroke(); // gold: on your chase list
     const pad = 9 * k;
     ctx.fillStyle = theme.muted; font(600, 10 * k); const pw = textW(ch.price);
     ctx.fillText(ch.price, x + w - pad - pw, y + h * 0.68);

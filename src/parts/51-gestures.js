@@ -83,7 +83,7 @@ function startTwo(pts) {
   const [a, b] = pts, m = mid(a, b);
   gesture = { kind: "two", d0: dist(a, b), m0: m, cam: { ...cam }, qs: [], m, r: 1 };
   // A pinch from a card up close lands on the set, never past it: closing the set takes a second pinch.
-  if (state.focus) { unfocus(); fly = null; gesture.noClose = true; }
+  if (state.focus || (view === "set" && state.g && cam.s > fitCam(state.g).s * 1.6)) { if (state.focus) unfocus(); fly = null; gesture.noClose = true; }
   // Spreading on (or near) a panel starts opening it, under your fingers.
   if (view === "mosaic") { const h = hit(m.x, m.y, true); if (h?.block) gesture.g = h.block; }
 }

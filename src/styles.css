@@ -398,3 +398,13 @@ body.building .lens, body.building .markbar, body.building .timebar, body.buildi
 .chip[aria-pressed="true"] { border-color: var(--gold); background: color-mix(in srgb, var(--gold) 16%, transparent); }
 .chip[aria-pressed="true"] span { color: var(--gold); }
 .chip[aria-pressed="true"] b::before { content: "✓ "; color: var(--gold); }
+
+/* The Chase lens's banner: what arrived since you last looked, under the top strip. */
+.dealbar { position: fixed; z-index: 3; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 62px); transform: translateX(-50%); width: min(520px, calc(100vw - 20px)); display: flex; align-items: center; gap: 4px; padding: 4px 4px 4px 6px; border-radius: 14px; border-color: color-mix(in srgb, var(--deal) 55%, var(--line)); }
+.dealbar[hidden] { display: none; }
+body.focused .dealbar, body.offering .dealbar, body.trading .dealbar, body.welcoming .dealbar, body.listmode .dealbar, body.paying .dealbar, body.building .dealbar, body.inset .dealbar { display: none; }
+.db-main { flex: 1; min-width: 0; display: grid; gap: 1px; text-align: left; border: 0; background: none; padding: 6px 8px; border-radius: 10px; cursor: pointer; color: var(--ink); line-height: 1.2; }
+.db-main b { font-size: 14.5px; font-weight: 700; color: var(--deal); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.db-main span { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.db-main:hover { background: var(--line); }
+.db-x { width: 34px; height: 34px; color: var(--muted); }
