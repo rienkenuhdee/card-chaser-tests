@@ -65,6 +65,49 @@ for (const dpr of [1, 2]) {
     r = await toDoor(); await u.pinch(195, r.y + 32, 40, 120, 160); await wait(900); R.push(["a spread on the door opens the room", (await rm()).on]);
     await p.click("#back"); await wait(900); R.push(["back closes the room", !(await rm()).on]);
   }
+  // The trade binder: an imported collection with spare copies, the Trade lens up, the binder's cover at its top.
+  await p.evaluate(() => {
+    const at = Date.now() - 30 * 86400e3, owned = {}, copies = {};
+    for (const c of __w.cards) if (c.own0) { owned[c.id] = { on: true, at }; if (c.i % 4 === 0) copies[c.id] = { n: c.i % 3 ? 2 : 3, got: at }; }
+    localStorage.clear();
+    localStorage.setItem("wall-owned", JSON.stringify(owned)); localStorage.setItem("wall-copies", JSON.stringify(copies));
+    localStorage.setItem("wall-imported", "TCGplayer"); localStorage.setItem("wall-welcomed", "1");
+  });
+  await p.reload({ waitUntil: "load" }); await wait(900);
+  const v = await installTouch(p);
+  const bd = () => p.evaluate(() => ({ on: __w.bnd.on, q: __w.bnd.q, vi: __w.bnd.vi, show: __w.bnd.show, n: __w.tbList().length }));
+  const cover = () => p.evaluate(() => { const m = __w.COVER.m; return m ? { x: m.x + m.w / 2, y: m.y + m.h / 2 - __w.mScroll } : null; });
+  await p.click('[data-lens="trade"]'); await wait(1600);
+  let cv = await cover(); R.push(["the Trade lens shows the binder's cover", Boolean(cv) && cv.y > 60 && cv.y < 300 && (await bd()).n > 18]);
+  const openIt = async () => { cv = await cover(); await v.tap(cv.x, cv.y); await wait(900); };
+  await openIt(); R.push(["tapping the cover opens the binder", (await bd()).on && (await bd()).q === 1]);
+  await v.drag(300, 450, 450, 120, -200); await wait(700); R.push(["a sideways flick turns the page", (await bd()).vi === 1]);
+  await v.drag(100, 450, 450, 120, 200); await wait(700); R.push(["a flick the other way turns it back", (await bd()).vi === 0]);
+  await p.click("#back"); await wait(900); R.push(["back closes the binder", !(await bd()).on]);
+  await openIt(); await v.pinch(195, 450, 220, 195, 320, 250); await wait(800); R.push(["a slow small pinch stays in the binder", (await bd()).on]);
+  await v.pinch(195, 450, 220, 120, 90); await wait(900); R.push(["a quick pinch closes the binder", !(await bd()).on]);
+  // Show mode: the other person taps two pockets; Done, then who it was, and the table opens with them on your side.
+  const pickTwo = async () => {
+    await p.click("#bb-show"); await wait(700);
+    const pk = await p.evaluate(() => [0, 4].map((k) => { const c = __w.tbList()[__w.bnd.vi * 9 + k], r = __w.tbPocketRect(c); return { id: c.id, x: r.x + r.w / 2, y: r.y + r.h / 2 }; }));
+    for (const q of pk) { await v.tap(q.x, q.y); await wait(150); }
+    await p.click("#sb-done"); await wait(600);
+    return pk.map((q) => q.id);
+  };
+  await openIt(); const shown = await pickTwo();
+  await p.click('#tb-who [data-w="0"]'); await wait(1200);
+  const tb = await p.evaluate(() => ({ on: __w.tbl.on, give: __w.tbl.give.map((c) => c.id) }));
+  R.push(["Show mode, two picks, Done and a trader open the table with them on your side", tb.on && tb.give.length === 2 && shown.every((id) => tb.give.includes(id))]);
+  await p.click("#back"); await wait(1200); R.push(["back from the table returns to the binder", !(await p.evaluate(() => __w.tbl.on)) && (await bd()).on]);
+  // Someone new: one copy of each pick is given away, and Undo puts the counts and the cards back exactly.
+  const snap = (ids) => p.evaluate((ids) => JSON.stringify(ids.map((id) => { const c = __w.pool.find((x) => x.id === id); return [c.owned, c.got, __w.nOf(c), __w.copies[id] || null]; })), ids);
+  const ids = await pickTwo(), before = await snap(ids), n0 = await p.evaluate((ids) => ids.map((id) => __w.nOf(__w.pool.find((x) => x.id === id))), ids);
+  await p.evaluate(() => [...document.querySelectorAll("#tb-who [data-w]")].find((b) => b.querySelector("b").textContent === "Someone new").click()); await wait(400);
+  const gave = await p.evaluate((ids) => ({ n: ids.map((id) => __w.nOf(__w.pool.find((x) => x.id === id))), toast: document.getElementById("toast").textContent }), ids);
+  R.push(["someone new takes one copy of each", gave.n.every((n, i) => n === n0[i] - 1) && /^Gave 2 cards to someone new\./.test(gave.toast)]);
+  await p.evaluate(() => document.querySelector("#toast .toast-btn").click()); await wait(300);
+  R.push(["undo gives them back exactly", (await snap(ids)) === before]);
+  await p.keyboard.press("Escape"); await wait(900); R.push(["escape closes the binder", !(await bd()).on]);
   R.push([`no page errors${p.errors.length ? `: ${p.errors[0]}` : ""}`, !p.errors.length]);
   failures += report(R, `[dpr ${dpr}] `);
   await p.close();

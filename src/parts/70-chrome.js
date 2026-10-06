@@ -28,12 +28,12 @@ function setTheme(t) {
 prefs.querySelectorAll("[data-theme]").forEach((b) => (b.onclick = () => setTheme(b.dataset.theme)));
 
 // ---------- home: tap the count to see the whole wall ----------
-document.getElementById("count").addEventListener("click", (e) => { e.preventDefault(); if (view === "set") exitToMosaic(); else if (room.on) closeRoom(); });
+document.getElementById("count").addEventListener("click", (e) => { e.preventDefault(); if (view === "set") exitToMosaic(); else if (bnd.on) closeBinder(); else if (room.on) closeRoom(); });
 
 // ---------- rearrange: the sets and your chases, or price bands (under the Value filter) ----------
 function rearrange(m) {
   if (m === mode || state.trans) return;
-  unfocus(); hideCaption();
+  unfocus(); hideCaption(); if (bnd.on) closeBinder(true);
   const run = () => {
     for (const c of drawnCards) c.pm = { ...c.m };
     const was = new Set(drawnCards);

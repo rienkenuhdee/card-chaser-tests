@@ -104,7 +104,7 @@ let crossing = null; // { rec, t, give, get, n }
 const flights = []; // { c, out, edge, slot, last, t0, dur, then }
 function crossOnWall(rec, t) {
   const give = toCards(rec.give).filter((c) => c.owned), get = toCards(rec.get).filter((c) => !c.owned);
-  if (reduced || document.body.classList.contains("listmode") || crossing) { completeTrade(rec, t); if (lifted) liftLayout(true); kick(); return; }
+  if (reduced || document.body.classList.contains("listmode") || crossing || bnd.on) { completeTrade(rec, t); if (lifted) liftLayout(true); kick(); return; }
   crossing = { rec, t, give, get, still: [], n: give.length + get.length };
   const now = performance.now(), step = () => { if (crossing && --crossing.n <= 0) finishCross(); };
   quietLayout = true;

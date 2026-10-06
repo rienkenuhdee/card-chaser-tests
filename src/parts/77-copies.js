@@ -147,7 +147,7 @@ function copyTile(c, r, a) {
   countPill(n, spare, r.x + inset + (marked ? clamp(r.w * 0.11, 5, 12) * 2 + 4 : 0), r.y + inset, size);
 }
 function drawCopies() {
-  if (!(state.lens === "have" || state.lens === "trade") || state.time || state.trans || shuffle || room.on || tbl.on || preview) return;
+  if (!(state.lens === "have" || state.lens === "trade") || state.time || state.trans || shuffle || room.on || tbl.on || bnd.on || preview) return;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   const dim = 1 - state.dimAll * 0.72;
   if (view === "mosaic") {

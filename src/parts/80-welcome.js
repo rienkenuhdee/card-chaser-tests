@@ -144,7 +144,9 @@ function finishImport(src) {
   const sync = syncDone({ quiet: true });
   if (lifted && !sync) liftLayout(true);
   tick(14);
-  setTimeout(() => toast(`${n.toLocaleString()} cards imported from ${src}, ${d} with spare copies.${chaseAll ? ` ${k.toLocaleString()} on your chase list.` : ""}`), reduced ? 100 : 500);
+  // The spares went into the trade binder: Open goes to the Trade lens and opens it. (Kept to two lines.)
+  const said = d ? `${n.toLocaleString()} cards imported${chaseAll ? `, ${k.toLocaleString()} to chase` : ""}. ${d} with spares are in your trade binder.` : `${n.toLocaleString()} cards imported from ${src}.${chaseAll ? ` ${k.toLocaleString()} on your chase list.` : ""}`;
+  setTimeout(() => toast(said, d ? () => tbOpenFromAnywhere() : null, "Open"), reduced ? 100 : 500);
   kick();
 }
 

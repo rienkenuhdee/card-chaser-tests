@@ -186,13 +186,28 @@ that is still doing something; the case's families and the timeline's history we
 Dropped: the sort, Share, the ghost plaques, the timeline. On a phone, safe's case didn't show a moved trophy for Ryan
 (not chased down, since it was dropped).
 
+**Round 17: Your spares.** How doubles get onto the wall and how a spare finds someone. All three gave every card a
+copy count, with the import seeding doubles by card id (mostly commons and uncommons), and a done trade taking one
+copy rather than the card. Safe: a stepper on the card panel ("You have 2"), every copy past the first a spare unless
+you keep it, and a line saying who wants it with Trade with Maya. Bold: copies drawn as stacks at every level, and a
+flick up off the stack to put one up for trade. Radical: a nine-pocket trade binder of your spares, most wanted first
+with who chases each pocket, and Show mode, a dark full-screen spread handed across a table, whose picks become a trade.
+Kept (the critic's mix): safe's counts, stepper and "Wanted by" line; the binder as a level behind a cover at the top
+of the Trade lens, with Show mode into the table and a new Someone new that gives the picks away with Undo; bold's
+copies stacked behind the mini card in spare tiles. The Trade lift stays, most wanted first. Learned: the empty Trade
+lens was a data problem, not a layout one, and once copies exist a spare is just arithmetic; a binder handed across a
+table is the most natural trading object we've tried. Dropped: the flick and the drag into the binder (a vertical drag
+on a close-up meaning something new, depending on state you can't see), the far-out stack slivers (they read as
+misdrawn tiles), the likely-doubles review (a seeded guess dressed as a review), Mark's Into the trade binder. Also
+fixed: the import toast counted printings, so it disagreed with the counter.
+
 ## Open questions (next rounds)
 
 - A deal arriving off screen: one tap from the line to the offers, and whether the arrival should nudge the wall.
 - Painting past the screen's edge: should a sweep scroll the binder as it goes?
 - At the show: does the Wants lens alone carry a vendor table, or does the verdict (NEED IT, pay up to) earn a place when a card is looked up?
 - Trading: a real other side (the twelve-second reply is a stand-in), more than one card per counter, and whether a done trade should fall off the chip after a day.
-- Starting a trade: spares begin empty, so the demo needs a few marked by hand; an import option for doubles, or a hint on a spare's panel naming who wants it.
+- Spares: Show mode's Someone new gives cards away with nothing back; a stranger at a show might want to offer a card, which needs their side of the table without an account.
 - The import's reveal: the round 11 assembly from nothing as the flood after an import.
 - A chase's twins: should a custom panel's cards also lead in the Chase lens, or only their set's copy? And should a chase hide from the wall once it's complete?
 - Trophies: the worth line is a made-up year; real data would start at the finish date ("Up $27 since you finished"). Sharing a trophy (safe's picture card), and whether a sub-chase of a finished set should fold into the set's plaque. The room hides the lenses; Value could recolour the engravings.

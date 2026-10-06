@@ -64,7 +64,7 @@ function mosaicLayout() {
   const R0 = { x: 8, y: topPad(), w: vw - 16 }, top = R0.y + shelfLayout(R0); // the shelf first: trophies finished today
   const live = groups.filter((g) => !g.done);
   const newH = mode === "set" && !picking() ? NEW_H : 0;
-  newPanel = null; trophyCase = null;
+  newPanel = null; trophyCase = null; COVER.m = null;
   const fitH = vh - top - botPad() - newH;
   // The sets you collect share the screen; the others fold to a line beneath (picked in the welcome, or in Settings).
   if (mode === "set" && pickedSets.size && pickedSets.size < sets.length) {
@@ -145,7 +145,8 @@ function liftedLayout() {
   const R = { x: 8, y: topPad(), w: vw - 16 };
   let y = R.y + shelfLayout(R);
   const live = groups.filter((g) => !g.done && g.lead.length), folded = groups.filter((g) => !g.done && !g.lead.length);
-  if (state.lens === "trade") y += stripLayout({ x: R.x, y, w: R.w }); else strip = null; // the traders along the top
+  COVER.m = null;
+  if (state.lens === "trade") { y += coverLayout({ x: R.x, y, w: R.w }); y += stripLayout({ x: R.x, y, w: R.w }); } else strip = null; // the trade binder's cover, then the traders
   // On a wide screen two live panels sit side by side; on a phone they stack.
   const across = R.w >= 900 ? 2 : 1, pw = R.w / across;
   for (let i = 0; i < live.length; i += across) {
@@ -166,6 +167,7 @@ function layoutAll() {
   const keep = mScroll;
   if (lifted) { newPanel = null; liftedLayout(); } else mosaicLayout();
   if (room.on) { if (!caseList().length) { endRoom(); return; } if (room.fan && !inCase(room.fan)) room.fan = null; mScroll = keep; strip = null; roomLayout(); }
+  if (bnd.on) { bnd.L = tbGeom(bnd.show); bnd.vi = clamp(bnd.vi, 0, tbViews() - 1); } // the binder fits the new screen
 }
 
 // ---------- camera (inside a set) ----------

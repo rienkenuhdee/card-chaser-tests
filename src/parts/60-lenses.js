@@ -26,7 +26,7 @@ function liftLayout(force = false) {
   const want = state.lens === "chase" || state.lens === "trade";
   const same = want === lifted && (!want || state.lens === liftKey); // Chase to Trade is a flight too
   if (same && !(force && lifted)) { layoutAll(); return; }
-  if (tbl.on) { layoutAll(); kick(); return; } // nothing of the wall shows under the table: no flight to watch
+  if (tbl.on || bnd.on) { layoutAll(); kick(); return; } // nothing of the wall shows under the table or the binder: no flight to watch
   const T = state.trans;
   if (T && !(T.anim || T.t0)) { layoutAll(); return; } // fingers are holding a transition: relayout under it
   if (T) finishTransition();

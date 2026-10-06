@@ -35,6 +35,7 @@ function hit(sx, sy, nearest = false) {
       for (const g of caseList()) { const dx = Math.max(g.m.x - sx, 0, sx - g.m.x - g.m.w), dy = Math.max(g.m.y - y, 0, y - g.m.y - g.m.h), d = Math.hypot(dx, dy); if (d < bd) { bd = d; best = g; } }
       return best && bd < 60 ? { block: best } : null;
     }
+    if (COVER.m && inR(COVER.m, sx, y)) return { block: COVER }; // the trade binder, at the top of the Trade lens
     if (inR(DOOR.m, sx, y)) return { block: DOOR };
     for (const g of groups) if (g.m && !inCase(g) && inR(g.m, sx, y)) return { block: g };
     if (!nearest) return null;
@@ -147,6 +148,7 @@ function pinchMove(a, b) {
       }
       if (!g.g?.done) return;
     } else if (g.g?.door) { if (r > 1.12) { g.snap = true; openRoom(); } return; }
+    else if (g.g?.tbCover) { if (r > 1.12) { g.snap = true; openBinder(); } return; }
     else if (g.g && (g.g.fan || g.g.pick)) return;
     if (!g.g) return;
     const q = clamp((r - 1) / 1.1, 0, 1);

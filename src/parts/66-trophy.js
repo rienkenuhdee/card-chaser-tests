@@ -149,7 +149,7 @@ function shelfLayout(R) {
   const h = plaqueRows(dn, R, R.y) + 2;
   shelf = { y: R.y, h };
   const next = Math.min(...dn.map((g) => finishOf(g).at + DAY)) - Date.now() + 100;
-  shelfTimer = setTimeout(() => { if (view === "mosaic" && !state.trans && !gesture && !tbl.on && !room.on) shelfMorph(); else { layoutAll(); kick(); } }, clamp(next, 100, 2e9));
+  shelfTimer = setTimeout(() => { if (view === "mosaic" && !state.trans && !gesture && !tbl.on && !room.on && !bnd.on) shelfMorph(); else { layoutAll(); kick(); } }, clamp(next, 100, 2e9));
   syncShelfPad();
   return h;
 }

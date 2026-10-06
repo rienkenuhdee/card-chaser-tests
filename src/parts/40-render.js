@@ -348,6 +348,7 @@ function drawWall(now, alpha = 1, except = null) {
   if (settling) kick();
 }
 function drawMosaic(now, alpha = 1, except = null) {
+  if (bnd.on) { if (tbStep(now)) kick(); if (bnd.on) { tbDraw(now); return; } } // the trade binder is a level of its own
   if (!room.on) { drawWall(now, alpha, except); return; }
   if (stepRoomAnim(now)) kick();
   if (!room.on) { drawWall(now, alpha, except); return; } // the close just finished
@@ -458,7 +459,7 @@ function frame(now) {
     for (const c of state.g.cards) if (c.anim) { more = true; break; }
   }
   // Search hits in the mosaic: a ring around each one so they're easy to spot.
-  if (state.matches && view === "mosaic" && !T) {
+  if (state.matches && view === "mosaic" && !T && !bnd.on) {
     ctx.lineWidth = 1.5; ctx.strokeStyle = theme.ink;
     for (const c of state.matches) { ctx.beginPath(); ctx.arc(c.m.x + c.m.w / 2, c.m.y - mScroll + c.m.h / 2, Math.max(6, c.m.h * 0.7), 0, Math.PI * 2); ctx.stroke(); }
   }

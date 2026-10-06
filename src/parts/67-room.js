@@ -113,7 +113,7 @@ function packRoomPlaque(g) {
 
 // ----- opening and closing -----
 function openRoom() {
-  if (room.on || state.trans || tbl.on || view !== "mosaic" || !caseList().length) return;
+  if (room.on || state.trans || tbl.on || bnd.on || view !== "mosaic" || !caseList().length) return;
   hideCaption(); cancelPress(); closePop(true); tick(8);
   room.on = true; room.closing = false; room.wallScroll = mScroll; room.fan = null; room.pinch = null; mScroll = 0;
   layoutAll();
