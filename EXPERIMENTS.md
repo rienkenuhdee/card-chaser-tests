@@ -201,12 +201,23 @@ on a close-up meaning something new, depending on state you can't see), the far-
 misdrawn tiles), the likely-doubles review (a seeded guess dressed as a review), Mark's Into the trade binder. Also
 fixed: the import toast counted printings, so it disagreed with the counter.
 
+**Round 18: Trading online (pinned).** Three takes on a trade when the other person isn't across the table, all on a
+demo clock (a day every 20 s, Skip a day): a marketplace flow (the trader's record, a grade and a photo of their copy
+on hold, Send offer, then Ship by, Mark shipped, Got them); the same with the mail on the wall (an incoming card faint in
+its own slot, its edge filling as it travels, filling in solid on arrival); and a live shared table (the other
+collector's hand on the mat, Hold to shake, both sides' cards held mid-mat until both arrive). Pinned by Ryan: online
+trading needs real backend work first (accounts, addresses, shipping, trust), so nothing was harvested and the variants
+live only on the round 18 branch (PR #27, left open). The critic's pick for when it returns: the incoming ghost on the
+wall, the photo on hold, the shipping thread, the trader's record; not the live table or Hold to shake. Missing for
+strangers in all three: swapping addresses, cancel before shipping, report a problem, a rating, a warning on a lopsided
+offer, who ships first.
+
 ## Open questions (next rounds)
 
 - A deal arriving off screen: one tap from the line to the offers, and whether the arrival should nudge the wall.
 - Painting past the screen's edge: should a sweep scroll the binder as it goes?
 - At the show: does the Wants lens alone carry a vendor table, or does the verdict (NEED IT, pay up to) earn a place when a card is looked up?
-- Trading: a real other side (the twelve-second reply is a stand-in), more than one card per counter, and whether a done trade should fall off the chip after a day.
+- Trading: a real other side (the twelve-second reply is a stand-in), more than one card per counter, and whether a done trade should fall off the chip after a day. Online trading is pinned on backend work (round 18).
 - Spares: Show mode's Someone new gives cards away with nothing back; a stranger at a show might want to offer a card, which needs their side of the table without an account.
 - The import's reveal: the round 11 assembly from nothing as the flood after an import.
 - A chase's twins: should a custom panel's cards also lead in the Chase lens, or only their set's copy? And should a chase hide from the wall once it's complete?
