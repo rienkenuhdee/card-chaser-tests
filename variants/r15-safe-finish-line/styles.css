@@ -1,0 +1,2 @@
+/* r15-safe-finish-line: the finished line in the list view, in gold like the frame on the wall. */
+#list .lfin, #list h2.lfin { color: var(--gold); }
