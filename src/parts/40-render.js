@@ -69,7 +69,7 @@ function emphasis(c) {
   if (c.away) return 0; // out on the trade table: its tile is empty
   if (preview) return preview.has(c.base || c) ? (c.owned ? 0.42 : 1) : 0.1; // the New chase form: what it would match
   if (state.matches) return state.matches.has(rootOf(c)) ? 1 : 0.1;
-  if (state.lens === "need") return c.owned ? 0.1 : 1;
+  if (state.lens === "need") return c.owned ? 0.1 : c.ph ? 0.3 : 1; // a Dex pocket your sets can't fill stays quieter
   if (state.lens === "chase") return isChase(c) ? 1 : 0.18;
   if (state.lens === "trade") return isSpare(c) ? 1 : 0.18;
   return 1;
@@ -85,6 +85,7 @@ function drawTile(c, sx, sy, w, h, now, mult = 1) {
     sx += (w - w * k) / 2; sy += (h - h * k) / 2; w *= k; h *= k;
   }
   drawTile0(c, sx, sy, w, h, now, mult);
+  if (c.reg && w >= 34 && view === "set") dexRegionTag(c, sx, sy, w, mult); // the first pocket of a region in the Dex
   // Inside a set the cards people chase wear a gold corner.
   if (c.pop && view === "set" && groups[c.g]?.set && w >= 14 && c.e > 0.3 && (!state.focus || state.focus === c)) {
     const s = clamp(w * 0.36, 4, 18), r = w >= 26 ? w * 0.045 : 0;
@@ -132,6 +133,7 @@ function drawTile0(c, sx, sy, w, h, now, mult = 1) {
     sx += (w - w * k) / 2; sy += (h - h * k) / 2; w *= k; h *= k;
   }
   ctx.globalAlpha = alpha;
+  if (c.ph) { dexPocket(c, sx, sy, w, h, alpha); return; } // a Pokémon with no card in your sets (85-natdex.js)
   // A chased card out in front: while its tile is wider than it is tall it reads as a feed tile (the deal, or the
   // most you'd pay); as it grows into the binder it becomes the card.
   if (c.lift && w > h * 1.05) { if (c.owned) drawSpareTile(c, sx, sy, w, h, alpha, now); else drawFeedTile(c, sx, sy, w, h, alpha, now); ctx.globalAlpha = 1; return; }
@@ -264,6 +266,7 @@ function drawHeader(st, now, C = cam, ox = 0, alpha = 1) {
   ctx.fillText(fitText(line, sw - pw - 12), sx, sy + hh * 0.72);
   drawBar(st, sx, sy + hh * 0.82, sw, Math.max(1.5, 3 * k), now, k);
   drawNextPin(st, sx, sy + hh * 0.82, sw, Math.max(1.5, 3 * k), now, k); // the next medal to earn, at its point on the bar
+  if (st.natdex && !f?.put && k >= 0.3) drawDexRow(st, sx, sy + hh, k, ctx.globalAlpha); // prints, type, regions
   if (st.popChips) drawPopRow(st, sx, sy + hh, k, ctx.globalAlpha);
   else if ((st.chase || f) && k >= 0.3) { for (const b of [st.hdrBtn, st.hdrBtn2]) if (b) drawHdrBtn(st, b, sx, sy + hh + b.y * k, k, ctx.globalAlpha); ctx.textBaseline = "alphabetic"; }
   if (st.burst) {
@@ -342,7 +345,7 @@ function drawWall(now, alpha = 1, except = null) {
     const a = alpha * g.pe;
     drawPanel(g, now, a);
     if (inCase(g)) continue; // its strip is part of the door, drawn below the tiles
-    for (const c of g.cards) drawTile(c, c.m.x, c.m.y - mScroll, c.m.w, c.m.h, now, a);
+    for (const c of g.cards) { const y = c.m.y - mScroll; if (y > vh || y + c.m.h < 0) continue; drawTile(c, c.m.x, y, c.m.w, c.m.h, now, a); } // off-screen tiles skipped (the Dex is tall)
   }
   if (!except && !state.trans) { drawNewPanel(now, alpha); drawDoor(now, alpha); }
   if (!state.trans) for (const g of groups) { if (!inCase(g) || room.on) continue; if (g.m.y - mScroll > vh || g.m.y + g.m.h - mScroll < 0) continue; for (const c of g.cards) drawTile(c, c.m.x, c.m.y - mScroll, c.m.w, c.m.h, now, alpha * g.pe); }

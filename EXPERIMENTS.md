@@ -229,6 +229,11 @@ pins in the mosaic (they read as glitches beside the gold ticks), the bar's end 
 Left out of the catalog for want of data: buying trophies, region chases, promo milestones, Gym Circuit, Full
 Evolution, the rarities the wall's sets don't have, and counts the wall can't reach (2,500 cards, 500 and 1,000
 Pokémon, Splash!, Unown Alphabet).
+Also, after the round: a Complete Dex chase (Ryan's ask), one pocket per Pokémon from #1 to #1,025 in Dex order,
+each filled by your best print of that Pokémon (else the cheapest, to chase), the ones the wall's sets don't print as
+dashed "Not in your sets" pockets that count in its total; its settings filter the prints (Any, Holo and up, Full art)
+and the type. Picked in Choose your sets or the New chase sheet; it owns the Kanto, 50 and 151 Pokémon medals. It
+doesn't flood the chase list; Need on its panel shows what your sets can fill.
 
 ## Open questions (next rounds)
 

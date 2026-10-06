@@ -382,6 +382,8 @@ body.building .lens, body.building .markbar, body.building .timebar, body.buildi
 .cs-tally small { margin-top: 3px; font: 500 12px var(--font); color: var(--muted); }
 .cs-line { flex: 1; min-width: 0; font-size: 13.5px; line-height: 1.3; color: var(--muted); }
 #cs-save { height: 46px; max-width: 48%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The Complete Dex: picking it sets the card fields aside; its settings sheet keeps only prints and type */
+.chase-sheet.dexmode .cs-card, .chase-sheet.dexedit .cs-dexf { display: none; }
 /* Chase more like this: a row of one-tap rules under Chase it, on the card panel and in the Chase pop. */
 .morelike { display: grid; gap: 6px; min-width: 0; }
 .morelike[hidden] { display: none; }

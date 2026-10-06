@@ -60,6 +60,7 @@ function drawBar(g, x, y, w, h, now, k = 1) {
 // gone and the panel comes back. A finished group you chose to keep on the wall stays there (put: false).
 let doneDirty = false; // a trade changes several cards with quietLayout on: one check at the end
 function syncDone({ quiet = false } = {}) {
+  natdexSync();
   const list = mode === "set" ? groups : [...(setGroups || []), ...chaseGroups.values()];
   const minted = [], freed = [], now = performance.now();
   for (const g of list) {

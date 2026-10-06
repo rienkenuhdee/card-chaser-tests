@@ -43,7 +43,7 @@ function leaveMark() {
 }
 function revert(changes) { for (const [c, was] of changes) if (c.owned !== was) setOwned(c, was, { quiet: true }); updateBar(); }
 function markCard(c, on) {
-  if (c.owned === on) return;
+  if (c.ph || c.owned === on) return; // a Dex pocket with no card can't be marked
   if (!session.has(c)) session.set(c, c.owned);
   setOwned(c, on, { quiet: true });
   if (session.get(c) === c.owned) session.delete(c); // back where it started: not a change any more
@@ -52,7 +52,7 @@ function markCard(c, on) {
 // Select all: every card in the set you're in becomes yours (through the session, so Undo takes them all back).
 function markAllInSet() {
   const g = state.g; if (!g || !marking) return;
-  const todo = g.cards.filter((c) => !c.owned); if (!todo.length) { toast("You have all of them already."); return; }
+  const todo = g.cards.filter((c) => !c.owned && !c.ph); if (!todo.length) { toast("You have all of them already."); return; }
   const now = performance.now();
   todo.forEach((c, i) => { const b = c.base || c; if (!session.has(c)) session.set(c, c.owned); b.owned = true; b.got = Date.now(); saved[b.id] = { on: true, at: b.got }; if (!reduced) for (const t of [b, ...twinsOf(b)]) t.anim = { t0: now + i * 5, to: true }; }); // the card itself, whichever place it was marked in
   persist(); updateBar(); updateCount(); drawList(); tick(14);

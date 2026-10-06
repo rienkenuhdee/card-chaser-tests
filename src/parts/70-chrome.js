@@ -72,7 +72,7 @@ function drawList() {
   const rows = (items) => `<ul>${items.map(row).join("")}</ul>`;
   listEl.querySelector("#list-body").innerHTML = top + trophyListHTML(show, rows) + groups.map((g) => {
     if (g.done) return "";
-    const items = g.cards.filter(show);
+    const items = g.cards.filter((c) => !c.ph && show(c)); // a Dex pocket with no card isn't a row
     if (!items.length) return "";
     const f = finishOf(g);
     return `<section><h2>${g.name}</h2><p class="lsub">${f ? `Finished ${dayOf(f.at)}, worth ${money(worthOf(g.base))}. On the wall. ` : ""}${g.sub()}</p><ul>${items.map(row).join("")}</ul></section>`;

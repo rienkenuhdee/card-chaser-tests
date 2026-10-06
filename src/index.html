@@ -60,12 +60,13 @@
 </main>
 <div class="caption glass" id="caption" hidden>Your whole collection. Tap a set to open it.</div>
 <section class="chase-sheet glass" id="chase-sheet" aria-label="New chase" inert>
-  <div class="cs-top"><b class="cs-title">New chase</b><button type="button" class="ib" id="cs-close" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="cs-top"><b class="cs-title" id="cs-title">New chase</b><button type="button" class="ib" id="cs-close" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
   <div class="cs-fields">
-    <div class="cs-field"><label class="cs-lbl" for="cs-q">Pokémon</label><input class="cs-in" id="cs-q" type="text" placeholder="Type a name" autocomplete="off" autocapitalize="words" enterkeyhint="done"><div class="cs-chips wrap" id="cs-sugg"></div></div>
-    <div class="cs-field"><span class="cs-lbl">Set</span><div class="cs-chips" id="cs-sets"></div></div>
-    <div class="cs-field"><span class="cs-lbl">Artist</span><div class="cs-chips" id="cs-artists"></div></div>
-    <div class="cs-field"><span class="cs-lbl">Rarity</span><div class="seg cs-rar" role="group" aria-label="Rarity"><button type="button" data-rar="0">Any</button><button type="button" data-rar="3">Holo and up</button><button type="button" data-rar="4">Full art only</button></div></div>
+    <div class="cs-field cs-dexf"><span class="cs-lbl">The whole Dex</span><div class="cs-chips"><button type="button" class="cs-chip" id="cs-dex" aria-pressed="false">Complete Dex<small>one of every Pokémon</small></button></div></div>
+    <div class="cs-field cs-card"><label class="cs-lbl" for="cs-q">Pokémon</label><input class="cs-in" id="cs-q" type="text" placeholder="Type a name" autocomplete="off" autocapitalize="words" enterkeyhint="done"><div class="cs-chips wrap" id="cs-sugg"></div></div>
+    <div class="cs-field cs-card"><span class="cs-lbl">Set</span><div class="cs-chips" id="cs-sets"></div></div>
+    <div class="cs-field cs-card"><span class="cs-lbl">Artist</span><div class="cs-chips" id="cs-artists"></div></div>
+    <div class="cs-field"><span class="cs-lbl" id="cs-rar-lbl">Rarity</span><div class="seg cs-rar" role="group" aria-label="Rarity"><button type="button" data-rar="0">Any</button><button type="button" data-rar="3">Holo and up</button><button type="button" data-rar="4">Full art only</button></div></div>
     <div class="cs-field"><span class="cs-lbl">Type</span><div class="cs-chips" id="cs-types"></div></div>
   </div>
   <div class="cs-foot"><div class="cs-tally"><b id="cs-n">0</b><small>to find</small></div><span class="cs-line" id="cs-line"></span><button type="button" class="mbtn primary" id="cs-save" disabled>Put it on the wall</button></div>
@@ -74,6 +75,7 @@
   <div class="w-top"><span class="w-dots" aria-hidden="true"><i></i><i></i><i></i></span><button type="button" class="w-skip" id="w-skip">Skip</button></div>
   <div class="w-row"><div class="w-text"><b id="w-title"></b><span id="w-line" aria-live="polite"></span></div><div class="w-tally" id="w-tally"><b id="w-n">0</b><small id="w-what"></small></div></div>
   <div class="w-prog" id="w-prog" hidden><i></i></div>
+  <label class="w-opt" id="w-dex" hidden><input type="checkbox" id="w-dexon"><span>Also chase the complete Dex, one of every Pokémon</span></label>
   <label class="w-opt" id="w-opt" hidden><input type="checkbox" id="w-chase"><span>Chase every card I'm missing</span></label>
   <div class="w-acts">
     <button type="button" class="mbtn primary w-next" id="w-next">Continue</button>
@@ -117,6 +119,7 @@
     <li><b>Have, Need, Chase, Trade</b> at the bottom are lenses: they recolor the wall rather than taking you somewhere else.</li>
     <li><b>The wall is live.</b> When a copy of a card you chase comes up for less, its tile flashes where it sits and Chase counts it. Nothing nags.</li>
     <li><b>Chase</b> is your chase list: the cards you're after deal out of the wall as a feed of tiles, live deals first. Tap one and it pops up with every copy online: swipe through them, or switch to the packs and boxes it comes in. Got it asks what you paid. <b>Chase it</b> on any card adds it; On a card you own, <b>+</b> counts a copy: every copy past your first is a spare, up for trade.</li>
+    <li><b>The Complete Dex</b> is a chase with one slot for every Pokémon, #1 to #1,025, in Dex order. Add it from New chase, or in Choose your sets. A slot fills when you have any card of that Pokémon; the ones your sets don't print read "Not in your sets". Its settings count only holo or full art prints, or one type.</li>
     <li><b>Trade</b> shows your spares and who wants them. Tap a collector and the screen becomes a table between you: their spares above, yours below. Drag cards onto the table and shake hands. At the top, the <b>trade binder</b> holds every card you have a spare of, most wanted first: swipe its pages, tap a card to trade it, or use <b>Show mode</b> to hand it across a table and let the other person pick.</li>
     <li><b>Trophies</b>: every set and chase earns them as it fills, with production's names and luck (now and then one comes up Critical or Shiny). Inside a set the next one hangs on the bar; mark the card that tips it and it mints right there. A finished set becomes a plaque. They all live in the <b>trophy room</b> behind the door at the end of the wall: tap a trophy to see the cards behind it.</li>
     <li><b>Filters</b> (top, by the search) add <b>Value</b>, the more it's worth the hotter, and <b>Time</b>: scrub or play through when you got each card.</li>

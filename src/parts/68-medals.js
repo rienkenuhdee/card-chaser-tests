@@ -168,11 +168,15 @@ function mdCompute() {
   };
   for (const st of sets) chase({ key: `set:${st.id}`, name: st.name, kind: "set", color: mdFour(st.ink), plate: st.code, cards: st.cards, setId: st.id, open: { set: st.id } });
   for (const r of chases) {
+    if (r.kind === "natdex") { mdNatdex(r, mk); continue; } // a filtered Dex's milestones (85-natdex.js); the Complete Dex carries the Dex medals below
     const kind = mdKindOf(r); if (kind === "set") continue; // "All of a set" is the set, which has its own
     chase({ key: `chase:${ruleKey(r)}`, name: r.label, kind, color: kind === "pokemon" ? "blue" : kind === "artist" ? "green" : "yellow", plate: mdPlate(kind, r, r.label), cards: ruleCards(r), open: { chase: r.id } });
   }
   // The Dex: Kanto (the one region the wall's sets fill) and how many Pokémon overall.
-  const D = { chase: "Dex", sec: "dex", kind: "dex", color: "red", plate: "DEX" }, all = [...MD_SPECIES.values()];
+  // With the Complete Dex on the wall they are its medals, on its shelf; Johto to Paldea and 500 or 1,000 Pokémon stay
+  // out: the wall's sets reach 450 Pokémon and fill no region but Kanto (see 85-natdex.js).
+  const dx = chases.find(isFullDex);
+  const D = dx ? { chase: dx.label, sec: `chase:${ruleKey(dx)}`, kind: "dex", color: "red", plate: "DEX", open: { chase: dx.id } } : { chase: "Dex", sec: "dex", kind: "dex", color: "red", plate: "DEX" }, all = [...MD_SPECIES.values()];
   const kanto = []; for (let d = 1; d <= 151; d++) if (MD_SPECIES.has(d)) kanto.push(MD_SPECIES.get(d));
   mk(D, { id: "dex:gen1", name: "Kanto master", desc: kanto.length === 151 ? "Every Kanto Pokémon." : `Every Kanto Pokémon on the wall (${kanto.length}).`, tier: "gold", units: kanto, need: kanto.length });
   for (const n of [50, 151]) mk(D, { id: `dex:count${n}`, name: `${n} Pokémon`, desc: `Have a card for ${n} different Pokémon.`, tier: n >= 151 ? "gold" : "silver", units: all, need: n, noCards: true });

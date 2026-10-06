@@ -158,6 +158,54 @@ for (const dpr of [1, 2]) {
   await p.evaluate(() => document.querySelector("#toast .toast-btn").click()); await wait(300);
   R.push(["undo gives them back exactly", (await snap(ids)) === before]);
   await p.keyboard.press("Escape"); await wait(900); R.push(["escape closes the binder", !(await bd()).on]);
+  // The Complete Dex: added from the New chase sheet, a panel on the wall with one slot for each of the 1,025 Pokémon.
+  await p.evaluate(() => {
+    const at = Date.now() - 30 * 86400e3, owned = {};
+    for (const c of __w.cards) if (c.own0) owned[c.id] = { on: true, at };
+    localStorage.clear();
+    localStorage.setItem("wall-owned", JSON.stringify(owned)); localStorage.setItem("wall-imported", "TCGplayer"); localStorage.setItem("wall-welcomed", "1");
+  });
+  await p.reload({ waitUntil: "load" }); await wait(900);
+  const x = await installTouch(p);
+  const dex = () => p.evaluate(() => { const g = __w.dexGroup; return g ? { on: __w.groupsNow.includes(g), n: g.base.length, have: g.base.filter((c) => c.owned).length, label: g.name, m: Boolean(g.m), view: __w.view, inside: __w.state.g === g, chases: __w.chases.filter((r) => r.kind === "natdex").length } : { on: false, view: __w.view, chases: __w.chases.filter((r) => r.kind === "natdex").length }; });
+  for (let k = 0; k < 14; k++) { const y = await p.evaluate(() => __w.newPanel && __w.newPanel.y - __w.mScroll); if (y > 120 && y < 680) break; await x.drag(200, 650, 250, 120); await wait(250); }
+  const np = await p.evaluate(() => ({ x: __w.newPanel.x + __w.newPanel.w / 2, y: __w.newPanel.y + __w.newPanel.h / 2 - __w.mScroll }));
+  await x.tap(np.x, np.y); await wait(700);
+  await p.click("#cs-dex"); await wait(200); await p.click("#cs-save"); await wait(1800);
+  let dx = await dex(); R.push(["adding the Complete Dex from the New chase sheet puts its panel on the wall", dx.on && dx.m && dx.n === 1025 && dx.label === "Complete Dex"]);
+  for (let k = 0; k < 14; k++) { const y = await p.evaluate(() => __w.dexGroup.m.y - __w.mScroll); if (y > 100 && y < 600) break; await x.drag(200, y < 100 ? 250 : 650, y < 100 ? 650 : 250, 120); await wait(250); }
+  const dp = await p.evaluate(() => { const m = __w.dexGroup.m; return { x: m.x + m.w / 2, y: Math.min(700, m.y + 80 - __w.mScroll) }; });
+  await x.tap(dp.x, dp.y); await wait(1300); dx = await dex(); R.push(["tapping the Dex panel opens its binder", dx.view === "set" && dx.inside]);
+  // Mark a slot your sets can fill: its card is yours and the Dex's count ticks up.
+  const onScreen = (pick) => p.evaluate((pick) => { const g = __w.dexGroup, C = __w.cam, s = g.cards.find((c) => (pick === "ph" ? c.ph : !c.ph && !c.owned)); C.y = Math.max(C.y, s.y - 320 / C.s); __w.kick(); return { dex: s.dexN, id: s.base?.id || null }; }, pick);
+  const slotAt = (n) => p.evaluate((n) => { const g = __w.dexGroup, C = __w.cam, s = g.cards.find((c) => c.dexN === n); return { x: (s.x - C.x) * C.s + 31 * C.s, y: (s.y - C.y) * C.s + 44 * C.s, owned: s.owned, ph: s.ph, base: s.base ? s.base.owned : null }; }, n);
+  const s0 = await onScreen("fill"); await wait(400);
+  await p.click("#mark"); await wait(300);
+  let sa = await slotAt(s0.dex); await x.tap(sa.x, sa.y); await wait(700);
+  sa = await slotAt(s0.dex); const d1 = await dex();
+  R.push(["marking a Dex slot owns its card and ticks the count", sa.owned && sa.base === true && d1.have === dx.have + 1 && (await p.evaluate((id) => __w.cards.find((c) => c.id === id).owned, s0.id))]);
+  await p.click("#m-done"); await wait(400);
+  // A Pokémon with no card in the wall's sets: its pocket can't be marked, and a tap says so.
+  const s1 = await onScreen("ph"); await wait(400);
+  sa = await slotAt(s1.dex); await x.tap(sa.x, sa.y); await wait(500);
+  const said = await p.evaluate(() => document.getElementById("toast").textContent);
+  await p.click("#mark"); await wait(300); sa = await slotAt(s1.dex); await x.tap(sa.x, sa.y); await wait(500);
+  sa = await slotAt(s1.dex); const d2 = await dex();
+  R.push(["a Dex slot for a Pokémon with no card can't be marked", sa.ph && !sa.owned && d2.have === d1.have && /in your sets/.test(said) && !(await p.evaluate(() => __w.state.focus))]);
+  await p.click("#m-done"); await wait(400);
+  // Its settings in place: Full art only, the count and the slots change.
+  await p.evaluate(() => { Object.assign(__w.cam, { y: -(70 + 6) / __w.cam.s }); __w.kick(); }); await wait(400);
+  const hdr = (which) => p.evaluate((which) => { const g = __w.dexGroup, C = __w.cam, k = (g.head * C.s) / (132 + g.popH), sx = (g.x - C.x) * C.s, y0 = (g.y - C.y) * C.s + 132 * k, b = which === "full" ? g.dexSeg[2] : g.hdrBtn; return { x: sx + (b.x + b.w / 2) * k, y: y0 + (b.y + b.h / 2) * k }; }, which);
+  const own1 = await slotAt(1);
+  let hb = await hdr("full"); await x.tap(hb.x, hb.y); await wait(1200);
+  const d3 = await dex(), own1b = await slotAt(1);
+  R.push(["switching the Dex to Full art changes its count and its slots", d3.label === "Full art Dex" && d3.n === 1025 && d3.have < d2.have && own1.owned && !own1b.owned]);
+  // Remove chase takes it off, and Undo puts it back.
+  hb = await hdr("remove"); await x.tap(hb.x, hb.y); await wait(1500);
+  const d4 = await dex();
+  await p.evaluate(() => document.querySelector("#toast .toast-btn")?.click()); await wait(1500);
+  const d5 = await dex();
+  R.push(["Remove chase takes the Dex off the wall, and Undo puts it back", !d4.on && d4.chases === 0 && d4.view === "mosaic" && d5.on && d5.chases === 1 && d5.label === "Full art Dex"]);
   R.push([`no page errors${p.errors.length ? `: ${p.errors[0]}` : ""}`, !p.errors.length]);
   failures += report(R, `[dpr ${dpr}] `);
   await p.close();

@@ -2,6 +2,7 @@
 const panel = document.getElementById("panel");
 function panelH() { return Math.min(panel.offsetHeight || 230, vh * 0.5); }
 function focus(c, dir = 0) {
+  if (c.ph) { phSay(c); return; } // a Dex pocket with no card has no card to bring up
   state.focus = c;
   document.body.classList.add("focused");
   fillPanel(c, dir);
@@ -23,7 +24,8 @@ function unfocus() {
 }
 function step(d) {
   const c = state.focus; if (!c) return;
-  const n = groups[c.g].cards[c.k + d];
+  let k = c.k + d, n = groups[c.g].cards[k];
+  while (n?.ph) n = groups[c.g].cards[(k += d)]; // along the Dex, past the Pokémon your sets don't have
   if (!n) { bump(d); return; }
   tick(); focus(n, d);
 }

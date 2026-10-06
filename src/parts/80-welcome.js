@@ -20,7 +20,7 @@ const picking = () => wel.step === 1 && view === "mosaic" && mode === "set" && !
 // ----- the sheet -----
 const welEl = document.getElementById("welcome");
 const wTitle = welEl.querySelector("#w-title"), wLine = welEl.querySelector("#w-line"), wN = welEl.querySelector("#w-n"), wWhat = welEl.querySelector("#w-what"), wNext = welEl.querySelector("#w-next"), wSkip = welEl.querySelector("#w-skip"), wDots = [...welEl.querySelectorAll(".w-dots i")];
-const wProg = welEl.querySelector("#w-prog"), wSrc = welEl.querySelector("#w-src"), wOr = welEl.querySelector("#w-or"), wAlt = welEl.querySelector("#w-alt"), wTally = welEl.querySelector("#w-tally"), wOpt = welEl.querySelector("#w-opt"), wChase = welEl.querySelector("#w-chase"), wAll = welEl.querySelector("#w-all");
+const wProg = welEl.querySelector("#w-prog"), wSrc = welEl.querySelector("#w-src"), wOr = welEl.querySelector("#w-or"), wAlt = welEl.querySelector("#w-alt"), wTally = welEl.querySelector("#w-tally"), wOpt = welEl.querySelector("#w-opt"), wDex = welEl.querySelector("#w-dex"), wDexOn = welEl.querySelector("#w-dexon"), wChase = welEl.querySelector("#w-chase"), wAll = welEl.querySelector("#w-all");
 
 const ownedTotal = () => cards.filter((c) => c.owned).length;
 const chaseTotal = () => cards.filter(isChase).length;
@@ -35,7 +35,7 @@ function welcomeSync() {
   wel.key = key;
   wDots.forEach((d, i) => d.classList.toggle("on", i === wel.step - 1));
   welEl.classList.toggle("only", wel.only); welEl.classList.toggle("intro", wel.step === 0);
-  wProg.hidden = wel.imp !== "busy"; wSrc.hidden = wel.imp !== "pick"; wOpt.hidden = wel.imp !== "pick"; wOr.hidden = wel.step !== 0 || wel.imp === "busy"; wAlt.hidden = wel.step !== 0 || wel.imp === "busy";
+  wProg.hidden = wel.imp !== "busy"; wSrc.hidden = wel.imp !== "pick"; wOpt.hidden = wel.imp !== "pick"; wOr.hidden = wel.step !== 0 || wel.imp === "busy"; wAlt.hidden = wel.step !== 0 || wel.imp === "busy"; wDex.hidden = wel.step !== 1;
   wNext.hidden = wel.step === 0 && wel.imp !== null; wSkip.hidden = wel.imp === "busy"; wSkip.textContent = wel.only ? "Cancel" : "Skip"; wTally.hidden = wel.step === 0;
   wAll.hidden = !(wel.step === 2 && inSet && marking);
   if (wel.step === 0) {
@@ -66,12 +66,14 @@ function welcomeSync() {
   if (wel.step === 3 && inSet && !marking && !state.trans && !state.focus) enterMark();
 }
 function gotoStep(n) {
+  if (n === 1) wDexOn.checked = chases.some(isFullDex);
   wel.step = n; wel.key = ""; wel.imp = null;
   tick(4); welcomeSync(); kick();
 }
 function startWelcome({ only = false } = {}) {
   wel.on = true; wel.step = only ? 1 : 0; wel.imp = null; wel.only = only; wel.chased = false; wel.key = "";
   wel.picks = new Set(only ? pickedSets : []);
+  wDexOn.checked = chases.some(isFullDex);
   wel.own0 = ownedTotal();
   document.body.classList.add("welcoming");
   if (only && view === "set") exitToMosaic();
@@ -88,7 +90,8 @@ wNext.onclick = () => {
     const changed = pickedSets.size !== wel.picks.size || [...wel.picks].some((id) => !pickedSets.has(id));
     pickedSets.clear(); for (const id of wel.picks) pickedSets.add(id); persistSets();
     const first = groups.find((g) => g.set && wel.picks.has(g.set.id));
-    const after = () => { if (wel.only) finishWelcome(true); else { gotoStep(2); if (first) enterGroup(first, { then: () => { enterMark(); welcomeSync(); } }); } };
+    const only = wel.only, dexOn = wDexOn.checked;
+    const after = () => { if (wel.only) finishWelcome(true); else { gotoStep(2); if (first) enterGroup(first, { then: () => { enterMark(); welcomeSync(); } }); } welcomeDex(dexOn, only); };
     if (changed && view === "mosaic" && mode === "set") foldFlight(after); else after();
     return;
   }

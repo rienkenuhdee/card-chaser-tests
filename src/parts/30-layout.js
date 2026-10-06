@@ -10,7 +10,7 @@ function binderLayout(g) {
   g.x = 0; g.y = 0;
   g.w = g.cols * stepX(g) - (tight(g) ? 0 : GAP * g.sz);
   // The title block is a fixed height on screen, whatever the card size: 132px at the framed zoom.
-  if (g.set) popLayout(g); else { g.popChips = null; g.popH = g.chase ? 30 : 0; g.hdrBtn = g.chase ? { x: vw - 24 - 118, y: 2, w: 118, h: 22 } : null; g.hdrBtn2 = null; } // a chase's header: a row with Remove chase
+  if (g.set) popLayout(g); else if (g.natdex) dexLayout(g); else { g.popChips = null; g.popH = g.chase ? 30 : 0; g.hdrBtn = g.chase ? { x: vw - 24 - 118, y: 2, w: 118, h: 22 } : null; g.hdrBtn2 = null; } // a chase's header: a row with Remove chase
   albumHeader(g); // a finished group's header: Back to the wall, or Put on the shelf
   g.head = (132 + (g.popH || 0)) / ((vw - 24) / g.w); // the title block, plus the People chase row in a set
   g.h = g.head + Math.ceil(g.cards.length / g.cols) * stepY(g) - (tight(g) ? 0 : GAP * g.sz);
@@ -60,6 +60,7 @@ function packPanel(g) {
 
 const W_FOLD = 50, NEW_H = 56;
 let newPanel = null; // the New chase panel at the end of the wall, in mosaic coordinates
+const wallW = (g) => g.weight || g.cards.length; // a panel's share of the wall: its cards (the Dex's empty pockets count for less)
 function mosaicLayout() {
   const R0 = { x: 8, y: topPad(), w: vw - 16 }, top = R0.y + shelfLayout(R0); // the shelf first: trophies finished today
   const live = groups.filter((g) => !g.done);
@@ -69,9 +70,9 @@ function mosaicLayout() {
   // The sets you collect share the screen; the others fold to a line beneath (picked in the welcome, or in Settings).
   if (mode === "set" && pickedSets.size && pickedSets.size < sets.length) {
     const mine = live.filter((g) => g.chase || pickedSets.has(g.set.id)), rest = live.filter((g) => g.set && !pickedSets.has(g.set.id));
-    const n = mine.reduce((a, g) => a + g.cards.length, 0);
+    const n = mine.reduce((a, g) => a + wallW(g), 0);
     const R = { x: R0.x, y: top, w: R0.w, h: mine.length ? Math.max(fitH - rest.length * W_FOLD, fitH * 0.62, (n * 340) / (vw - 16)) : 0 };
-    const items = mine.map((g) => ({ g, v: Math.max(g.cards.length, 45) }));
+    const items = mine.map((g) => ({ g, v: Math.max(wallW(g), 45) }));
     const floor = items.reduce((t, i) => t + i.v, 0) * 0.06;
     for (const i of items) i.v = Math.max(i.v, floor);
     if (items.length) stripTreemap(items, R);
@@ -85,7 +86,7 @@ function mosaicLayout() {
     for (const g of rest) packFolded(g);
     return;
   }
-  const n = live.reduce((a, g) => a + g.cards.length, 0);
+  const n = live.reduce((a, g) => a + wallW(g), 0);
   const R = { x: R0.x, y: top, w: R0.w, h: live.length ? Math.max(fitH, (n * 340) / (vw - 16)) : 0 };
   let y = R.y + R.h;
   if (newH) { newPanel = { x: R.x, y, w: R.w, h: newH }; y += newH; }
@@ -93,7 +94,7 @@ function mosaicLayout() {
   mMax = Math.max(0, y + botPad() - vh);
   mScroll = clamp(mScroll, 0, mMax);
   // Panel area follows card count, or, laid out by value, what the cards in the band are worth.
-  const items = live.map((g) => ({ g, v: mode === "value" ? Math.pow(g.cards.reduce((t, c) => t + c.price, 0), 0.7) : Math.max(g.cards.length, 45) }));
+  const items = live.map((g) => ({ g, v: mode === "value" ? Math.pow(g.cards.reduce((t, c) => t + c.price, 0), 0.7) : Math.max(wallW(g), 45) }));
   const floor = items.reduce((t, i) => t + i.v, 0) * 0.06;
   for (const i of items) i.v = Math.max(i.v, floor);
   if (items.length) stripTreemap(items, R);

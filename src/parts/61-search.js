@@ -27,6 +27,7 @@ qIn.addEventListener("input", () => { clearTimeout(qIn.t); qIn.t = setTimeout(ru
 qIn.addEventListener("keydown", (e) => { if (e.key === "Enter") { clearTimeout(qIn.t); runSearch(); qIn.blur(); } if (e.key === "Escape") { qIn.value = ""; runSearch(); qIn.blur(); } });
 document.getElementById("clear").onclick = (e) => { e.preventDefault(); qIn.value = ""; runSearch(); };
 function updateCount() {
+  natdexSync(); // a Dex slot shows the best print you own: picked again when what you own changes
   const n = state.time ? cards.filter((c) => c.owned && c.got && c.got <= state.t).length : cards.filter((c) => c.owned).length;
   document.getElementById("count").textContent = `${n.toLocaleString()} of ${TOTAL.toLocaleString()}`;
   // A shorter placeholder where Mark shares the strip with the search box on a narrow screen.

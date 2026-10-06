@@ -32,16 +32,18 @@ function matchRule(r, c) {
   if (r.rarity && c.tier < r.rarity) return false;
   if (r.type && c.type !== r.type) return false;
   if (r.popular && !c.pop) return false;
-  if (r.kind === "dex" && !c.dex) return false; // the Dex is Pokémon cards only
+  if ((r.kind === "dex" || r.kind === "natdex") && !c.dex) return false; // the Dex is Pokémon cards only
   return true;
 }
-const ruleKey = (r) => `${r.set || ""}|${r.dex || 0}|${r.artist || ""}|${r.rarity || 0}|${r.type || ""}|${r.popular ? 1 : 0}`;
+const ruleKey = (r) => `${r.set || ""}|${r.dex || 0}|${r.artist || ""}|${r.rarity || 0}|${r.type || ""}|${r.popular ? 1 : 0}${r.kind === "natdex" ? "|natdex" : ""}`; // a Complete Dex is its own kind, filters and all
+const isFullDex = (r) => r.kind === "natdex" && !r.rarity && !r.type; // the Complete Dex, unfiltered
 const findRule = (r) => chases.find((x) => ruleKey(x) === ruleKey(r)) || null;
 const possessive = (artist) => { const w = artist.split(" "), n = w[w.length - 1]; return /s$/.test(n) ? `${n}'` : `${n}'s`; };
 const plural = (n) => (/[sxz]$/.test(n) ? n : `${n}s`);
 // "Every Charizard", "Everything by Ken Sugimori", "Full art in 151", "Sugimori's Charizards", "Popular in Base Set",
 // "All of Base Set", "Holo Fire Pokémon in Jungle by Arita".
 function labelOf(r) {
+  if (r.kind === "natdex") return dexLabel(r); // "Complete Dex", "Full art Dex", "Fire Dex" (85-natdex.js)
   const st = r.set ? setById(r.set) : null, sp = r.dex ? SPECIES.get(r.dex) || "Pokémon" : "";
   const rar = r.rarity === FULL ? "Full art" : r.rarity === HOLO ? "Holo" : "", typ = r.type ? (TYPE[r.type] || TYPE.C)[0] : "";
   if (r.popular) return `Popular in ${st ? st.name : "every set"}`;
@@ -61,7 +63,7 @@ const ruleLeft = (r) => ruleCards(r).filter((c) => !c.owned && chasing[c.id] !==
 // cards that just joined the chase list.
 function applyRules() {
   const lit = [];
-  for (const c of cards) { const was = isChase(c); c.chase0 = chases.some((r) => matchRule(r, c)); if (!was && isChase(c)) lit.push(c); }
+  for (const c of cards) { const was = isChase(c); c.chase0 = chases.some((r) => r.kind !== "natdex" && matchRule(r, c)); if (!was && isChase(c)) lit.push(c); } // the Complete Dex adds nothing: its Need lens is the list
   return lit;
 }
 // A wall that has never had a chase starts with a few, so the shape is there to see: a Pokémon, an artist, a rarity in a set, a set's popular cards.
@@ -83,6 +85,7 @@ const twinsOf = (c) => { const b = c.base || c; return b.twins && mode === "set"
 const CHASE_INKS = ["#C9962B", "#B5533C", "#4D7FC4", "#5B9E66", "#9A5FC9", "#C06A9B"];
 const chaseGroups = new Map(); // id -> its group, kept across arrangements so an open binder stays the same object
 function chaseGroup(r, i) {
+  if (r.kind === "natdex") return natdexGroup(r, i); // one slot per Pokémon (85-natdex.js)
   const list = ruleCards(r).map((b) => twinOf(b, r.id));
   let g = chaseGroups.get(r.id);
   if (!g) { g = { key: `chase:${r.id}`, chase: r }; chaseGroups.set(r.id, g); }
@@ -134,7 +137,8 @@ function addChase(r, { quiet = false } = {}) {
   chases.push(r);
   const lit = applyRules();
   tick(8); chasesChanged(lit);
-  if (!quiet) { const left = ruleLeft(r), d = left.filter((c) => c.deal).length; toast(`${r.label} is on your wall. ${left.length ? `${left.length} to find${d ? `, ${d} with a live deal` : ""}.` : "You have them all."}`, () => removeChase(r, { quiet: true })); }
+  if (!quiet && r.kind === "natdex") toast(dexAddedText(r), () => removeChase(r, { quiet: true }));
+  else if (!quiet) { const left = ruleLeft(r), d = left.filter((c) => c.deal).length; toast(`${r.label} is on your wall. ${left.length ? `${left.length} to find${d ? `, ${d} with a live deal` : ""}.` : "You have them all."}`, () => removeChase(r, { quiet: true })); }
   return r;
 }
 function removeChase(r, { quiet = false } = {}) {
@@ -194,18 +198,20 @@ function refreshChips() { if (state.focus) fillPanel(state.focus, 0); if (pop.c)
 // ----- New chase: one plain form, along the bottom, with a live count; the wall under it dims to the match -----
 const sheetEl = document.getElementById("chase-sheet");
 const csQ = sheetEl.querySelector("#cs-q"), csN = sheetEl.querySelector("#cs-n"), csLine = sheetEl.querySelector("#cs-line"), csSave = sheetEl.querySelector("#cs-save");
-const draft = { set: null, dex: null, artist: null, rarity: 0, type: null };
+const draft = { set: null, dex: null, artist: null, rarity: 0, type: null, natdex: false, edit: null }; // natdex: the Complete Dex; edit: the Dex whose settings these are
 let preview = null; // while the form is up, the wall shows what the rule would match
 const building = () => !sheetEl.inert;
 function draftRule() {
+  if (draft.natdex) { const d = { kind: "natdex" }; if (draft.rarity) d.rarity = draft.rarity; if (draft.type) d.type = draft.type; return d; }
   const r = { kind: "custom" };
   if (draft.set) r.set = draft.set; if (draft.dex) r.dex = draft.dex; if (draft.artist) r.artist = draft.artist; if (draft.rarity) r.rarity = draft.rarity; if (draft.type) r.type = draft.type;
   if (!r.set && !r.dex && !r.artist && (r.rarity || r.type)) r.kind = "dex";
   return r;
 }
-const draftReady = () => Boolean(draft.set || draft.dex || draft.artist || draft.rarity || draft.type);
+const draftReady = () => Boolean(draft.natdex || draft.set || draft.dex || draft.artist || draft.rarity || draft.type);
 const chipHTML = (v, text, on, sub = "") => `<button type="button" class="cs-chip" data-v="${esc(v)}" aria-pressed="${on}">${esc(text)}${sub ? `<small>${esc(sub)}</small>` : ""}</button>`;
 function renderSheet() {
+  dexSheetSync(); // the Complete Dex choice, and the Dex's own settings (85-natdex.js)
   sheetEl.querySelector("#cs-sets").innerHTML = sets.map((st) => chipHTML(st.id, st.name, draft.set === st.id, String(st.year))).join("");
   sheetEl.querySelector("#cs-artists").innerHTML = ARTISTS.map((a) => chipHTML(a, a, draft.artist === a)).join("");
   sheetEl.querySelectorAll("[data-rar]").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.rar) === draft.rarity)));
@@ -223,6 +229,7 @@ function renderSuggestions() {
   sheetEl.querySelector("#cs-sugg").innerHTML = list.slice(0, 8).map((s) => chipHTML(String(s.dex), s.name, draft.dex === s.dex, `${s.n} card${s.n === 1 ? "" : "s"}`)).join("") || (q ? `<span class="cs-none">No Pokémon called "${esc(csQ.value.trim())}" here.</span>` : "");
 }
 function renderCount() {
+  if (draft.natdex) { dexSheetCount(); return; }
   const r = draftRule(), ready = draftReady();
   const m = ready ? ruleCards(r) : [], n = m.filter((c) => !c.owned && chasing[c.id] !== false).length;
   csN.textContent = String(n); csN.classList.toggle("zero", !n);
@@ -233,8 +240,8 @@ function renderCount() {
 }
 function openSheet(pre = {}) {
   if (tbl.on || wel.on) return;
-  if (view === "set") { exitToMosaic(); }
-  Object.assign(draft, { set: null, dex: null, artist: null, rarity: 0, type: null }, pre);
+  if (view === "set" && !pre.edit) { exitToMosaic(); } // the Dex's settings open over its binder
+  Object.assign(draft, { set: null, dex: null, artist: null, rarity: 0, type: null, natdex: false, edit: null }, pre);
   csQ.value = pre.dex ? SPECIES.get(pre.dex) || "" : "";
   sheetEl.inert = false; document.body.classList.add("building");
   renderSheet(); tick(4);
@@ -247,6 +254,7 @@ function closeSheet() {
 }
 sheetEl.addEventListener("click", (e) => {
   const rar = e.target.closest("[data-rar]"), ch = e.target.closest(".cs-chip");
+  if (e.target.closest("#cs-dex")) { draft.natdex = !draft.natdex; tick(3); renderSheet(); return; }
   if (rar) { draft.rarity = Number(rar.dataset.rar); tick(3); renderSheet(); return; }
   if (!ch) return;
   const box = ch.parentElement.id, v = ch.dataset.v; tick(3);
@@ -266,8 +274,9 @@ sheetEl.querySelector("#cs-close").onclick = () => closeSheet();
 csSave.onclick = () => {
   if (!draftReady()) return;
   const r = draftRule(); r.label = labelOf(r);
+  const edit = draft.edit;
   closeSheet(); tick(8);
-  addChase(r);
+  if (edit) setDexFilter(edit, r); else addChase(r);
 };
 addEventListener("keydown", (e) => { if (e.key === "Escape" && building() && !paying() && !pop.c) { e.preventDefault(); closeSheet(); } });
 document.getElementById("list").addEventListener("click", (e) => { const n = e.target.closest("[data-lnew]"); if (n) { setListMode(false); setTimeout(() => openSheet(), 60); } });
@@ -335,6 +344,7 @@ function removeSet(st) {
 function headAt(g, sx, sy) {
   const p = toWorld(sx, sy), k = (vw - 24) / g.w, fx = (p.x - g.x) * k, fy = (p.y - g.y) * k;
   for (const b of [g.hdrBtn, g.hdrBtn2]) if (b) { const by = 132 + b.y; if (fx >= b.x - 6 && fx <= b.x + b.w + 6 && fy >= by - 4 && fy <= by + b.h + 4) return { btn: b }; }
+  if (g.natdex && !finishOf(g)?.put) return dexHeadAt(g, fx, fy - 132); // the Dex's prints, type and regions
   if (!g.popChips) return null;
   const py = fy - 132; if (py < 0 || py > g.popH) return null;
   if (g.seg) for (const s of g.seg) if (fx >= s.x && fx <= s.x + s.w && py >= s.y - 3 && py <= s.y + s.h + 3) return { seg: s.key };

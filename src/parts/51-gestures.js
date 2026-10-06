@@ -76,7 +76,7 @@ function onDown(pts) {
   samples = [{ x: p.x, y: p.y, t: now }];
   const h0 = hit(p.x, p.y);
   if (view === "mosaic" && h0?.block) { state.press = { g: h0.block, t0: now, timer: 0 }; kick(); }
-  if (view === "set" && !state.focus && h0?.card && TW * h0.card.sz * cam.s >= 14) {
+  if (view === "set" && !state.focus && h0?.card && !h0.card.ph && TW * h0.card.sz * cam.s >= 14) { // a Dex pocket with no card has nothing to hold
     const card = h0.card;
     gesture.card = card;
     state.press = { c: card, t0: now, timer: setTimeout(() => {
@@ -286,10 +286,11 @@ function tap(sx, sy) {
   }
   if (!h?.card) {
     if (!state.focus && !marking) { const t = pinHit(sx, sy); if (t) return openMedal(t.id); } // the next medal on the bar
-    if (h?.block && !marking && !fly && !shuffle) { const p = headAt(h.block, sx, sy); if (p) { tick(4); if (p.seg) setScope(h.block.set, p.seg); else if (p.btn) { if (p.btn.shelf) toggleShelf(h.block); else if (p.btn.away) putAway(h.block); else if (p.btn.pop) chasePopular(h.block.set); else if (p.btn.remove) removeSet(h.block.set); else removeChase(h.block.chase); } else focus(p.c); } }
+    if (h?.block && !marking && !fly && !shuffle) { const p = headAt(h.block, sx, sy); if (p) { tick(4); if (p.dex) dexHeadTap(h.block, p.dex); else if (p.seg) setScope(h.block.set, p.seg); else if (p.btn) { if (p.btn.shelf) toggleShelf(h.block); else if (p.btn.away) putAway(h.block); else if (p.btn.pop) chasePopular(h.block.set); else if (p.btn.remove) removeSet(h.block.set); else removeChase(h.block.chase); } else focus(p.c); } }
     return;
   }
   const w = TW * h.card.sz * cam.s;
+  if (h.card.ph && w >= 14) return phSay(h.card); // a Pokémon with no card in your sets: nothing to mark, said plainly
   if (marking && w >= 14) return markCard(h.card, !h.card.owned); // in mark mode a tap toggles the card
   if (w >= 34) return focus(h.card);
   tick(5);
