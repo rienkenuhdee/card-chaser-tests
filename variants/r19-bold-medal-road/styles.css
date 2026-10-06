@@ -1,0 +1,32 @@
+/* Round 19, bold: the medal road. The medal sheet (the cards behind a medal) and the list's medals. */
+dialog.msheet { width: min(400px, calc(100vw - 28px)); max-height: calc(100vh - 40px); overflow: auto; padding: 18px 20px 20px; text-align: center; }
+.msheet .ms-medal { position: relative; width: 120px; height: 149px; margin: 0 auto 4px; }
+.msheet .ms-medal img { display: block; width: 120px; height: 149px; }
+.msheet .ms-medal.shiny::after { content: ""; position: absolute; inset: 8px 4px 40px; border-radius: 50%; background: conic-gradient(from 0deg, #FF6B6B, #FFD93D, #6BCB77, #4D96FF, #C77DFF, #FF6B6B); opacity: .22; filter: blur(10px); z-index: -1; animation: ms-turn 4s linear infinite; }
+@keyframes ms-turn { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .msheet .ms-medal.shiny::after { animation: none; } }
+.msheet .ms-rank { display: inline-block; margin: 0 0 6px; padding: 3px 10px; border-radius: 999px; font: 700 12.5px var(--font); }
+.msheet .ms-rank.crit { background: color-mix(in srgb, #FFCB05 22%, transparent); color: var(--ink); border: 1px solid #E0B000; }
+.msheet .ms-rank.shiny { background: color-mix(in srgb, #C77DFF 18%, transparent); color: var(--ink); border: 1px solid #B58BF0; }
+.msheet h2 { margin: 0; }
+.msheet .ms-owner { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+.msheet .ms-desc { margin: 8px 0 4px; font-size: 15px; }
+.msheet .lbl { text-align: left; }
+.msheet .ms-cards { list-style: none; padding: 0; margin: 0 0 6px; text-align: left; display: grid; gap: 2px; }
+.msheet .ms-cards li { display: flex; align-items: center; gap: 10px; padding: 6px 2px; border-bottom: 1px solid var(--line); font-size: 14px; line-height: 1.25; }
+.msheet .ms-cards li i { flex: none; width: 16px; height: 22px; border-radius: 3px; }
+.msheet .ms-cards li.miss i { background: var(--slot) !important; border: 1px solid var(--slot-line); }
+.msheet .ms-cards li span { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.msheet .ms-cards li b { font-weight: 700; font-stretch: 85%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.msheet .ms-cards li small { color: var(--muted); font-size: 12px; }
+.msheet .ms-cards li em { flex: none; font-style: normal; font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; }
+.msheet .ms-cards li.own em { color: var(--deal); font-weight: 700; }
+.msheet .ms-cards li.miss b { color: var(--muted); }
+.msheet .ms-more { margin: 0; color: var(--muted); font-size: 13px; text-align: left; }
+.msheet .ms-status { margin: 10px 0 14px; color: var(--muted); font-size: 14px; }
+#list .lmedals { list-style: none; padding: 0; margin: 4px 0 12px; display: grid; gap: 2px; }
+#list .lmedal { display: flex; align-items: center; gap: 10px; width: 100%; padding: 6px 4px; border: 0; border-bottom: 1px solid var(--line); background: none; color: var(--ink); text-align: left; font: inherit; cursor: pointer; }
+#list .lmedal img { flex: none; }
+#list .lmedal span { display: flex; flex-direction: column; }
+#list .lmedal b { font: 700 15px var(--font); }
+#list .lmedal small { color: var(--muted); font-size: 13px; }
