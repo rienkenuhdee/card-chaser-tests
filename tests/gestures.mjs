@@ -58,13 +58,63 @@ for (const dpr of [1, 2]) {
     const toDoor = async () => { for (let k = 0; k < 12; k++) { const r = await p.evaluate(() => ({ y: __w.trophyCase.y - __w.mScroll })); if (r.y > 120 && r.y < 640) return r; await u.drag(200, 650, 250, 120); await wait(250); } return p.evaluate(() => ({ y: __w.trophyCase.y - __w.mScroll })); };
     let r = await toDoor(); const wallAt = (await rm()).my;
     await u.tap(195, r.y + 32); await wait(900); R.push(["tapping the door opens the room", (await rm()).on && (await rm()).q === 1]);
-    const pl = await p.evaluate(() => { const g = __w.caseList()[0]; return { x: g.m.x + g.m.w / 2, y: g.m.y + 40 - __w.mScroll }; });
-    await u.tap(pl.x, pl.y); await wait(1000); R.push(["a plaque in the room opens its album", (await rm()).view === "set"]);
+    // Something in the room (a rect in room coordinates) dragged into view, then where it is on screen.
+    const inView = async (get) => { for (let k = 0; k < 10; k++) { const r = await get(); if (!r) return null; const y = r.y - (await rm()).my; if (y > 110 && y < 640) return { x: r.x, y }; const d = Math.max(-440, Math.min(440, y - 380)); await u.drag(200, d > 0 ? 680 : 220, (d > 0 ? 680 : 220) - d, Math.max(160, Math.abs(d) / 0.15)); await wait(300); } return null; }; // slow enough not to fling
+    const pl = await inView(() => p.evaluate(() => { const g = __w.caseList()[0]; return { x: g.m.x + g.m.w / 2, y: g.m.y + 40 }; }));
+    if (pl) await u.tap(pl.x, pl.y); await wait(1000); R.push(["a plaque in the room opens its album", (await rm()).view === "set"]);
     await p.click("#back"); await wait(900); R.push(["back from the album returns to the room", (await rm()).on && (await rm()).view === "mosaic"]);
     await u.pinch(195, 450, 220, 120, 90); await wait(900); R.push(["a quick pinch in the room closes it where the wall was", !(await rm()).on && Math.abs((await rm()).my - wallAt) < 4]);
     r = await toDoor(); await u.pinch(195, r.y + 32, 40, 120, 160); await wait(900); R.push(["a spread on the door opens the room", (await rm()).on]);
     await p.click("#back"); await wait(900); R.push(["back closes the room", !(await rm()).on]);
+    // The finished set's shelf: its plaque at the head, Binder Complete mounted on it, its other medals hanging beneath.
+    r = await toDoor(); await u.tap(195, r.y + 32); await wait(900);
+    const shelf = await p.evaluate(() => {
+      const g = __w.caseList()[0], sec = __w.mdSecOf(g), L = __w.roomL, rows = L.items.filter((it) => it.type === "row" && !it.stand && it.cells.every((c) => c.t.sec === sec));
+      return { plaque: __w.room.plaques.includes(g), ride: Boolean(g.ride?.complete && g.ride.sec === sec), first: rows[0] ? rows[0].y - (g.m.y + g.m.h) : null, n: rows.reduce((a, it) => a + it.cells.length, 0), head: L.items.some((it) => it.type === "head" && it.text === g.name) };
+    });
+    R.push(["the room shows the finished set's shelf: its plaque with its medals", shelf.plaque && shelf.ride && shelf.n > 0 && shelf.first !== null && shelf.first < 0 && !shelf.head]);
+    const medalAt = () => p.evaluate(() => { const g = __w.caseList()[0], sec = __w.mdSecOf(g), h = __w.roomL.hits.find((x) => x.blk.mdt && x.blk.mdt.sec === sec && x.y > g.m.y + 60); return h ? { x: h.x + h.w / 2, y: h.y + h.h / 2, id: h.blk.mdt.id } : null; });
+    const md = await inView(medalAt), mid = (await medalAt())?.id;
+    if (md) await u.tap(md.x, md.y); await wait(600);
+    const sheet = () => p.evaluate(() => ({ on: document.body.classList.contains("medaling"), name: document.getElementById("ms-name")?.textContent || "" }));
+    R.push(["tapping a medal opens its trophy sheet", (await sheet()).on && (await sheet()).name === (await p.evaluate((id) => __w.medalList().byId.get(id)?.name, mid))]);
+    await p.click("[data-ms-close]"); await wait(500);
+    // A shelf's locked medals fold behind one line; a tap unfolds them. (Here every other shelf is under "Not started yet".)
+    const fa = await inView(() => p.evaluate(() => { const it = __w.roomL.items.find((x) => x.type === "fold" && !x.open); return it ? { x: it.x + it.w / 2, y: it.y + it.h / 2 } : null; }));
+    if (fa) { await u.tap(fa.x, fa.y); await wait(500); }
+    const moreAt = () => p.evaluate(() => { const it = __w.roomL.items.find((x) => x.type === "more" && !x.open); return it ? { x: it.x + it.w / 2, y: it.y + it.h / 2, sec: it.blk.mdsec } : null; });
+    const mo = await inView(moreAt), msec = (await moreAt())?.sec;
+    const cellsOf = (sec) => p.evaluate((sec) => __w.roomL.items.filter((it) => it.type === "row" && !it.stand).reduce((a, it) => a + it.cells.filter((c) => c.t.sec === sec).length, 0), msec);
+    const c0 = await cellsOf(msec);
+    if (mo) await u.tap(mo.x, mo.y); await wait(500);
+    R.push(["a shelf's \"more to earn\" line unfolds its locked medals", Boolean(msec) && (await p.evaluate((sec) => __w.mdOpen.has(sec), msec)) && (await cellsOf(msec)) > c0]);
+    // Next up: a medal's sheet lists the cards behind it, missing first; tapping a missing one lands on it in its set.
+    const nu = await inView(() => p.evaluate(() => { const it = __w.roomL.items.find((x) => x.type === "nu" && !x.t.noCards); return it ? { x: it.x + it.w / 2, y: it.y + it.h / 2 } : null; }));
+    if (nu) await u.tap(nu.x, nu.y); await wait(600);
+    const ci = await p.evaluate(() => Number(document.querySelector("#msheet .ms-card:not(.own)")?.dataset.ci ?? -1));
+    if (ci >= 0) await p.click(`#msheet .ms-card[data-ci="${ci}"]`); await wait(1600);
+    R.push(["tapping a missing card in the sheet lands on it", ci >= 0 && (await p.evaluate((ci) => __w.view === "set" && __w.state.focus?.i === ci && !__w.state.focus.owned, ci))]);
+    for (let k = 0; k < 2; k++) if (await p.evaluate(() => !document.getElementById("back").hidden)) { await p.click("#back"); await wait(900); }
   }
+  // Inside a set the next medal hangs on the bar; marking the card that tips it records it and mints it there.
+  await p.evaluate(() => {
+    const g = __w.groups[0], need = Math.ceil(g.base.length / 2), owned = {}, at = Date.now() - 30 * 86400e3;
+    localStorage.clear();
+    for (const c of g.base.slice(-(need - 1))) owned[c.id] = { on: true, at };
+    localStorage.setItem("wall-owned", JSON.stringify(owned)); localStorage.setItem("wall-imported", ""); localStorage.setItem("wall-welcomed", "1");
+  });
+  await p.reload({ waitUntil: "load" }); await wait(900);
+  const w = await installTouch(p);
+  const half = await p.evaluate(() => `${__w.mdSecOf(__w.groups[0])}:half`);
+  g = await G(0); await w.tap(g.x, g.y); await wait(1200);
+  const pin = await p.evaluate((id) => ({ next: __w.mdNextOf(__w.groups[0])?.id, drawn: __w.groups[0].pinR?.t.id, had: Boolean(__w.medals[id]) }), half);
+  R.push(["an open set's bar carries its next medal", pin.next === half && pin.drawn === half && !pin.had]);
+  await p.click("#mark"); await wait(300);
+  const card = await p.evaluate(() => { const c = __w.groups[0].cards.find((x) => !x.owned), C = __w.cam; return { x: (c.x - C.x) * C.s + 31 * C.s, y: (c.y - C.y) * C.s + 44 * C.s, id: c.id }; });
+  await w.tap(card.x, card.y); await wait(650);
+  const minted = await p.evaluate((id) => ({ got: Boolean(__w.medals[id]), mint: __w.mintQ.length + __w.mintsOn.length }), half);
+  R.push(["marking the card that tips a medal records it and mints it on the bar", minted.got && minted.mint > 0]);
+  await wait(3500); await p.click("#m-done"); await wait(300);
   // The trade binder: an imported collection with spare copies, the Trade lens up, the binder's cover at its top.
   await p.evaluate(() => {
     const at = Date.now() - 30 * 86400e3, owned = {}, copies = {};

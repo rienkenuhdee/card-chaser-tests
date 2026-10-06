@@ -166,7 +166,7 @@ function layoutAll() {
   groups.forEach(binderLayout);
   const keep = mScroll;
   if (lifted) { newPanel = null; liftedLayout(); } else mosaicLayout();
-  if (room.on) { if (!caseList().length) { endRoom(); return; } if (room.fan && !inCase(room.fan)) room.fan = null; mScroll = keep; strip = null; roomLayout(); }
+  if (room.on) { if (!roomHas()) { endRoom(); return; } if (room.fan && !inCase(room.fan)) room.fan = null; mScroll = keep; strip = null; roomLayout(); }
   if (bnd.on) { bnd.L = tbGeom(bnd.show); bnd.vi = clamp(bnd.vi, 0, tbViews() - 1); } // the binder fits the new screen
 }
 

@@ -212,6 +212,24 @@ wall, the photo on hold, the shipping thread, the trader's record; not the live 
 strangers in all three: swapping addresses, cancel before shipping, report a problem, a rating, a warning on a lopsided
 offer, who ships first.
 
+**Round 19: Production's trophies in the room.** Ryan asked to bring the trophy types of the live app into dev. All
+three ported production's catalog where the wall's data supports it (per-chase milestones named by kind, Holo hunter,
+Chase cards, Clean sweep, crowned signature trophies hand-made per set and generic, hidden "?" trophies, Dex and
+global ones), production's medal artwork (a shape per kind, four tiers, nameplate), and luck (1 in 100 Shiny, about 1
+in 10 Critical, seeded by trophy id here where production rolls on its server). Safe made the room production's Medal
+tab (summary, Showcase, Next up, filters, a shelf per chase, the trophy sheet with the cards behind a medal); bold put
+each chase's medals on its bar as pins and minted them there when the tipping card was marked; radical made the
+catalog one more set on the wall. Kept: safe's room and sheet, bold's mint (inside a set only, one pin for the next
+medal), bold's ribbons, and Ryan's ask that a finished set's plaque sit with that set's medals: one shelf per set or
+chase, its plaque at the head with Binder Complete mounted on it, locked medals folded behind "12 more to earn". An
+import or Select all earns in one card rather than a stream. Learned: production's catalog drops onto the wall's data
+almost unchanged, so the two can merge; a medal earns most where its progress is (on the bar), and is read best
+where its siblings are (the shelf); the catalog is long, and locked medals have to fold. Dropped: the trophy set,
+pins in the mosaic (they read as glitches beside the gold ticks), the bar's end cluster, region masters past Kanto.
+Left out of the catalog for want of data: buying trophies, region chases, promo milestones, Gym Circuit, Full
+Evolution, the rarities the wall's sets don't have, and counts the wall can't reach (2,500 cards, 500 and 1,000
+Pokémon, Splash!, Unown Alphabet).
+
 ## Open questions (next rounds)
 
 - A deal arriving off screen: one tap from the line to the offers, and whether the arrival should nudge the wall.
@@ -221,5 +239,5 @@ offer, who ships first.
 - Spares: Show mode's Someone new gives cards away with nothing back; a stranger at a show might want to offer a card, which needs their side of the table without an account.
 - The import's reveal: the round 11 assembly from nothing as the flood after an import.
 - A chase's twins: should a custom panel's cards also lead in the Chase lens, or only their set's copy? And should a chase hide from the wall once it's complete?
-- Trophies: the worth line is a made-up year; real data would start at the finish date ("Up $27 since you finished"). Sharing a trophy (safe's picture card), and whether a sub-chase of a finished set should fold into the set's plaque. The room hides the lenses; Value could recolour the engravings.
+- Trophies: the worth line is a made-up year; real data would start at the finish date ("Up $27 since you finished"). Medals: whether Undo after a mint should take a medal back (production keeps it), the full-screen completion ceremony production plays, and the server-side luck roll when the two merge. Sharing a trophy (safe's picture card), and whether a sub-chase of a finished set should fold into the set's plaque. The room hides the lenses; Value could recolour the engravings.
 - Bringing the mosaic into the real app as the Chase home.

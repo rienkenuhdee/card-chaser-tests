@@ -31,4 +31,5 @@ function updateCount() {
   document.getElementById("count").textContent = `${n.toLocaleString()} of ${TOTAL.toLocaleString()}`;
   // A shorter placeholder where Mark shares the strip with the search box on a narrow screen.
   qIn.placeholder = vw >= 520 ? `Search ${TOTAL.toLocaleString()} cards` : "Search";
+  scheduleMedals(); // every count change: a beat later, any medal it earned
 }

@@ -252,14 +252,24 @@ function putAway(g) {
   });
 }
 const finishedText = (gs) => (gs.length === 1 ? `${trophyName(gs[0])} finished. It's on the shelf, worth ${money(worthOf(gs[0].base))}.` : `${gs.map(trophyName).join(" and ")} finished. They're on the shelf.`);
-// The list's Finished section.
+// The list's Trophies section: the Showcase and Next up, then a shelf per set or chase as in the trophy room, a
+// finished one's plaque (with Back to the wall and its cards) together with its medals; locked ones fold away.
 function trophyListHTML(show, rows) {
-  const fin = groups.filter((g) => g.done).sort(byFinish);
-  if (!fin.length) return "";
-  return `<section class="lshelf"><h2>Trophies</h2><p class="lsub">Finished and sealed. On the shelf for a day, then in the trophy room. Back to the wall puts one among the others again.</p>${fin.map((g) => {
-    const f = finishOf(g), items = g.cards.filter(show), s = seriesOf(g);
-    return `<h3 class="lfin">${esc(trophyName(g))}</h3><p class="lsub lfin-line"><span>Finished ${dayOf(f.at)}, worth ${money(worthOf(g.base))}. ${deltaText(s.delta)}.${onShelf(g) ? " On the shelf today." : " In the trophy room."}</span><button type="button" class="pill-btn" data-shelf="${esc(doneKey(g))}">Back to the wall</button></p>${items.length ? rows(items) : ""}`;
-  }).join("")}</section>`;
+  const fin = groups.filter((g) => g.done).sort(byFinish), L = mode === "set" ? medalList() : null;
+  if (!fin.length && !L?.earned.length) return "";
+  const plaque = (g) => { const f = finishOf(g), s = seriesOf(g); return `<p class="lsub lfin-line"><span>${esc(trophyName(g))} finished ${dayOf(f.at)}, worth ${money(worthOf(g.base))}. ${deltaText(s.delta)}.${onShelf(g) ? " On the shelf today." : " In the trophy room."}</span><button type="button" class="pill-btn" data-shelf="${esc(doneKey(g))}">Back to the wall</button></p>`; };
+  const shelf = (sh) => {
+    const won = sh.all.filter((t) => t.earned), locked = sh.all.filter((t) => !t.earned), g = sh.plaque, items = g ? g.cards.filter(show) : [];
+    return `<h3 class="lfin">${esc(sh.name)} <span class="lm-of">${won.length} of ${sh.all.length}</span></h3>${g ? plaque(g) : ""}${won.length ? `<ul class="lmed">${won.map((t) => mdListRow(t)).join("")}</ul>` : ""}${locked.length ? `<details class="lmed-more"><summary>${locked.length} more to earn</summary><ul class="lmed">${locked.map((t) => mdListRow(t)).join("")}</ul></details>` : ""}${items.length ? rows(items) : ""}`;
+  };
+  if (!L) return `<section class="lshelf"><h2>Trophies</h2>${fin.map((g) => `<h3 class="lfin">${esc(trophyName(g))}</h3>${plaque(g)}${g.cards.filter(show).length ? rows(g.cards.filter(show)) : ""}`).join("")}</section>`;
+  const { started, notYet } = mdShelves(fin);
+  const next = L.list.filter((t) => !t.earned && t.goal > 1 && t.have < t.goal).sort((a, b) => b.have / b.goal - a.have / a.goal || (a.goal - a.have) - (b.goal - b.have)).slice(0, 4);
+  return `<section class="lshelf lmedals"><h2>Trophies</h2><p class="lsub">${L.earned.length} of ${L.list.length} earned.${L.hiddenLeft ? ` ${L.hiddenLeft} hidden left to find.` : ""}${fin.length ? ` ${fin.length} finished and sealed.` : ""} Tap a trophy to see the cards behind it.</p>
+    ${L.earned.length ? `<h3 class="lfin">Showcase</h3><ul class="lmed">${L.earned.slice(0, 6).map((t) => mdListRow(t, true)).join("")}</ul>` : ""}
+    ${next.length ? `<h3 class="lfin">Next up</h3><ul class="lmed">${next.map((t) => mdListRow(t, true)).join("")}</ul>` : ""}
+    ${started.map(shelf).join("")}
+    ${notYet.length ? `<details class="lmed-later"${mdListOpen ? " open" : ""}><summary>Not started yet · ${notYet.length} ${notYet.length === 1 ? "chase" : "chases"}</summary>${notYet.map(shelf).join("")}</details>` : ""}</section>`;
 }
 document.getElementById("list").addEventListener("click", (e) => {
   const b = e.target.closest("[data-shelf]"); if (!b) return;

@@ -25,14 +25,15 @@ function hit(sx, sy, nearest = false) {
     if (room.on && room.anim) finishRoomAnim();
     const y = sy + mScroll;
     if (room.on) {
-      for (const g of caseList()) {
+      for (const it of room.L?.hits || []) if (inR(it, sx, y)) return { block: it.blk }; // a medal, a filter, a fold line
+      for (const g of room.plaques) {
         if (g.fanR && inR(g.fanR, sx, y)) return { block: g.fanBtn };
         if (g === room.fan) for (const r of fanRows(g)) if (inR(r.m, sx, y)) return { block: r };
         if (inR(g.m, sx, y)) return { block: g };
       }
       if (!nearest) return null;
       let best = null, bd = Infinity;
-      for (const g of caseList()) { const dx = Math.max(g.m.x - sx, 0, sx - g.m.x - g.m.w), dy = Math.max(g.m.y - y, 0, y - g.m.y - g.m.h), d = Math.hypot(dx, dy); if (d < bd) { bd = d; best = g; } }
+      for (const g of room.plaques) { const dx = Math.max(g.m.x - sx, 0, sx - g.m.x - g.m.w), dy = Math.max(g.m.y - y, 0, y - g.m.y - g.m.h), d = Math.hypot(dx, dy); if (d < bd) { bd = d; best = g; } }
       return best && bd < 60 ? { block: best } : null;
     }
     if (COVER.m && inR(COVER.m, sx, y)) return { block: COVER }; // the trade binder, at the top of the Trade lens
@@ -284,6 +285,7 @@ function tap(sx, sy) {
     return;
   }
   if (!h?.card) {
+    if (!state.focus && !marking) { const t = pinHit(sx, sy); if (t) return openMedal(t.id); } // the next medal on the bar
     if (h?.block && !marking && !fly && !shuffle) { const p = headAt(h.block, sx, sy); if (p) { tick(4); if (p.seg) setScope(h.block.set, p.seg); else if (p.btn) { if (p.btn.shelf) toggleShelf(h.block); else if (p.btn.away) putAway(h.block); else if (p.btn.pop) chasePopular(h.block.set); else if (p.btn.remove) removeSet(h.block.set); else removeChase(h.block.chase); } else focus(p.c); } }
     return;
   }

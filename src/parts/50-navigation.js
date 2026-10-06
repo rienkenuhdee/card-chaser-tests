@@ -25,6 +25,7 @@ function settled(T) {
 }
 function enterGroup(g, { then = null } = {}) {
   if (state.trans) return;
+  if (g.md) { mdTap(g); return; } // a medal, a filter or a fold line in the trophy room
   if (g.tbCover) { openBinder(); return; }
   if (g.door) { openRoom(); return; }
   if (g.fan) { toggleFan(g.fan); return; }

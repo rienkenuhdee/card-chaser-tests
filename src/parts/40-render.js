@@ -14,7 +14,7 @@ function font(weight, size, narrow = false) {
 }
 function readTheme() {
   const cs = getComputedStyle(document.documentElement);
-  for (const k of ["bg", "slot", "slot-line", "ink", "muted", "deal", "gold", "panel", "panel-solid", "paper", "paper-ink", "plaque", "plaque-ink", "plaque-hi", "plaque-lo", "door", "door-hi", "door-ink", "door-muted", "room-bg", "room-bg2", "room-wood", "room-wood-hi", "room-ink", "room-muted", "room-plaque", "room-plaque-ink", "room-plaque-lo", "room-up", "room-down"]) theme[k] = cs.getPropertyValue(`--${k}`).trim();
+  for (const k of ["bg", "slot", "slot-line", "ink", "muted", "deal", "gold", "panel", "panel-solid", "paper", "paper-ink", "plaque", "plaque-ink", "plaque-hi", "plaque-lo", "door", "door-hi", "door-ink", "door-muted", "room-bg", "room-bg2", "room-wood", "room-wood-hi", "room-ink", "room-muted", "room-plaque", "room-plaque-ink", "room-plaque-lo", "room-up", "room-down", "c-red", "c-yellow", "c-green", "c-blue", "m-surface"]) theme[k] = cs.getPropertyValue(`--${k}`).trim();
   theme.panelFill = cs.getPropertyValue("--panel-fill").trim();
   if (typeof heatCache !== "undefined") heatCache.clear();
   theme.dark = cs.colorScheme === "dark" || matchMedia("(prefers-color-scheme: dark)").matches && document.documentElement.dataset.theme !== "light";
@@ -263,6 +263,7 @@ function drawHeader(st, now, C = cam, ox = 0, alpha = 1) {
   const line = state.time ? `${owned} of ${n} by ${monthOf(state.t)}` : f ? `Finished ${dayOf(f.at)}, worth ${money(worthOf(st.base || st.cards))}.${f.put ? "" : " On the wall."}` : st.sub();
   ctx.fillText(fitText(line, sw - pw - 12), sx, sy + hh * 0.72);
   drawBar(st, sx, sy + hh * 0.82, sw, Math.max(1.5, 3 * k), now, k);
+  drawNextPin(st, sx, sy + hh * 0.82, sw, Math.max(1.5, 3 * k), now, k); // the next medal to earn, at its point on the bar
   if (st.popChips) drawPopRow(st, sx, sy + hh, k, ctx.globalAlpha);
   else if ((st.chase || f) && k >= 0.3) { for (const b of [st.hdrBtn, st.hdrBtn2]) if (b) drawHdrBtn(st, b, sx, sy + hh + b.y * k, k, ctx.globalAlpha); ctx.textBaseline = "alphabetic"; }
   if (st.burst) {
@@ -467,6 +468,7 @@ function frame(now) {
   ctx.globalAlpha = 1;
   for (const c of drawnCards) if (c.anim) { more = true; break; }
   drawMarks(); drawPicks();
+  if (drawMints(now)) more = true; // a medal minting off a set's bar
   if (drawLive(now)) more = true;
   if (drawPop(now)) more = true;
   drawTraders(now);

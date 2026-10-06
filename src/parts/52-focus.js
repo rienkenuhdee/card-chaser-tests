@@ -56,6 +56,7 @@ document.getElementById("p-buy").onclick = () => {
 let quietLayout = false; // a trade changes several cards at once: one relayout at the end, not one per card
 function setOwned(c, on, { undo = null, quiet = false } = {}) {
   const now = performance.now(), b = c.base || c;
+  if (on) mdCause = { c, t: now }; // a medal this tips rises from this card when it has no bar of its own
   b.owned = on; b.got = on ? Date.now() : null; saved[b.id] = { on, at: b.got }; persist();
   for (const t of [b, ...twinsOf(b)]) { t.anim = { t0: now, to: on }; const tg = groups[t.g]; if (tg && (t === c || tg.base?.includes(t) || tg.cards.includes(t))) tg.ripple = { t0: now, col: t.col, row: t.row }; }
   tick(on ? 14 : 6);

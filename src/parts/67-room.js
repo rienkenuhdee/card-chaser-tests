@@ -8,15 +8,18 @@
 // walked back month by month with a seeded drift, summed, cached per plaque), and the room's header sums the whole
 // case with the same line, so the room reads as what finishing has been worth. A set's master and grand set
 // trophies stack behind the set's plaque; tap the stack and they fan out beneath it.
+// Round 19 moved production's medals in (68-medals.js): the header sums them, then the Showcase, Next up and the
+// filters, then one shelf per set or chase, a finished one's plaque at the head of its shelf with its medals beneath.
 // The room borrows the wall's scroll: while it is up, mScroll and mMax are the room's, and the wall's scroll is kept
 // to come back to. The plaques are laid out in mosaic coordinates, so a tap, a spread, the open transition, the
 // press and the search rings all work on them unchanged.
 
-const DOOR_H = 64, ROOM_HEAD = 128, ROW_H = 118, SUB_H = 66, SHELF_H = 12, MONTHS = 12;
-const room = { on: false, q: 0, anim: null, closing: false, wallScroll: 0, pinch: null, fan: null, slots: [], L: null, sum: null };
+const DOOR_H = 64, ROW_H = 118, SUB_H = 66, SHELF_H = 12, MONTHS = 12;
+const room = { on: false, q: 0, anim: null, closing: false, wallScroll: 0, pinch: null, fan: null, slots: [], L: null, sum: null, plaques: [] };
 const DOOR = { door: true, name: "Trophy room", cards: [], lead: [], m: null };
 const inCase = (g) => Boolean(g.done && !onShelf(g));
 const caseList = () => groups.filter(inCase).sort(byFinish);
+const roomHas = () => mode === "set" && (caseList().length > 0 || medalCount() > 0); // a plaque or a medal opens the door
 const inR = (r, x, y) => Boolean(r) && x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
 const lerpRect = (a, b, k) => ({ x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k, w: a.w + (b.w - a.w) * k, h: a.h + (b.h - a.h) * k });
 
@@ -76,33 +79,25 @@ function fanRows(g) { g.subs ||= {}; return stackOf(g).map((s) => (g.subs[s] ||=
 // The door on the wall: one row at the end, the engravings along its bottom. The trophies' tiles live in the strip,
 // so a trophy coming down from the shelf shrinks into it and a search ring still finds a card.
 function caseLayout(R, y) {
-  const dn = caseList();
+  const dn = caseList(), md = mode === "set" ? medalCount() : 0;
   room.slots = [];
-  if (!dn.length) { trophyCase = null; DOOR.m = null; return 0; }
-  trophyCase = { x: R.x, y, w: R.w, h: DOOR_H }; DOOR.m = trophyCase; caseSeries();
-  const n = dn.length, gap = 5, x0 = R.x + PG + 12, w = R.w - PG * 2 - 24, sw = (w - gap * (n - 1)) / n, ey = y + DOOR_H - PG - 17;
+  if (!dn.length && !md) { trophyCase = null; DOOR.m = null; return 0; }
+  const H = (dn.length ? DOOR_H : 44) + (md ? 30 : 0); // the medals stand in a row above the engravings
+  trophyCase = { x: R.x, y, w: R.w, h: H, minis: md > 0 }; DOOR.m = trophyCase; if (dn.length) caseSeries();
+  const n = dn.length, gap = 5, x0 = R.x + PG + 12, w = R.w - PG * 2 - 24, sw = (w - gap * (n - 1)) / Math.max(1, n), ey = y + H - PG - 17;
   dn.forEach((g, i) => { const m = { x: x0 + i * (sw + gap), y: ey, w: sw, h: ENGR_H }; room.slots.push({ g, ...m }); g.plq = plaqueInfo(g); if (!room.on) { g.m = m; packStrip(g, m); } });
-  return DOOR_H;
+  return H;
 }
 function packStrip(g, m) { const n = g.base.length, cw = m.w / n; g.base.forEach((c, i) => { c.m = { x: m.x + i * cw, y: m.y, w: cw, h: m.h }; }); }
-// The room: a header, then rows of plaques on shelves, newest first. One across on a phone, two on a wide screen.
+// The room: the header, then production's Medal tab (68-medals.js): the Showcase, Next up, the filters and a shelf per
+// set or chase, a finished one's plaque at the head of its shelf. One column, as wide as a phone and no wider than 760.
 const roomPlate = (m) => ({ x: m.x + PG, y: m.y + 8, w: m.w - PG * 2, h: m.h - 8 - SHELF_H - 4 });
 function roomLayout() {
-  const dn = caseList(), W = Math.min(vw, 760), R = { x: (vw - W) / 2 + 8, w: W - 16 };
-  const cols = R.w >= 560 ? 2 : 1, cw = R.w / cols, y0 = topPad() + ROOM_HEAD, rows = [];
-  let y = y0;
-  for (let i = 0; i < dn.length; i += cols) {
-    const row = dn.slice(i, i + cols), fan = row.find((g) => g === room.fan), h = ROW_H + (fan ? stackOf(fan).length * SUB_H : 0);
-    row.forEach((g, j) => {
-      g.m = { x: R.x + j * cw, y, w: cw, h: ROW_H }; g.plq = plaqueInfo(g); packRoomPlaque(g);
-      g.fanR = stackOf(g).length ? { x: g.m.x + g.m.w - PG - 12 - 150, y: g.m.y + 8, w: 150, h: 34 } : null; // the badge, and the worth beside it
-      g.fanBtn ||= { fan: g, lead: [], cards: [] };
-      if (g === room.fan) fanRows(g).forEach((r, k) => { r.m = { x: g.m.x, y: y + ROW_H + k * SUB_H, w: cw, h: SUB_H }; });
-    });
-    rows.push({ y: y + h - SHELF_H - 4, h: SHELF_H });
-    y += h;
-  }
-  room.L = { R, cols, rows, y0 };
+  const W = Math.min(vw, 760), R = { x: (vw - W) / 2 + 8, w: W - 16 }, y0 = topPad(), headH = caseList().length ? 140 : 62;
+  const items = [{ type: "header", x: R.x, y: y0, w: R.w, h: headH }], hits = [], plaques = [], rows = [];
+  const y = mdRoomLayout(R, y0 + headH, items, hits, plaques, rows);
+  room.plaques = plaques;
+  room.L = { R, rows, y0, items, hits, headH };
   mMax = Math.max(0, y + botPad() + 10 - vh);
   mScroll = clamp(mScroll, 0, mMax);
 }
@@ -113,7 +108,7 @@ function packRoomPlaque(g) {
 
 // ----- opening and closing -----
 function openRoom() {
-  if (room.on || state.trans || tbl.on || bnd.on || view !== "mosaic" || !caseList().length) return;
+  if (room.on || state.trans || tbl.on || bnd.on || view !== "mosaic" || !roomHas()) return;
   hideCaption(); cancelPress(); closePop(true); tick(8);
   room.on = true; room.closing = false; room.wallScroll = mScroll; room.fan = null; room.pinch = null; mScroll = 0;
   layoutAll();
@@ -167,39 +162,56 @@ document.getElementById("to-list").addEventListener("click", () => { if (room.on
 function drawDoor(now, alpha) {
   const t = trophyCase; if (!t || state.trans) return;
   const m = mr(t); if (m.y > vh || m.y + m.h < 0) return;
-  const x = m.x + PG, y = m.y + PG, w = m.w - PG * 2, h = m.h - PG * 2, s = room.sum || caseSeries();
+  const x = m.x + PG, y = m.y + PG, w = m.w - PG * 2, h = m.h - PG * 2, plaques = room.slots.length, n = medalCount(), s = plaques ? room.sum || caseSeries() : null;
   ctx.globalAlpha = alpha;
   rr(x, y, w, h, 12); ctx.fillStyle = theme.door; ctx.fill();
   ctx.save(); rr(x, y, w, h, 12); ctx.clip(); ctx.fillStyle = theme["door-hi"]; ctx.fillRect(x, y, w, 1.5); ctx.restore();
   if (state.press?.g === DOOR) { ctx.lineWidth = 1.5; ctx.strokeStyle = theme.ink; rr(x, y, w, h, 12); ctx.stroke(); }
   ctx.textBaseline = "alphabetic"; ctx.textAlign = "right"; ctx.fillStyle = theme["door-muted"]; font(600, 13);
-  const stat = `${s.n} ${s.n === 1 ? "trophy" : "trophies"} · ${short(s.worth)}  ›`;
+  const stat = `${n} ${n === 1 ? "trophy" : "trophies"}${plaques ? ` · ${plaques} sealed · ${short(s.worth)}` : ""}  ›`;
   ctx.fillText(stat, x + w - 12, y + 22);
   const sw = textW(stat);
   ctx.textAlign = "left"; ctx.fillStyle = theme["door-ink"]; font(800, 15.5, true); ctx.fillText(fitText("Trophy room", w - sw - 32), x + 12, y + 22);
+  if (t.minis) ctx.drawImage(doorMedals(w - 24), x + 12 - PADR, y + 31 - PADR, w - 24 + PADR * 2, 28 + PADR * 2); // the rarest earned, in a row
   for (const sl of room.slots) { ctx.fillStyle = "rgb(0 0 0 / .35)"; ctx.fillRect(sl.x - 1, sl.y - mScroll - 1, sl.w + 2, sl.h + 2); ctx.drawImage(engravingOf(sl.g, sl.w, sl.h), sl.x, sl.y - mScroll, sl.w, sl.h); }
   ctx.globalAlpha = 1;
+}
+// The door's row of medals: the rarest earned, small, drawn once and kept.
+const doorRow = {};
+function doorMedals(w) {
+  const E = medalList().earned, step = MD_DW + 6, n = Math.min(E.length, Math.floor((w + 6) / step));
+  return cachedImage(doorRow, `${Math.round(w)}|${E.slice(0, n).map((t) => `${t.id}${t.rank}`).join(",")}|${dpr}|${theme["m-surface"]}|${mdVer}`, w, 28, (x) => {
+    for (let i = 0; i < n; i++) drawMedal(x, E[i], MD_DW / 2 + i * step, 1, MD_DW);
+  });
 }
 function drawRoom(now, alpha = 1, except = null) {
   const L = room.L; if (!L) return;
   live.line = null; // a deal landing on the wall flashes there; its line to the lens bar has nowhere to go here
   ctx.globalAlpha = alpha; ctx.fillStyle = theme["room-bg"]; ctx.fillRect(0, 0, vw, vh);
-  // the header: the whole case summed, with its line
-  const R = L.R, hy = topPad() - mScroll;
-  if (hy + ROOM_HEAD > 0) ctx.drawImage(headerImage(R.w), R.x - PADR, hy - PADR, R.w + PADR * 2, ROOM_HEAD + PADR * 2);
-  // the shelves, then the plaques on them
+  const R = L.R, pg = state.press?.g;
+  // the header, the Showcase, Next up, the filters, and every shelf's heading and rows of medals (drawn once and kept)
+  for (const it of L.items) {
+    const y = it.y - mScroll; if (y > vh || y + it.h < 0) continue;
+    if (it.type === "header") ctx.drawImage(headerImage(R.w, it.h), R.x - PADR, y - PADR, R.w + PADR * 2, it.h + PADR * 2);
+    else if (it.type === "row") ctx.drawImage(mdRowImage(it), it.x - PADR, y - PADR, it.w + PADR * 2, it.h + PADR * 2);
+    else mdDrawItem(it, y, pg && it.blk === pg);
+    ctx.globalAlpha = alpha;
+  }
+  // the shelf under a plaque with nothing hanging from it, then the plaques
   for (const row of L.rows) {
     const y = row.y - mScroll; if (y > vh || y + row.h < 0) continue;
     ctx.fillStyle = theme["room-wood"]; ctx.fillRect(R.x - 6, y, R.w + 12, row.h);
     ctx.fillStyle = theme["room-wood-hi"]; ctx.fillRect(R.x - 6, y, R.w + 12, 1.5);
     ctx.fillStyle = "rgb(0 0 0 / .35)"; ctx.fillRect(R.x - 6, y + row.h, R.w + 12, 6);
   }
-  for (const g of caseList()) {
+  for (const g of room.plaques) {
     if (g === except) continue;
     if (g.m.y - mScroll > vh || g.m.y + g.m.h + (g === room.fan ? stackOf(g).length * SUB_H : 0) - mScroll < 0) continue;
     drawPanel(g, now, alpha);
     for (const c of g.cards) drawTile(c, c.m.x, c.m.y - mScroll, c.m.w, c.m.h, now, alpha);
   }
+  // the medal under a finger
+  if (pg?.mdt) for (const h of L.hits) if (h.blk === pg && !h.type) { ctx.lineWidth = 1.5; ctx.strokeStyle = theme["room-ink"]; rr(h.x + 2, h.y - mScroll + 2, h.w - 4, h.h - 4, 9); ctx.stroke(); }
   ctx.globalAlpha = 1;
 }
 // ----- plates, rendered once and kept (a shadow and a gradient per plate per frame was the slow part) -----
@@ -228,26 +240,31 @@ function plateOn(x, px, py, w, h, r, alpha = 1) {
   x.globalAlpha = 1;
 }
 const look = () => `${dpr}|${theme["room-plaque"]}|${theme["room-ink"]}`;
-function headerImage(w) {
-  const s = room.sum || caseSeries();
-  return cachedImage(room, `${Math.round(w)}|${s.key}|${look()}`, w, ROOM_HEAD, (x) => {
+// The summary: how many trophies, how many hidden are left to find, and with plaques the whole case's worth over the year.
+function headerImage(w, h) {
+  const L = medalList(), dn = caseList(), s = dn.length ? room.sum || caseSeries() : null;
+  const sum = `${L.earned.length} of ${L.list.length} trophies`, hid = L.hiddenLeft ? `${L.hiddenLeft} hidden left to find` : "";
+  return cachedImage(room, `${Math.round(w)}|${h}|${sum}|${hid}|${s ? s.key : ""}|${look()}`, w, h, (x) => {
     x.textBaseline = "alphabetic"; x.textAlign = "left"; x.fillStyle = theme["room-ink"]; fontOn(x, 800, 26, true);
     x.fillText("Trophy room", 10, 30);
-    x.textAlign = "right"; fontOn(x, 800, 22); x.fillText(short(s.worth), w - 10, 30);
+    fontOn(x, 600, 13); x.fillStyle = theme["room-muted"]; x.fillText(sum, 10, 50);
+    if (hid) { const sw = x.measureText(`${sum} · `).width; x.fillText(" · ", 10 + x.measureText(sum).width, 50); x.fillStyle = "#C3A8FF"; x.fillText(hid, 10 + sw, 50); }
+    if (!s) return;
+    x.textAlign = "right"; x.fillStyle = theme["room-ink"]; fontOn(x, 800, 22); x.fillText(short(s.worth), w - 10, 30);
     x.textAlign = "left"; x.fillStyle = theme["room-muted"]; fontOn(x, 600, 12.5);
-    x.fillText(`${s.n} ${s.n === 1 ? "trophy" : "trophies"} finished and sealed`, 10, 48);
-    x.textAlign = "right"; x.fillStyle = s.delta >= 0 ? theme["room-up"] : theme["room-down"]; fontOn(x, 600, 12.5);
-    x.fillText(deltaText(s.delta), w - 10, 48);
-    drawWorthLine(x, s.pts, 10, 60, w - 20, 44, theme["room-plaque"], "rgb(230 192 80 / .12)");
-    x.fillStyle = theme["room-muted"]; fontOn(x, 500, 10.5); x.textAlign = "left"; x.fillText("A year ago", 10, 116); x.textAlign = "right"; x.fillText("Now", w - 10, 116);
+    x.fillText(`${s.n} finished and sealed`, 10, 72);
+    x.textAlign = "right"; x.fillStyle = s.delta >= 0 ? theme["room-up"] : theme["room-down"]; x.fillText(deltaText(s.delta), w - 10, 72);
+    drawWorthLine(x, s.pts, 10, 82, w - 20, 36, theme["room-plaque"], "rgb(230 192 80 / .12)");
+    x.fillStyle = theme["room-muted"]; fontOn(x, 500, 10.5); x.textAlign = "left"; x.fillText("A year ago", 10, 132); x.textAlign = "right"; x.fillText("Now", w - 10, 132);
   });
 }
 function plaqueImage(g, w, h) {
-  const stack = stackOf(g), s = seriesOf(g), info = g.plq || (g.plq = plaqueInfo(g)), fan = room.fan === g;
-  return cachedImage(g, `${Math.round(w)}|${Math.round(h)}|${stack.length}|${fan ? 1 : 0}|${s.key}|${info.title}|${look()}`, w, h, (x) => {
+  const stack = stackOf(g), s = seriesOf(g), info = g.plq || (g.plq = plaqueInfo(g)), fan = room.fan === g, ride = g.ride || null;
+  return cachedImage(g, `${Math.round(w)}|${Math.round(h)}|${stack.length}|${fan ? 1 : 0}|${s.key}|${info.title}|${look()}|${ride ? `${ride.id}${ride.rank}|${theme["m-surface"]}|${mdVer}` : ""}`, w, h, (x) => {
     for (let i = stack.length; i >= 1; i--) plateOn(x, 7 * i, -6 * i, w - 14 * i, h, 8, 0.75); // the other views behind it
     plateOn(x, 0, 0, w, h, 8);
-    const px = 12, pw = w - 24;
+    if (ride) { x.save(); x.shadowColor = "rgb(60 35 0 / .45)"; x.shadowBlur = 5; x.shadowOffsetY = 2; drawMedal(x, ride, 10 + MD_PW / 2, 6, MD_PW); x.restore(); } // its Binder Complete, mounted on it
+    const px = ride ? 22 + MD_PW : 12, pw = w - px - 12;
     x.textBaseline = "alphabetic"; x.fillStyle = theme["room-plaque-ink"];
     x.textAlign = "right"; fontOn(x, 800, 15); const ww = x.measureText(short(s.worth)).width; x.fillText(short(s.worth), px + pw, 23);
     x.textAlign = "left"; fontOn(x, 800, 15, true); x.fillText(fitOn(x, info.title, pw - ww - 10 - (stack.length ? 92 : 0)), px, 23);
@@ -260,9 +277,9 @@ function plaqueImage(g, w, h) {
       x.fillText(`${stack.length} behind ${fan ? "▴" : "▾"}`, bx + bw / 2, by + bh / 2 + 3.5);
     }
     drawWorthLine(x, s.pts, px, 46, pw, h - 46 - 24, "rgb(42 30 5 / .9)", "rgb(42 30 5 / .1)"); // the line beneath: worth over the year
-    const ey = h - 20;
-    x.fillStyle = "rgb(0 0 0 / .22)"; x.fillRect(px - 1, ey - 1, pw + 2, ENGR_H + 2);
-    x.drawImage(engravingOf(g, pw, ENGR_H), px, ey, pw, ENGR_H);
+    const ey = h - 20, ex = 12, ew = w - 24, sw = Math.min(ew, g.base.length * ENGR_H * TW / TH); // the engraving runs under the medal too
+    x.fillStyle = "rgb(0 0 0 / .22)"; x.fillRect(ex - 1, ey - 1, sw + 2, ENGR_H + 2);
+    x.drawImage(engravingOf(g, ew, ENGR_H), ex, ey, ew, ENGR_H);
   });
 }
 function rowImage(g, r, w, h) {
