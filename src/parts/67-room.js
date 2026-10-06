@@ -179,7 +179,8 @@ function drawDoor(now, alpha) {
 // The door's row of medals: the rarest earned, small, drawn once and kept.
 const doorRow = {};
 function doorMedals(w) {
-  const E = medalList().earned, step = MD_DW + 6, n = Math.min(E.length, Math.floor((w + 6) / step));
+  // During the import's story: the ones landed so far (not the catalog, worked out again with every card).
+  const E = story ? story.landed.slice().sort((a, b) => mdScore(b) - mdScore(a)) : medalList().earned, step = MD_DW + 6, n = Math.min(E.length, Math.floor((w + 6) / step));
   return cachedImage(doorRow, `${Math.round(w)}|${E.slice(0, n).map((t) => `${t.id}${t.rank}`).join(",")}|${dpr}|${theme["m-surface"]}|${mdVer}`, w, 28, (x) => {
     for (let i = 0; i < n; i++) drawMedal(x, E[i], MD_DW / 2 + i * step, 1, MD_DW);
   });

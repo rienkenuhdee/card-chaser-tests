@@ -13,7 +13,7 @@ function toast(t, action = null, label = "Undo") {
 const about = document.getElementById("about");
 document.getElementById("info").onclick = () => about.showModal();
 document.getElementById("about-close").onclick = () => about.close();
-document.getElementById("reset").onclick = () => { saved = {}; persist(); try { for (const k of ["wall-chase", "wall-chases", "wall-scope", "wall-done", "wall-spares", "wall-copies", "wall-paid", "wall-trades", "wall-welcomed", "wall-imported", "wall-sets", "wall-lens", "wall-mode", "wall-value", "wall-medals"]) localStorage.removeItem(k); } catch { /* fine */ } location.reload(); };
+document.getElementById("reset").onclick = () => { saved = {}; persist(); try { for (const k of ["wall-chase", "wall-chases", "wall-scope", "wall-done", "wall-spares", "wall-copies", "wall-paid", "wall-trades", "wall-welcomed", "wall-imported", "wall-sets", "wall-lens", "wall-mode", "wall-value", "wall-medals", "wall-dated", "wall-arrival"]) localStorage.removeItem(k); } catch { /* fine */ } location.reload(); };
 
 // ---------- settings: appearance, the list, reset ----------
 const prefs = document.getElementById("prefs");

@@ -3,8 +3,8 @@
 // pinch still opens a set, a drag still scrolls) and the sheet follows what you did.
 //   0. Import from TCGplayer or Collectr (first and biggest), or pick your sets and mark by hand. The import is
 //      simulated: pick the source, a second of "Looking for your collection", then the seeded demo collection (the
-//      541 cards the demo used to ship with) floods into the wall set by set. "Chase every card I'm missing" puts the
-//      rest on your chase list as it comes in.
+//      541 cards the demo used to ship with) plays in, in the order you got it, and the import's summary comes up
+//      (round 20). "Chase every card I'm missing" puts the rest on your chase list as it comes in.
 //   1. Which sets do you collect? The mosaic's panels become pickable (tap to tick). Continue folds the rest back.
 //   2. Mark a few you have. The first picked set opens in Mark mode; Select all takes the whole set.
 //   3. Chase one. Press and hold a card you don't have; it goes on your chase list.
@@ -127,30 +127,24 @@ function startImport(src) {
   wel.imp = "busy"; wel.src = src; wel.key = ""; tick(4); welcomeSync();
   setTimeout(() => finishImport(src), reduced ? 250 : 1100);
 }
-// The imported cards flood into the wall set by set (the marking flood, a beat apart), and the welcome is over.
+// The import marks and saves everything at once (cards, dates, copies, the chase list), then hands over to the reveal
+// (86-story.js, 87-arrival.js): your collection's story in the order you got it, then the "Import complete" summary.
+let importDates = true; // a file without acquisition dates lands every card on today (the tests switch this off)
 function finishImport(src) {
   if (!wel.on) return;
-  const now = performance.now(), chaseAll = wChase.checked;
+  const chaseAll = wChase.checked, got = [], today = Date.now();
   let n = 0, k = 0, d = 0;
   for (const c of pool) {
     if (c.owned || !c.own0) { if (chaseAll && !c.owned) { chasing[c.id] = true; k++; } continue; }
-    c.owned = true; c.got = seededGot(c); saved[c.id] = { on: true, at: c.got }; if (!c.of) n++; // the count says cards, as the counter does (printings ride along)
+    c.owned = true; c.got = importDates ? seededGot(c) : today; saved[c.id] = { on: true, at: c.got }; got.push(c); if (!c.of) n++; // the count says cards, as the counter does (printings ride along)
     if (!c.of) { const x = importCopies(c); if (x > 1) { copies[c.id] = { n: x, got: c.got }; d++; } }
-    if (!reduced) c.anim = { t0: now + 200 + c.g * 140 + c.k * 2.2, to: true };
   }
   copiesKey++; persist(); persistCopies(); if (chaseAll) persistChase();
   wel.on = false; wel.step = 0; wel.imp = null; wel.key = "";
   try { localStorage.setItem("wall-welcomed", "1"); localStorage.setItem("wall-imported", src); } catch { /* fine */ }
   document.body.classList.remove("welcoming"); welEl.classList.remove("on");
   if (marking) { session.clear(); leaveMark(); }
-  updateCount(); drawList();
-  const sync = syncDone({ quiet: true });
-  if (lifted && !sync) liftLayout(true);
-  tick(14);
-  // The spares went into the trade binder: Open goes to the Trade lens and opens it. (Kept to two lines.)
-  const said = d ? `${n.toLocaleString()} cards imported${chaseAll ? `, ${k.toLocaleString()} to chase` : ""}. ${d} with spares are in your trade binder.` : `${n.toLocaleString()} cards imported from ${src}.${chaseAll ? ` ${k.toLocaleString()} on your chase list.` : ""}`;
-  setTimeout(() => toast(said, d ? () => tbOpenFromAnywhere() : null, "Open"), reduced ? 100 : 500);
-  kick();
+  reveal({ src, n, k: chaseAll ? k : 0, d, got });
 }
 
 // Picked sets stay as panels; the rest fold to a line (every card flies to its new place, the way a lens does).

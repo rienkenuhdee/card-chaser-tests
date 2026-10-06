@@ -206,6 +206,51 @@ for (const dpr of [1, 2]) {
   await p.evaluate(() => document.querySelector("#toast .toast-btn")?.click()); await wait(1500);
   const d5 = await dex();
   R.push(["Remove chase takes the Dex off the wall, and Undo puts it back", !d4.on && d4.chases === 0 && d4.view === "mosaic" && d5.on && d5.chases === 1 && d5.label === "Full art Dex"]);
+  // The import's reveal (round 20): a fresh wall, the welcome's Import, TCGplayer. The collection plays in the order it
+  // was got, then "Import complete" comes up with its rows.
+  const imp = () => p.evaluate(() => ({ story: Boolean(__w.story), sum: __w.summary.on, rows: __w.summary.rows.map((r) => r.id), my: Math.round(__w.mScroll), view: __w.view, set: __w.state.g?.name, rings: __w.rings, n: __w.groups.reduce((a, g) => a + (g.set ? g.base.filter((c) => c.owned).length : 0), 0), storying: document.body.classList.contains("storying"), arriving: document.body.classList.contains("arriving"), toast: document.getElementById("toast").classList.contains("show") ? document.getElementById("toast").textContent : "", mpop: document.getElementById("mpop").classList.contains("show") }));
+  const importFresh = async () => {
+    await p.evaluate(() => localStorage.clear()); await p.reload({ waitUntil: "load" }); await wait(3200);
+    await p.click("#w-next"); await wait(300); await p.click('[data-src="TCGplayer"]');
+    return Date.now();
+  };
+  const untilSheet = async (ms) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if ((await imp()).sum) return true; await wait(100); } return false; };
+  let tap = await importFresh(); await wait(3500);
+  const mid = await imp();
+  R.push(["the import plays the collection in the order it was got", mid.story && mid.storying && mid.n > 0 && mid.n < 541]);
+  const reached = await untilSheet(30000), took = (Date.now() - tap) / 1000, done1 = await imp();
+  console.log(`  [dpr ${dpr}] the import took ${took.toFixed(1)} s from the tap to the summary`);
+  R.push(["the story ends home at the top with the summary and its rows", reached && !done1.story && done1.my === 0 && done1.n === 541 && ["near", "md", "tb"].every((id) => done1.rows.includes(id)) && !done1.mpop && !done1.toast]);
+  const nearSet = await p.evaluate(() => /^(.*), \d+ to go$/.exec(__w.summary.rows.find((r) => r.id === "near").title)[1]);
+  await p.click('[data-ar="near"]'); await wait(2600);
+  const ring = await imp(), gaps = await p.evaluate(() => __w.gaps(__w.state.g).filter((r) => r.y > 70 && r.y < 772).length);
+  R.push(["the closest-to-done row opens that set with its missing pockets ringed", ring.view === "set" && ring.set === nearSet && ring.rings?.set === nearSet && gaps > 0 && !ring.sum]);
+  const y = await installTouch(p);
+  await y.drag(195, 600, 450, 200); await wait(600);
+  R.push(["the rings fade on the first touch", !(await imp()).rings]);
+  // A drag during the story ends it there, and the drag scrolls; the totals come as a toast with Open, not the sheet.
+  tap = await importFresh(); await wait(5000);
+  const z = await installTouch(p), my0 = (await imp()).my;
+  await z.drag(200, 650, 300, 200); await wait(500);
+  const took2 = await imp(); await wait(2500); const later = await imp();
+  R.push(["a drag during the story ends it and the wall scrolls", !took2.story && !took2.storying && took2.n === 541 && Math.abs(took2.my - my0) > 40]);
+  R.push(["after a drag the totals come as a toast with Open, not the sheet", /541 cards imported/.test(took2.toast) && /Open/.test(took2.toast) && !took2.sum && !later.sum && !later.arriving]);
+  await p.evaluate(() => document.querySelector("#toast .toast-btn").click()); await wait(700);
+  R.push(["Open in the toast brings up the summary", (await imp()).sum]);
+  await p.click("[data-ar-close]"); await wait(600);
+  const shut = await imp();
+  await p.reload({ waitUntil: "load" }); await wait(3200);
+  R.push(["See your wall closes the summary for good", !shut.sum && !shut.arriving && !(await imp()).sum]);
+  // Skip goes straight to the summary.
+  await importFresh(); await wait(2500);
+  await p.click(".st-skip"); await wait(700);
+  const sk = await imp();
+  R.push(["Skip goes straight to the summary", !sk.story && sk.sum && sk.n === 541 && sk.my === 0]);
+  await p.click("[data-ar-close]"); await wait(400);
+  // Afterwards the story's moments are dots on the Time slider.
+  await p.click("#filter"); await wait(150); await p.click('[data-filter="time"]'); await wait(600);
+  R.push(["the story's moments sit on the Time slider as dots", (await p.evaluate(() => document.querySelectorAll(".timebar .t-marks i").length)) >= 4]);
+  await p.click("#filter"); await wait(150); await p.click('[data-filter="time"]'); await wait(300);
   R.push([`no page errors${p.errors.length ? `: ${p.errors[0]}` : ""}`, !p.errors.length]);
   failures += report(R, `[dpr ${dpr}] `);
   await p.close();

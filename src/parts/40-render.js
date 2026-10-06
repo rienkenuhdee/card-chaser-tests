@@ -471,6 +471,7 @@ function frame(now) {
   ctx.globalAlpha = 1;
   for (const c of drawnCards) if (c.anim) { more = true; break; }
   drawMarks(); drawPicks();
+  if (drawRings(now)) more = true; // a set opened from the import's summary: its gaps ringed in gold
   if (drawMints(now)) more = true; // a medal minting off a set's bar
   if (drawLive(now)) more = true;
   if (drawPop(now)) more = true;

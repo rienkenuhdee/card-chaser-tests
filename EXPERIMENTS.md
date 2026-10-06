@@ -235,6 +235,21 @@ dashed "Not in your sets" pockets that count in its total; its settings filter t
 and the type. Picked in Choose your sets or the New chase sheet; it owns the Kanto, 50 and 151 Pokémon medals. It
 doesn't flood the chase list; Need on its panel shows what your sets can fill.
 
+**Round 20: The import's reveal.** What the first minute after your collection arrives shows you, now that an import
+also brings spares, a trade binder, trophies and maybe the Dex, each of which used to announce itself separately.
+Safe: one "Import complete" sheet after the flood, its rows doors into the wall. Bold: the camera toured composed
+stops with a caption each (the set closest to done with its missing pockets ringed in gold, the binder cover, the
+trophy door). Radical: the import played the collection in the order it was got, the Time clock running from the
+first card to today with the moments landing on their dates. Kept (Ryan's mix): radical's story as the intro and
+safe's sheet as the finish, with the critic's fixes: no empty lead-in (the clock starts on the first card), only the
+first lucky trophy stops the clock (17 s from the tap to the sheet), the camera home before the sheet, worth counted
+over the wall's own cards, a touch during the story ending it and leaving a toast with Open instead of the sheet, the
+closest-to-done row opening that set with bold's gold rings on its gaps, and the moments kept as dots on the Time
+slider when the import carries dates (an undated import does the plain flood into the sheet). Learned: an import's
+news belongs in one place, and a story in time reads as yours in a way a flood set by set doesn't; an autoplay tour
+that switches lenses for you teaches nothing. Dropped: the tour, radical's end card. Also fixed: the summary's worth
+counted printings.
+
 ## Open questions (next rounds)
 
 - A deal arriving off screen: one tap from the line to the offers, and whether the arrival should nudge the wall.
@@ -242,7 +257,7 @@ doesn't flood the chase list; Need on its panel shows what your sets can fill.
 - At the show: does the Wants lens alone carry a vendor table, or does the verdict (NEED IT, pay up to) earn a place when a card is looked up?
 - Trading: a real other side (the twelve-second reply is a stand-in), more than one card per counter, and whether a done trade should fall off the chip after a day. Online trading is pinned on backend work (round 18).
 - Spares: Show mode's Someone new gives cards away with nothing back; a stranger at a show might want to offer a card, which needs their side of the table without an account.
-- The import's reveal: the round 11 assembly from nothing as the flood after an import.
+- The import: a real import without acquisition dates loses the story (round 20); and the Complete Dex can't be chosen on the import path, only in Choose your sets.
 - A chase's twins: should a custom panel's cards also lead in the Chase lens, or only their set's copy? And should a chase hide from the wall once it's complete?
 - Trophies: the worth line is a made-up year; real data would start at the finish date ("Up $27 since you finished"). Medals: whether Undo after a mint should take a medal back (production keeps it), the full-screen completion ceremony production plays, and the server-side luck roll when the two merge. Sharing a trophy (safe's picture card), and whether a sub-chase of a finished set should fold into the set's plaque. The room hides the lenses; Value could recolour the engravings.
 - Bringing the mosaic into the real app as the Chase home.

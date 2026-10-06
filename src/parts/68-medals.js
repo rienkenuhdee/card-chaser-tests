@@ -138,7 +138,7 @@ let mdStore = null; // id -> { at, rank, name, chase, sec, kind, color, plate, t
 try { mdStore = JSON.parse(localStorage.getItem("wall-medals") || "null"); } catch { mdStore = null; }
 const mdFirst = !mdStore || typeof mdStore !== "object";
 if (mdFirst) mdStore = {};
-const mdPersist = () => { try { localStorage.setItem("wall-medals", JSON.stringify(mdStore)); } catch { /* private mode */ } };
+const mdPersist = () => { try { localStorage.setItem("wall-medals", JSON.stringify(story ? { ...story.held, ...mdStore } : mdStore)); } catch { /* private mode */ } }; // the import's story holds its trophies back until their dates: still saved
 const mdTradesDone = () => (typeof trades === "undefined" ? [] : trades.filter((r) => r.state === "done" || r.state === "accepted"));
 const mdUnitOwned = (u) => (Array.isArray(u) ? u.some((c) => c.owned) : u.owned);
 const medalCount = () => Object.keys(mdStore).length;
@@ -235,7 +235,7 @@ function mdWhen(t) {
 // ----- earning: checked a beat after the count changes (updateCount); quietly on load -----
 let mdBooted = false, mdTimer = 0, mdImp = null, mdCause = null;
 const mdImported = () => { try { return localStorage.getItem("wall-imported"); } catch { return null; } };
-function scheduleMedals() { if (!mdBooted) return; clearTimeout(mdTimer); mdTimer = setTimeout(() => checkMedals(false), 220); }
+function scheduleMedals() { if (!mdBooted || story) return; clearTimeout(mdTimer); mdTimer = setTimeout(() => checkMedals(false), 220); } // during the import's story its trophies are already earned, waiting for their dates
 function checkMedals(quiet) {
   const imp = mdImported(), viaImport = !quiet && Boolean(imp) && imp !== mdImp; // the import just landed: its medals arrive in one card
   mdImp = imp;
@@ -809,7 +809,7 @@ const mdQueue = [];
 let mdPopT = 0, mdPopList = [];
 function mdCelebrateSoon() {
   clearTimeout(mdCelebrateSoon.t);
-  if (wel.on || tbl.on || document.body.classList.contains("welcoming")) { mdCelebrateSoon.t = setTimeout(mdCelebrateSoon, 1200); return; }
+  if (wel.on || tbl.on || revealing() || document.body.classList.contains("welcoming")) { mdCelebrateSoon.t = setTimeout(mdCelebrateSoon, 1200); return; } // nor over the import's story or summary
   const list = mdQueue.splice(0), via = mdQueue.via; mdQueue.via = "";
   if (list.length) mdCelebrate(list, via);
 }

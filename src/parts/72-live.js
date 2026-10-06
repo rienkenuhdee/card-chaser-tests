@@ -48,7 +48,7 @@ function arrive() {
 }
 // The feed never lands on a moving wall: while a transition plays, the arrival waits a moment.
 function tickFeed() {
-  if (state.trans || shuffle || tbl.anim || gesture) { setTimeout(tickFeed, 600); return; }
+  if (state.trans || shuffle || tbl.anim || gesture || revealing()) { setTimeout(tickFeed, 600); return; } // nor during the import's story and summary
   arrive();
   setTimeout(tickFeed, 9000);
 }
