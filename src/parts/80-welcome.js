@@ -110,7 +110,7 @@ function finishWelcome(skipped) {
   if (marking) { session.clear(); leaveMark(); } // the marks stay; no summary toast on top of the lens one
   if (wel.only) { kick(); return; }
   if (!skipped && view === "set" && !state.trans) exitToMosaic();
-  setTimeout(() => toast("Have, Need, Chase and Trade recolor the wall. Tap a set to open it."), skipped ? 300 : 700);
+  setTimeout(() => toast("Collection and Chase recolor the wall. Tap a set to open it."), skipped ? 300 : 700);
   kick();
 }
 

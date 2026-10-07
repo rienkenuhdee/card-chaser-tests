@@ -107,7 +107,7 @@ function dexStats(r) {
   }
   return { n, have, fill, absent: n - fill };
 }
-const dexAddedText = (r) => { const s = dexStats(r), left = s.fill - s.have; return `${r.label} is on your wall, ${s.have} of ${s.n.toLocaleString()}.${left ? ` Need shows ${left} more.` : ""}`; };
+const dexAddedText = (r) => { const s = dexStats(r), left = s.fill - s.have; return `${r.label} is on your wall, ${s.have} of ${s.n.toLocaleString()}.${left ? ` Show Missing (in Filters) picks out the ${left} more your sets can fill.` : ""}`; };
 
 // ----- its panel (chaseGroup hands a natdex rule here) -----
 function natdexGroup(r, i) {
@@ -119,7 +119,7 @@ function natdexGroup(r, i) {
   g.sub = () => {
     const s = dexCount(list), out = s.n - s.fill;
     if (state.value) return `Your Dex. Yours is worth ${money(worthOf(list))}`;
-    if (state.lens === "need") return `${(s.n - s.have).toLocaleString()} to go${out ? `, ${s.fill - s.have} of them in your sets` : ""}`;
+    if (showNow() === "missing") return `${(s.n - s.have).toLocaleString()} to go${out ? `, ${s.fill - s.have} of them in your sets` : ""}`;
     return `${s.have} of ${s.n.toLocaleString()} Pokémon${out ? `, ${out} not in your sets` : ""}`;
   };
   return g;

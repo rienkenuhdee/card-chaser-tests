@@ -9,8 +9,9 @@ collection is one surface with three composed levels, and the interface moves th
   Scroll down it; flick sideways for the next set; pinch out or tap back to close it.
 - **Card.** Tap a card to bring it up close. Flick it to move along the set. Press and hold any card to mark it.
 
-Lenses (All, Need, Deals, Value, Time) recolor whatever you're looking at. Rearrange lays the same cards out by set,
-by Pokémon, or by value (where size follows worth).
+Two lenses, Collection and Chase, recolor whatever you're looking at. Filters (by the search) show all, only what's
+missing or only what you have, color by type or value, group the same cards by set, price (size follows worth),
+rarity or type, order each binder by number, price, name or rarity, and play Time.
 
 The cards are real (1,327 cards from 10 sets). Who owns what, prices, deals and acquisition dates are made up.
 

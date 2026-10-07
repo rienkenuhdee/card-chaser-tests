@@ -95,15 +95,32 @@ function listingsOf(c) {
   }
   return out;
 }
-// The Feed: every listing from a source that's on, newest first. counts: listings per source, on or off.
-function feedList(counts = null) {
+// ----- the Feed's own filters and sort (kept on this device): production's condition and damaged rules -----
+// Condition filters by what a listing's title states (a title that doesn't say still shows, as in production). A
+// damaged or heavily played copy stays hidden unless you pick "Damaged too" (production's separate switch; it only
+// matters with any condition, so it's the last choice of the same picker). The filter counts everywhere the Feed is
+// counted (the rooms button, the map), like a source switched off. The sort is only how the page reads.
+const feedView = { sort: "newest", cond: "" }; // cond: "" any but damaged, NM, LP or MP and better, "any" damaged too
+try { const v = JSON.parse(localStorage.getItem("wall-feed-view") || "null"); if (v) Object.assign(feedView, { sort: ["newest", "best", "price", "pct"].includes(v.sort) ? v.sort : "newest", cond: ["", "NM", "LP", "MP", "any"].includes(v.cond) ? v.cond : "" }); } catch { /* fresh */ }
+const COND_RANK = { NM: 0, LP: 1, MP: 2, HP: 3, DMG: 4 };
+const damagedL = (L) => L.cond === "HP" || L.cond === "DMG";
+const feedPass = (L) => feedView.cond === "any" || (feedView.cond ? !L.cond || COND_RANK[L.cond] <= COND_RANK[feedView.cond] : !damagedL(L));
+const FEED_SORTS = { best: (a, b) => scoreOf(b).score - scoreOf(a).score, price: (a, b) => a.price - b.price, pct: (a, b) => pctOf(b) - pctOf(a) };
+const feedSorted = (list) => (FEED_SORTS[feedView.sort] ? [...list].sort((a, b) => FEED_SORTS[feedView.sort](a, b) || b.seen - a.seen) : list);
+// The Feed: every listing from a source that's on and past its filters, newest first. counts: listings per source,
+// on or off; hidden: how many the filters keep out (from the sources that are on).
+function feedList(counts = null, hidden = null) {
   const out = [];
-  for (const c of cards) for (const L of listingsOf(c)) { if (counts) counts[L.src] = (counts[L.src] || 0) + 1; if (srcOn(L.src)) out.push(L); }
+  for (const c of cards) for (const L of listingsOf(c)) {
+    if (counts) counts[L.src] = (counts[L.src] || 0) + 1;
+    if (!srcOn(L.src)) continue;
+    if (feedPass(L)) out.push(L); else if (hidden) hidden.n++;
+  }
   return out.sort((a, b) => b.seen - a.seen || a.c.i - b.c.i || a.k - b.k);
 }
 let feedMemo = { key: "", v: null };
 function feedData() { // once a frame at most, for the map's cards
-  const key = `${lastFrame}|${srcState.ver}|${copiesKey}|${scan.last}|${wallVer}`;
+  const key = `${lastFrame}|${srcState.ver}|${copiesKey}|${scan.last}|${wallVer}|${feedView.cond}`;
   if (feedMemo.key === key) return feedMemo.v;
   const counts = {}, list = feedList(counts), chased = cards.filter(isChase).length;
   feedMemo = { key, v: { list, counts, chased, fresh: list.filter(isNewL).length } };
@@ -212,20 +229,39 @@ function feedRowHTML(L, slide) {
 }
 function renderFeed(slideId = null) {
   if (pgFeed.hidden && !slideId) return;
-  const counts = {}, list = feedList(counts), chased = cards.filter(isChase), withAny = new Set(list.map((L) => L.c)), all = Object.values(counts).reduce((a, n) => a + n, 0);
+  const counts = {}, hid = { n: 0 }, list = feedList(counts, hid), chased = cards.filter(isChase), withAny = new Set(list.map((L) => L.c)), all = Object.values(counts).reduce((a, n) => a + n, 0);
   const fresh = list.filter(isNewL).length, watching = chased.filter((c) => !withAny.has(c)).length;
   pfCount.textContent = fresh ? `${fresh} new` : ""; pfCount.classList.toggle("new", fresh > 0);
+  const order = { newest: "newest first", best: "best deals first", price: "cheapest first", pct: "most under market first" }[feedView.sort];
   pfSub.innerHTML = !chased.length ? "Every listing found for the cards you chase, newest first."
-    : list.length ? `Every listing found for the cards you chase, newest first: <b>${plural1(list.length, "listing")}</b> for ${plural1(withAny.size, "card")}.` : "Every listing found for the cards you chase lands here, newest first.";
+    : list.length ? `Every listing found for the cards you chase, ${order}: <b>${plural1(list.length, "listing")}</b> for ${plural1(withAny.size, "card")}.` : `Every listing found for the cards you chase lands here, ${order}.`;
+  syncFeedTools(hid.n);
   const keep = pgFeed.scrollTop > 8 ? pgFeed.scrollHeight - pgFeed.scrollTop : null; // a listing landing on top doesn't push away the one you're reading
   if (!chased.length) pfList.innerHTML = `<li class="fd-empty"><b>Nothing to look for yet</b><span>Chase a card on the wall (tap it, then Chase it) and every listing found for it lands here.</span><button type="button" class="mbtn primary" data-go="chase">Go to the wall</button></li>`;
+  else if (!list.length && hid.n) pfList.innerHTML = `<li class="fd-empty"><b>Your filters hide ${hid.n === 1 ? "the one listing" : `all ${hid.n} listings`}</b><span>${plural1(hid.n, "listing")} for your chases ${hid.n === 1 ? "doesn't" : "don't"} pass the condition you picked.</span><button type="button" class="mbtn primary" data-fd-all>Show all</button></li>`;
   else if (!list.length && all) pfList.innerHTML = `<li class="fd-empty"><b>Every source is off</b><span>${plural1(all, "listing")} for your chases ${all === 1 ? "is" : "are"} hidden. Switch a source back on to see ${all === 1 ? "it" : "them"}.</span><button type="button" class="mbtn primary" data-go="source">Open Source</button></li>`;
   else if (!list.length) pfList.innerHTML = `<li class="fd-empty"><b>Looking for ${plural1(chased.length, "card")} you chase</b><span>A listing under market lands here the moment it's found.</span></li>`;
-  else pfList.innerHTML = list.map((L) => feedRowHTML(L, L.id === slideId)).join("");
+  else pfList.innerHTML = feedSorted(list).map((L) => feedRowHTML(L, L.id === slideId)).join("");
   pfNote.innerHTML = chased.length ? `${watching ? `Still looking for ${plural1(watching, "more card")} you chase, with nothing under market yet. ` : ""}Your chase list, one tile a card with its best deal, is the <button type="button" class="linklike" data-go="lens">Chase lens</button> on the wall.` : "";
   if (keep !== null) pgFeed.scrollTop = pgFeed.scrollHeight - keep;
 }
+// The tools row: sort, condition, and damaged copies. A line under it says what the filters hide, with Show all.
+const pfSort = document.getElementById("pf-sort"), pfCond = document.getElementById("pf-cond"), pfHidden = document.getElementById("pf-hidden");
+function syncFeedTools(hidden) {
+  pfSort.value = feedView.sort; pfCond.value = feedView.cond;
+  pfCond.classList.toggle("on", Boolean(feedView.cond));
+  pfHidden.hidden = !hidden;
+  if (hidden) pfHidden.innerHTML = `${feedView.cond ? `${plural1(hidden, "listing")} hidden by the condition you picked` : `${plural1(hidden, "damaged listing")} hidden`}. <button type="button" class="linklike" data-fd-all>Show ${hidden === 1 ? "it" : "them"}</button>`;
+}
+function setFeedView(patch) {
+  Object.assign(feedView, patch); tick(4);
+  try { localStorage.setItem("wall-feed-view", JSON.stringify(feedView)); } catch { /* private mode */ }
+  pgFeed.scrollTop = 0; renderFeed(); syncBadge(); drawList();
+}
+pfSort.onchange = () => setFeedView({ sort: pfSort.value });
+pfCond.onchange = () => setFeedView({ cond: pfCond.value });
 pgFeed.addEventListener("click", (e) => {
+  if (e.target.closest("[data-fd-all]")) { setFeedView({ cond: "any" }); return; }
   const row = e.target.closest("[data-l]"); if (row) { tick(4); openListing(row.dataset.l); return; }
   const go = e.target.closest("[data-go]"); if (!go) return;
   if (go.dataset.go === "lens") goRoom("chase", { then: () => setLens("chase") }); else goRoom(go.dataset.go);
@@ -237,7 +273,7 @@ function feedArrived(c) {
   const L = listingsOf(c)[0]; if (!L) { syncBadge(); return; }
   finds.unshift({ L, at: Date.now() }); if (finds.length > 40) finds.pop();
   mapUI.pulse = { L, t0: performance.now() };
-  if (srcOn(L.src)) {
+  if (srcOn(L.src) && feedPass(L)) {
     mapUI.feedIn = { t0: performance.now() };
     if (inFeed()) renderFeed(L.id);
     if (srcState.alerts && scoreOf(L).score >= 75 && rooms.at !== "feed") toast(`Phone alert: ${c.name} ${short(L.price)} on ${openOn(L)}, ${pctOf(L)}% under market.`, () => openListing(L.id), "Open");
@@ -247,8 +283,8 @@ function feedArrived(c) {
 }
 // The list view's Feed section: the same listings, as rows a screen reader reads.
 function feedListHTML() {
-  const list = feedList(), now = Date.now();
-  return `<section data-sec="feed"><h2>Feed</h2><p class="lsub">${list.length ? `Every listing found for the cards you chase, newest first: ${plural1(list.length, "listing")}.` : "Every listing found for the cards you chase lands here. Nothing yet."}</p><ul>${list.map((L) => {
+  const list = feedSorted(feedList()), now = Date.now(), order = { newest: "newest first", best: "best deals first", price: "cheapest first", pct: "most under market first" }[feedView.sort];
+  return `<section data-sec="feed"><h2>Feed</h2><p class="lsub">${list.length ? `Every listing found for the cards you chase, ${order}: ${plural1(list.length, "listing")}. Sort and filter it in the Feed.` : "Every listing found for the cards you chase lands here. Nothing yet."}</p><ul>${list.map((L) => {
     const c = L.c, st = sets[c.si];
     return `<li><button class="lrow" data-listing="${esc(L.id)}"><span class="lname">${isNewL(L) ? "NEW. " : ""}${esc(c.name)}</span><span class="lmeta">${esc(st.name)} #${esc(c.num)}. ${esc(whereText(L))}, ${agoText(L.seen, now)}. Score ${scoreOf(L).score}.</span><span class="lprice"><b class="ldeal">${money(L.price)}</b></span><span class="lstate">Market ${money(c.price)}, ${pctOf(L)}% under</span></button></li>`;
   }).join("")}</ul></section>`;
@@ -331,4 +367,4 @@ function toCard(c) {
 }
 
 // Debug builds only: the tests' hook sees the Feed.
-setTimeout(() => { if (window.__w) Object.defineProperties(window.__w, { feedList: { value: () => feedList() }, listingsOf: { value: listingsOf }, openListing: { value: openListing }, isNewL: { value: isNewL }, scoreOf: { value: scoreOf }, srcState: { value: srcState }, arrive: { value: arrive }, feedNewCount: { value: feedNewCount }, lsOpen: { get: () => lsOpen } }); }, 0);
+setTimeout(() => { if (window.__w) Object.defineProperties(window.__w, { feedList: { value: () => feedList() }, listingsOf: { value: listingsOf }, openListing: { value: openListing }, isNewL: { value: isNewL }, scoreOf: { value: scoreOf }, srcState: { value: srcState }, arrive: { value: arrive }, feedNewCount: { value: feedNewCount }, lsOpen: { get: () => lsOpen }, feedView: { get: () => feedView }, setFeedView: { value: setFeedView }, feedSorted: { value: feedSorted }, pctOf: { value: pctOf } }); }, 0);
