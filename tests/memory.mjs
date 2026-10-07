@@ -51,11 +51,24 @@ for (let k = 0; k < ROUNDS; k++) {
   }
   per.push(await bytes());
 }
+// The trade binder, full frame (round 22 polish): its pages are kept as canvases the size of the screen, so a visit
+// that turns through the pages reuses them (resized on a turn of the phone) rather than making more.
+const binder = [];
+if (rooms && (await p.evaluate(() => Boolean(__w.openBinder)))) {
+  for (let k = 0; k < 3; k++) {
+    await p.evaluate(() => __w.toMap()); await wait(900); await p.evaluate(() => __w.openPlace("trade")); await wait(900);
+    await p.evaluate(() => __w.openBinder()); await wait(1200);
+    for (let j = 0; j < 4; j++) { await p.evaluate(() => __w.tbTurn(1)); await wait(600); }
+    await p.evaluate(() => __w.closeBinder()); await wait(1000);
+    binder.push(await bytes());
+  }
+}
 const last = per[per.length - 1], grew = last.mb - per[0].mb, made = last.n - per[0].n;
 console.log(`canvas memory at dpr 3: ${atLoad.mb.toFixed(1)} MB at load (${atLoad.n} canvases); after ${ROUNDS} rounds through every room ${per.map((x) => x.mb.toFixed(1)).join(", ")} MB (${last.n} canvases, ${made} new after the first round)`);
 const bad = report([
   [`every canvas together stays under ${BUDGET} MB at dpr 3 (${last.mb.toFixed(1)} MB)`, last.mb < BUDGET],
   [`going in and out of the rooms again makes no new canvases (${made} new, ${grew.toFixed(1)} MB)`, made === 0 && grew < 0.5],
+  ...(binder.length ? [[`the trade binder, full frame, makes no new canvases after its first visit (${binder.map((x) => `${x.n}`).join(", ")} canvases; its pages ${(binder[0].mb - last.mb).toFixed(1)} MB at dpr 3)`, binder[binder.length - 1].n === binder[0].n && binder[binder.length - 1].mb - binder[0].mb < 0.5]] : []),
   [`no page errors${errors.length ? `: ${errors[0]}` : ""}`, !errors.length],
 ]);
 await browser.close();

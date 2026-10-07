@@ -217,7 +217,7 @@ function albumHeader(g) {
   const f = finishOf(g); if (!f) return;
   const W = frameW(), btn = { x: W - 128, y: 2, w: 128, h: 22, shelf: true };
   if (f.put) { g.popChips = null; g.seg = null; g.popH = 30; g.hdrBtn = btn; g.hdrBtn2 = onShelf(g) ? { x: W - 128 - 8 - 112, y: 2, w: 112, h: 22, away: true } : null; } // on its first day: skip the wait
-  else if (g.set) g.hdrBtn = { ...btn, y: 4 };
+  else if (g.set) { g.hdrBtn = { ...btn, y: landPhone() ? g.hdrBtn.y : 4 }; if (g.hdrBtn2?.y === g.hdrBtn.y) g.hdrBtn2.x = g.hdrBtn.x - 8 - g.hdrBtn2.w; } // on its side, on the title's line beside Remove set
   else g.hdrBtn2 = { ...btn, x: W - 118 - 8 - 128 };
 }
 // Back to the wall: the album closes into a panel among the others (the binder stays packed for the flight). Put on

@@ -25,6 +25,7 @@ function setChrome() {
   markBtn.hidden = view !== "set" || marking;
   document.getElementById("where").textContent = rooms.map ? "Rooms: Feed, Chase, Trade, Trophies, Source" : tbl.on ? `Trade with ${tbl.t.name}` : view === "set" && state.g ? state.g.name : bnd.on ? (bnd.show ? "Trade binder, Show mode" : "Trade binder") : room.on ? "Trophies" : rooms.at === "chase" ? "" : ROOM_NAME[rooms.at];
   if (marking && view !== "set") leaveMark();
+  if ((rooms.map || rooms.at !== "chase") && !filterMenu.hidden) setFilterMenu(false); // Filters are the wall's; another room hides them (styles.css)
   syncPages(); syncShelfPad(); updateCount(); syncBadge();
 }
 // Opening and closing a group are one transition with a position, q (0 is the mosaic, 1 the binder). A tap plays it;

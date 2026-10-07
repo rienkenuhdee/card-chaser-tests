@@ -77,7 +77,7 @@ function payFinish(skip) {
   paid[c.id] = amount; persistChase(); drawList();
   const undo = () => { delete paid[c.id]; setOwned(c, false, { quiet: true }); persistChase(); };
   const left = cards.filter(isChase).length;
-  toast(`${c.name} got${amount ? ` for ${money(amount)}` : ""}.${left ? ` ${left} to find.` : " That's all of them."}`, undo);
+  toast(`${c.name} got${amount ? ` for ${money(amount)}` : ""}.${left ? ` ${left} to go.` : " That's all of them."}`, undo);
 }
 document.getElementById("pay-keys").addEventListener("click", (e) => { const b = e.target.closest("[data-k]"); if (b) payKey(b.dataset.k); });
 paySkip.onclick = () => payFinish(true);

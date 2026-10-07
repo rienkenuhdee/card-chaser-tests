@@ -6,13 +6,22 @@ const stepX = (g) => (tight(g) ? TW : TW + GAP) * g.sz, stepY = (g) => (tight(g)
 function binderLayout(g) {
   // As many across as stay readable: five on a phone, up to ten on a wide screen; bigger cards, fewer across.
   const base = clamp(Math.floor(frameW() / 74), 4, COLS);
-  g.cols = Math.max(1, Math.floor(base / g.sz));
-  g.x = 0; g.y = 0;
-  g.w = g.cols * stepX(g) - (tight(g) ? 0 : GAP * g.sz);
   // The title block is a fixed height on screen, whatever the card size: 132px at the framed zoom (less on a phone on
   // its side, where height is what's short).
-  if (g.set) popLayout(g); else if (g.natdex) dexLayout(g); else { g.popChips = null; g.popH = g.chase ? (landPhone() ? 36 : 30) : 0; g.hdrBtn = g.chase ? { x: frameW() - 118, y: landPhone() ? 8 : 2, w: 118, h: 22 } : null; g.hdrBtn2 = null; } // a chase's header: a row with Remove chase
+  if (g.set) popLayout(g); else if (g.natdex) dexLayout(g); else { g.popChips = null; g.popH = g.chase ? 30 : 0; g.hdrBtn = g.chase ? { x: frameW() - 118, y: 2, w: 118, h: 22 } : null; g.hdrBtn2 = null; } // a chase's header: a row with Remove chase
   albumHeader(g); // a finished group's header: Back to the wall, or Put on the shelf
+  g.cols = Math.max(1, Math.floor(base / g.sz));
+  // On a phone on its side a binder opens on at least three rows (round 22 polish): more across, smaller, until the
+  // header and three rows fit between the top row and the bottom edge.
+  if (landPhone()) {
+    const fit = vh - topPad() - 6 - (SAFE.bottom + 18) - headH() - (g.popH || 0), n = g.cards.length;
+    for (; g.cols < 20; g.cols++) {
+      const rows = Math.min(3, Math.ceil(n / g.cols)), w = g.cols * stepX(g) - (tight(g) ? 0 : GAP * g.sz), s = frameW() / w;
+      if (s * ((rows - 1) * stepY(g) + TH * g.sz) <= fit) break;
+    }
+  }
+  g.x = 0; g.y = 0;
+  g.w = g.cols * stepX(g) - (tight(g) ? 0 : GAP * g.sz);
   g.head = (headH() + (g.popH || 0)) / (frameW() / g.w); // the title block, plus the People chase row in a set
   g.h = g.head + Math.ceil(g.cards.length / g.cols) * stepY(g) - (tight(g) ? 0 : GAP * g.sz);
   g.cards.forEach((c, k) => { c.sz = g.sz; c.col = k % g.cols; c.row = Math.floor(k / g.cols); c.x = c.col * stepX(g); c.y = g.head + c.row * stepY(g); });
@@ -33,9 +42,9 @@ function readSafe() {
   SAFE.left = Math.max(0, r.left || 0); SAFE.right = Math.max(0, vw - (r.right || vw));
 }
 const frameW = () => vw - 24 - SAFE.left - SAFE.right; // a framed binder's width on screen, clear of the notch
-const headH = () => (landPhone() ? 86 : 132); // a binder's title block at the framed zoom (on a phone on its side, as tight as the next medal under the bar allows)
+const headH = () => (landPhone() ? 60 : 132); // a binder's title block at the framed zoom (on a phone on its side: one line of title and count, the bar, and the next medal hanging under it)
 const topPad = () => (landPhone() ? SAFE.top + 62 : 70);
-const botPad = () => { const b = document.body.classList; return landPhone() ? SAFE.bottom + (b.contains("timing") ? 104 : b.contains("marking") ? 74 : 18) : b.contains("timing") ? 160 : 72; };
+const botPad = () => { const b = document.body.classList; return landPhone() ? SAFE.bottom + (b.contains("timing") ? 104 : 18) : b.contains("timing") ? 160 : 72; };
 const LABEL = 40, PG = 6;
 // Ordered strip treemap: groups keep their order (oldest set first), rows fill the width, the rows fill the height.
 // The mosaic scrolls when it needs to: every card gets at least a small tile, so a big collection grows downward

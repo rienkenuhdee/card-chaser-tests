@@ -29,40 +29,59 @@ const plural1 = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 // ----- geometry: a page is three by three pockets, each a card with a line of small type under it -----
 // On a wide screen, and on any phone on its side (round 22), the binder lies open as two facing pages with the rings
-// down the spine between them, the way a real one does; otherwise one page at a time. On a phone on its side the
-// spread takes the whole height: Back and the binder's title sit in the margin at its left, Show mode and the page
-// count in the margin at its right, and Show mode is the same spread, dark.
+// down the spine between them, the way a real one does; otherwise one page at a time. Full frame (round 22 polish,
+// Ryan): the paper fills the screen edge to edge and top to bottom (inside the notch), and the chrome is tucked into
+// the page's own edges. In portrait, Back and Show mode sit on the page's top edge and the dots on its bottom edge,
+// with the pockets spread over the rest like a real page; on its side the pockets hug the spine and each page's outer
+// edge holds what the margins used to (Back and the title at the left, Show mode and the page count at the right).
+// The map's Trade card draws the classic page (full: false), pockets packed.
 const SHOW_BG = "#0B0C0F", SHOW_PAGE = "#15171C", SHOW_SLEEVE = "#22262E", SHOW_LINE = "#2C313B", SHOW_MUTED = "#9AA0AD", SHOW_PICK = "#3BD597";
 function safeInsets() { return SAFE; }
-function tbGeom(show, only = 0) {
+function tbGeom(show, only = 0, full = true) {
   const S = SAFE, flat = landPhone(), spread = only || (flat || (vw >= 820 && vh >= 600) ? 2 : 1), sp = spread === 2 ? 18 : 0; // sp: the spine between the pages
-  const top = flat ? S.top + 10 : show ? S.top + 78 : topPad() + 62, bottom = flat ? S.bottom + 28 : show ? S.bottom + 96 : 112;
   const lh = flat ? 18 : show ? 24 : 22, g = flat ? 6 : show ? 6 : 8, ring = spread === 2 ? 14 : show ? 8 : 20, edge = flat ? 9 : show ? 8 : 10, pad = 8;
-  const side = flat ? 116 : show ? 5 : 10; // the least each margin keeps (on its side: room for Back, the title, Show mode)
-  const availW = (vw - S.left - S.right - side * 2 - sp) / spread, availH = vh - top - bottom;
-  const byW = (availW - ring - edge - g * 2) / 3, byH = ((availH - pad * 2 - g * 2) / 3 - lh) * TW / TH;
+  if (!full) { // the classic page, packed: just its proportions matter (the map's card)
+    const cw = 100, ch = Math.round(cw * TH / TW), pw = ring + cw * 3 + g * 2 + edge, ph = pad * 2 + (ch + lh) * 3 + g * 2;
+    return { show, flat, spread, sp, cw, ch, lh, g, gx: g, gy: g, ring, edge, pad, pw, ph, bx: ring, bxL: edge, by: pad, side: 0, x0: 0, y0: 0, top: 0, pages: [{ x: 0, y: 0 }] };
+  }
+  // The paper: the whole screen, under the notch too; what's on it stays clear of the notch and the home bar. T and B:
+  // the bands at its top and bottom edges for the chrome (the safe area's top and bottom included).
+  const pw = Math.floor((vw - sp) / spread), ph = Math.floor(vh), inX = Math.max(S.left, S.right);
+  const T = S.top + (flat ? 10 : show ? 64 : 66), B = S.bottom + (flat ? 26 : show ? 104 : 34);
+  const side = flat ? 120 : 0; // on its side: each page's outer edge keeps room for the chrome
+  const contentW = pw - ring - edge - (flat ? inX : S.left + S.right), availH = ph - T - B;
+  const byW = (contentW - side - g * 2) / 3, byH = ((availH - g * 2) / 3 - lh) * TW / TH;
   const cw = Math.floor(clamp(Math.min(byW, byH), 36, show ? 230 : 172)), ch = Math.round(cw * TH / TW);
-  const pw = ring + cw * 3 + g * 2 + edge, ph = pad * 2 + (ch + lh) * 3 + g * 2;
-  const total = pw * spread + sp, x0 = Math.round(S.left + (vw - S.left - S.right - total) / 2), y0 = Math.round(top + Math.max(0, (availH - ph) / 2));
-  return { show, flat, spread, sp, cw, ch, lh, g, ring, edge, pad, pw, ph, x0, y0, top, pages: Array.from({ length: spread }, (_, j) => ({ x: x0 + j * (pw + sp), y: y0 })) };
+  const blockW = cw * 3 + g * 2, blockH = (ch + lh) * 3 + g * 2, exW = Math.max(0, contentW - side - blockW), exH = Math.max(0, availH - blockH);
+  let gx = g, gy = g, bx, bxL, by;
+  if (flat) { bx = ring + 4; bxL = pw - ring - 4 - blockW; by = T + exH / 2; } // hugging the spine; the outer edge is the chrome's
+  else { // spread over the page like a real one: a share of what's spare between the rows, the rest around them
+    const ax = Math.min(exW / 4, cw * 0.3), ay = Math.min(exH / 4, ch * 0.3);
+    gx = g + ax; gy = g + ay;
+    const bw = blockW + ax * 2, bh = blockH + ay * 2;
+    bx = S.left + ring + (contentW - bw) / 2; bxL = S.left + edge + (contentW - bw) / 2; by = T + (availH - bh) / 2;
+  }
+  bx = Math.round(bx); bxL = Math.round(bxL); by = Math.round(by);
+  const sideW = flat ? Math.floor(contentW - blockW - 4) : 0; // the outer edge's width inside the notch, for the chrome that stands in it
+  return { show, flat, spread, sp, cw, ch, lh, g, gx, gy, ring, edge, pad, pw, ph, T, B, bx, bxL, by, side: sideW, x0: 0, y0: 0, top: 0, pages: Array.from({ length: spread }, (_, j) => ({ x: j * (pw + sp), y: 0 })) };
 }
 const tbSpreadRect = (G) => ({ x: G.x0, y: G.y0, w: G.pw * G.spread + G.sp, h: G.ph });
 // On a two-page spread the rings sit at the spine: a left page has them on its right.
 const tbLeft = (G, i) => G.spread === 2 && i % 2 === 0;
 function tbPocket(G, i, k) {
-  const ox = tbLeft(G, i) ? G.edge : G.ring;
-  return { x: ox + (k % 3) * (G.cw + G.g), y: G.pad + Math.floor(k / 3) * (G.ch + G.lh + G.g), w: G.cw, h: G.ch };
+  const ox = tbLeft(G, i) ? G.bxL : G.bx;
+  return { x: ox + (k % 3) * (G.cw + G.gx), y: G.by + Math.floor(k / 3) * (G.ch + G.lh + G.gy), w: G.cw, h: G.ch };
 }
 const bnd = { on: false, q: 0, anim: null, closing: false, vi: 0, turn: 0, tAnim: null, show: false, sq: 0, sa: null, prices: true, picks: new Set(), L: null, pinch: null, drag: null, rest: false, swallow: false, press: null, cache: new Map() };
 const tbViews = () => Math.max(1, Math.ceil(tbPageCount() / (bnd.L?.spread || 1)));
 const tbCan = (d) => bnd.vi + d >= 0 && bnd.vi + d < tbViews();
 // The margin beside the spread on a phone on its side, for the bars that stand in it.
-function tbSides(G) { document.body.style.setProperty("--tb-side", `${Math.max(90, Math.floor(G.x0 - SAFE.left - 22))}px`); }
+function tbSides(G) { document.body.style.setProperty("--tb-side", `${Math.max(90, Math.floor(G.side - 16))}px`); } // a page's outer edge, inside the paper
 
 // ----- painting a page (once, into the corner of the wall's canvas, then copied offscreen and kept) -----
 function tbKey(i, G) {
   const items = tbList().slice(i * 9, i * 9 + 9);
-  return `${copiesKey}|${G.show}|${G.pw}|${G.ph}|${G.cw}|${G.lh}|${G.spread}|${dpr}|${theme.bg}|${theme["panel-solid"]}|${theme.gold}|${bnd.prices}|${i}|${items.map((c) => `${c.id}.${sparesOf(c)}.${c.away ? 1 : 0}.${artMark(c, Math.min(G.cw, 108))}.${G.show && bnd.picks.has(c.id) ? 1 : 0}`).join(",")}`;
+  return `${copiesKey}|${G.show}|${G.pw}|${G.ph}|${G.cw}|${G.lh}|${G.spread}|${G.bx}|${G.bxL}|${G.by}|${G.gx}|${G.gy}|${dpr}|${theme.bg}|${theme["panel-solid"]}|${theme.gold}|${bnd.prices}|${i}|${items.map((c) => `${c.id}.${sparesOf(c)}.${c.away ? 1 : 0}.${artMark(c, Math.min(G.cw, 108))}.${G.show && bnd.picks.has(c.id) ? 1 : 0}`).join(",")}`;
 }
 function tbPaint(i, G) {
   const items = tbList().slice(i * 9, i * 9 + 9), show = G.show, small = G.lh <= 18;
@@ -117,7 +136,7 @@ function tbPaint(i, G) {
       else { ctx.fillStyle = muted; font(500, small ? 10.5 : 11.5); ctx.fillText(fitText("No takers yet", r.w - pw), r.x, ly); }
     }
   }
-  if (G.spread === 1) { ctx.textAlign = "center"; ctx.fillStyle = muted; font(600, 10); ctx.fillText(String(i + 1), G.ring / 2, G.ph - 8); } // the page number, by the rings (a spread has its folios under the pages)
+  if (G.spread === 1 && !show) { ctx.textAlign = "center"; ctx.fillStyle = muted; font(600, 10); ctx.fillText(String(i + 1), G.ring / 2, G.ph - (G.B ? G.B / 2 - 4 : 8)); } // the page number, by the rings (a spread has its folios under the pages)
 }
 // The binder's front cover: green board (the Trade room's colour) with a darker spine at its ring side, the title in
 // gold. The same object as the closed binder on the Trade room's page, which opens into the pages.
@@ -146,12 +165,13 @@ function tbEnsure(i, G) {
   const key = i === -1 ? `cover|${G.pw}|${G.ph}|${dpr}|${theme.dark ? 1 : 0}|${tbList().length}` : tbKey(i, G), slot = i === -1 ? "cover" : `${G.show ? "s" : "o"}${i}`, had = bnd.cache.get(slot), now = performance.now();
   if (had?.key === key) { had.used = now; return; }
   if (i === -1) tbCoverPaint(G); else tbPaint(i, G);
-  const W = Math.ceil(G.pw * dpr), H = Math.ceil(G.ph * dpr);
+  const W = Math.ceil(G.pw * dpr), H = Math.ceil(G.ph * dpr), most = 3 * G.spread + 1; // a spread mid-turn needs its pages either side, and the cover
   let cv = had?.cv;
-  if (!cv || cv.width !== W || cv.height !== H) { cv = document.createElement("canvas"); cv.width = W; cv.height = H; }
+  if (!cv && bnd.cache.size >= most) { const old = [...bnd.cache].filter((e) => e[0] !== "cover" || slot === "cover").sort((a, b) => a[1].used - b[1].used)[0]; if (old) { cv = old[1].cv; bnd.cache.delete(old[0]); } } // the page least lately used gives up its canvas
+  if (!cv) cv = document.createElement("canvas");
+  if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; } // a new size (a turn of the phone, Show mode): the same canvas, resized
   const x = cv.getContext("2d"); x.clearRect(0, 0, W, H); x.drawImage(canvas, 0, 0, W, H, 0, 0, W, H);
-  bnd.cache.set(slot, { key, cv, used: now }); // kept: a spread mid-turn needs six pages, and the cover
-  if (bnd.cache.size > 8) { const old = [...bnd.cache].filter((e) => e[0] !== "cover").sort((a, b) => a[1].used - b[1].used)[0]; bnd.cache.delete(old[0]); }
+  bnd.cache.set(slot, { key, cv, used: now }); // kept, and reused: turning through the binder never makes more canvases
 }
 const tbImg = (i, G) => bnd.cache.get(i === -1 ? "cover" : `${G.show ? "s" : "o"}${i}`)?.cv || null;
 
@@ -192,19 +212,19 @@ function tbDraw(now) {
   let S = tbSpreadRect(G);
   if (bnd.sa) S = lerpRect(bnd.sa.from, S, ease(bnd.sa.k));
   const ha = clamp((q - 0.72) / 0.28, 0, 1);
-  tbHeader(G, ha, sq);
   if (q < 1) tbOpening(G, S, q); else tbPages(G, S);
+  tbHeader(G, ha, sq); // on the paper's edge, over it
   if (bnd.press && !bnd.turn && q >= 1) { const r = tbPocketRect(bnd.press); if (r) { ctx.lineWidth = 2; ctx.strokeStyle = G.show ? "#fff" : theme.ink; rr(r.x - 3, r.y - 3, r.w + 6, r.h + 6, 6); ctx.stroke(); } }
   tbDots(G, S, ha);
   ctx.globalAlpha = 1;
 }
 function tbHeader(G, a, sq) {
   if (a <= 0.01) return;
-  const n = tbList().length, pages = tbPageCount(), v = bnd.vi + 1, x = G.x0 + 2;
+  const n = tbList().length, pages = tbPageCount(), v = bnd.vi + 1, x = SAFE.left + 16;
   const which = G.spread === 2 ? (v * 2 > pages ? `Page ${v * 2 - 1}` : `Pages ${v * 2 - 1} and ${v * 2}`) : `Page ${v}`;
   ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-  if (G.flat) { // in the margin at the spread's left, under Back
-    const mx = SAFE.left + 14, mw = G.x0 - mx - 12; if (mw < 70) return;
+  if (G.flat) { // on the left page's outer edge, under Back
+    const mx = SAFE.left + 14, mw = G.side - 20; if (mw < 70) return;
     let y = SAFE.top + (sq > 0.5 ? 34 : 92);
     ctx.globalAlpha = a; ctx.fillStyle = sq > 0.5 ? "#FFFFFF" : theme.ink; font(800, 19, true);
     for (const l of wrapLines("Trade binder", mw, 2)) { ctx.fillText(l, mx, y); y += 21; }
@@ -213,19 +233,14 @@ function tbHeader(G, a, sq) {
     for (const l of wrapLines(text, mw, 5)) { ctx.fillText(l, mx, y); y += 16; }
     ctx.globalAlpha = 1; return;
   }
-  if (sq < 0.999) {
-    ctx.globalAlpha = a * (1 - sq);
-    const y = topPad() + 26;
-    ctx.fillStyle = theme.ink; font(800, 25, true); ctx.fillText("Trade binder", x, y);
-    ctx.fillStyle = theme.muted; font(500, 13);
-    ctx.fillText(fitText(n ? `${plural1(n, "card")} · ${tbMemo.wanted ? `${tbMemo.wanted} wanted` : "no takers yet"}` : "Empty for now. On a card you have, + adds a spare.", vw - x - 12), x, y + 21);
-  }
+  // Upright, the page's top edge holds Back and Show mode (or, across the table, the prices switch): only Show mode
+  // says where you are, at the left where Back would be.
   if (sq > 0.001) {
     ctx.globalAlpha = a * sq;
-    const y = SAFE.top + 40;
-    ctx.fillStyle = "#FFFFFF"; font(800, 25, true); ctx.fillText("Trade binder", x, y);
-    ctx.fillStyle = SHOW_MUTED; font(500, 13.5);
-    ctx.fillText(fitText(`${which} of ${pages}`, vw - x - 140), x, y + 21); // what to do is in the bar at the bottom
+    const y = SAFE.top + 30;
+    ctx.fillStyle = "#FFFFFF"; font(800, 19, true); ctx.fillText("Trade binder", x, y);
+    ctx.fillStyle = SHOW_MUTED; font(500, 12.5);
+    ctx.fillText(fitText(`${which} of ${pages}`, vw - x - 150), x, y + 18);
   }
   ctx.globalAlpha = 1;
 }
@@ -324,13 +339,13 @@ function tbOpening(G, S, q) {
 }
 function tbDots(G, S, a) {
   const views = tbViews(); if (views < 2 || a <= 0.01) return;
-  const y = S.y + S.h + (G.flat ? 15 : 16), on = G.show ? "#FFFFFF" : theme.ink, off = G.show ? "#3A3F4A" : theme["slot-line"], cx = S.x + S.w / 2;
+  const k = S.h / G.ph, y = S.y + S.h - (G.show && !G.flat ? G.B - 14 : G.B / 2) * k, on = G.show ? "#FFFFFF" : theme.ink, off = G.show ? "#3A3F4A" : theme["slot-line"], cx = S.x + S.w / 2; // on the page's bottom edge
   ctx.globalAlpha = a;
   if (views > 24) { ctx.textAlign = "center"; ctx.fillStyle = G.show ? SHOW_MUTED : theme.muted; font(600, 12); ctx.fillText(`${bnd.vi + 1} of ${views}`, cx, y + 4); ctx.globalAlpha = 1; return; }
-  if (G.spread === 2) { // the folios, under each page's outer corner
+  if (G.spread === 2 && !G.show) { // the folios, at each page's outer corner (across the table, the bar has the corners)
     const pages = tbPageCount(), l = bnd.vi * 2 + 1; ctx.fillStyle = G.show ? SHOW_MUTED : theme.muted; font(600, 11);
-    ctx.textAlign = "left"; ctx.fillText(String(l), S.x + 4, y + 4);
-    if (l + 1 <= pages) { ctx.textAlign = "right"; ctx.fillText(String(l + 1), S.x + S.w - 4, y + 4); }
+    ctx.textAlign = "left"; ctx.fillText(String(l), S.x + SAFE.left + 16, y + 4);
+    if (l + 1 <= pages) { ctx.textAlign = "right"; ctx.fillText(String(l + 1), S.x + S.w - SAFE.right - 16, y + 4); }
     ctx.textAlign = "left";
   }
   const gap = 12, x0 = cx - ((views - 1) * gap) / 2, cur = bnd.vi + clamp(bnd.turn, -1, 1);

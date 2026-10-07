@@ -139,6 +139,9 @@ for (const dpr of [1, 2]) {
   let cv = await cover(); R.push(["the Trade room shows the binder's cover", Boolean(cv) && cv.y > 60 && cv.y < 400 && /cards on/.test(cv.text) && (await bd()).n > 18]);
   const openIt = async () => { await p.click("#pt-cover"); await wait(900); };
   await openIt(); R.push(["tapping the cover opens the binder", (await bd()).on && (await bd()).q === 1]);
+  // Full frame (round 22 polish): the page fills the screen; Back and Show mode sit on its top edge, clear of the pockets.
+  const ff = await p.evaluate(() => { const G = __w.bnd.L, c = __w.tbList()[__w.bnd.vi * 9], r = __w.tbPocketRect(c), sh = document.getElementById("bb-show").getBoundingClientRect(), bk = document.getElementById("back").getBoundingClientRect(); return { cover: (G.pw * G.ph * G.spread) / (innerWidth * innerHeight), top: r.y, chrome: Math.max(sh.bottom, bk.bottom) }; });
+  R.push([`the open binder's page fills the screen (${Math.round(ff.cover * 100)}%), its chrome clear of the pockets`, ff.cover >= 0.9 && ff.chrome <= ff.top]);
   await v.drag(300, 450, 450, 120, -200); await wait(700); R.push(["a sideways flick turns the page", (await bd()).vi === 1]);
   await v.drag(100, 450, 450, 120, 200); await wait(700); R.push(["a flick the other way turns it back", (await bd()).vi === 0]);
   await p.click("#back"); await wait(900); R.push(["back closes the binder to the Trade room", !(await bd()).on && (await p.evaluate(() => __w.rooms.at === "trade" && !__w.rooms.map))]);
@@ -304,6 +307,13 @@ for (const dpr of [1, 2]) {
     await p.reload({ waitUntil: "load" }); await wait(1200);
     s = await fl();
     R.push(["every choice is kept on the device", s.show === "missing" && s.mode === "rarity" && s.order === "price" && s.corder === "dear" && s.chip === "2 filters"]);
+    // Trophies and back (round 22 polish): the trophy room lives on the set wall, but leaving it gives the wall back
+    // exactly as it was, Group by and all.
+    await p.evaluate(() => __w.goRoom("medal")); await wait(1500);
+    const inTrophies = await p.evaluate(() => ({ room: __w.room.on, filter: getComputedStyle(document.getElementById("filter")).display }));
+    await p.evaluate(() => __w.goRoom("chase")); await wait(1500);
+    const backFrom = await fl();
+    R.push([`opening Trophies and coming back keeps Group by (${backFrom.mode}, ${backFrom.chip})`, inTrophies.room && backFrom.mode === "rarity" && backFrom.show === "missing" && backFrom.chip === "2 filters"]);
     await p.evaluate(() => document.getElementById("to-list").click()); await wait(400);
     const lv = await p.evaluate(() => { const rows = [...document.querySelectorAll("#list-body section:not([data-sec]) [data-i]")]; return { n: rows.length, owned: rows.filter((r) => r.getAttribute("aria-pressed") === "true").length, h: [...document.querySelectorAll("#list-body h2")].map((h) => h.textContent).slice(1, 3).join(", ") }; });
     await p.evaluate(() => document.getElementById("to-wall").click()); await wait(400);
@@ -315,6 +325,13 @@ for (const dpr of [1, 2]) {
     let F = await feedRows();
     const inOrder = (rows, f) => rows.every((r, k) => !k || f(rows[k - 1], r));
     R.push([`the Feed starts newest first, damaged copies hidden as in production (${F.rows.length} of ${F.all})`, F.rows.length > 10 && inOrder(F.rows, (a, b) => a.seen >= b.seen) && F.rows.every((r) => r.cond !== "HP") && F.rows.length === F.list && (F.all === F.rows.length || /hidden/.test(F.hidden))]);
+    const cond = await p.evaluate(() => { const s = document.getElementById("pf-cond"); return s.options[s.selectedIndex].textContent; });
+    R.push([`the Feed's default condition says what it hides ("${cond}")`, cond !== "Any condition" && /damaged/i.test(cond)]);
+    // Filters are the wall's: in every room but Chase the button is gone (search stays: it takes you to the wall).
+    const fbtn = [];
+    for (const id of ["feed", "trade", "medal", "source", "chase"]) { await p.evaluate((id) => __w.goRoom(id), id); await wait(1300); fbtn.push([id, await p.evaluate(() => getComputedStyle(document.getElementById("filter")).display !== "none"), await p.evaluate(() => getComputedStyle(document.getElementById("search")).display !== "none")]); }
+    R.push([`Filters shows only in Chase; search in every room (${fbtn.map(([id, f]) => `${id} ${f ? "on" : "off"}`).join(", ")})`, fbtn.every(([id, f, q]) => f === (id === "chase") && q)]);
+    await p.evaluate(() => __w.goRoom("feed")); await wait(1300);
     for (const [v, f] of [["best", (a, b) => a.score >= b.score], ["price", (a, b) => a.price <= b.price], ["pct", (a, b) => a.pct >= b.pct]]) {
       await p.select("#pf-sort", v); await wait(250); F = await feedRows();
       R.push([`the Feed sorts by ${v}`, F.rows.length > 10 && inOrder(F.rows, f)]);
@@ -322,7 +339,7 @@ for (const dpr of [1, 2]) {
     await p.select("#pf-cond", "NM"); await wait(250); F = await feedRows();
     const nm = F;
     await p.select("#pf-cond", "any"); await wait(250); F = await feedRows();
-    R.push([`Near Mint keeps only NM and unstated titles (${nm.rows.length}); Damaged too brings every listing back (${F.rows.length})`, nm.rows.length < F.rows.length && nm.rows.every((r) => !r.cond || r.cond === "NM") && /hidden by the condition you picked/.test(nm.hidden) && F.rows.length === F.all && !F.hidden && F.list === F.rows.length]);
+    R.push([`Near Mint keeps only NM and unstated titles (${nm.rows.length}); Any, damaged too brings every listing back (${F.rows.length})`, nm.rows.length < F.rows.length && nm.rows.every((r) => !r.cond || r.cond === "NM") && /hidden by the condition you picked/.test(nm.hidden) && F.rows.length === F.all && !F.hidden && F.list === F.rows.length]);
     await p.select("#pf-cond", "LP"); await wait(200);
     await p.reload({ waitUntil: "load" }); await wait(1200); await p.evaluate(() => __w.goRoom("feed")); await wait(1000);
     const fv = await p.evaluate(() => ({ ...__w.feedView, sel: document.getElementById("pf-sort").value }));

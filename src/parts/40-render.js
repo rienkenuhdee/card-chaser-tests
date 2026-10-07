@@ -310,18 +310,29 @@ function drawHeader(st, now, C = cam, ox = 0, alpha = 1) {
   const owned = ownedNow(st.cards), n = st.cards.length, f = finishOf(st);
   ctx.globalAlpha = alpha * (state.focus ? 1 - state.dimAll * 0.7 : 1);
   ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-  const title = clamp(34 * k, 16, 64), sub = clamp(14 * k, 10, 24);
+  // On a phone on its side the title and its line share one line (buttons at its right), and the bar sits close under.
+  const flat = landPhone(), title = clamp((flat ? 24 : 34) * k, 16, 64), sub = clamp(14 * k, 10, 24), barY = sy + hh * (flat ? 0.57 : 0.82);
+  let roomW = sw; if (flat) for (const b of [st.hdrBtn, st.hdrBtn2]) if (b && b.y < 0) roomW = Math.min(roomW, (b.x - 12) * k);
   ctx.fillStyle = theme.ink; font(800, title, true);
-  ctx.fillText(fitText(f ? trophyName(st) : st.name, sw), sx, sy + hh * 0.5);
+  const name = fitText(f ? trophyName(st) : st.name, roomW), nameW = flat ? textW(name) + 10 * k : 0;
+  ctx.fillText(name, sx, sy + hh * (flat ? 0.45 : 0.5));
   ctx.fillStyle = theme.muted; font(500, sub); // the count is in the line, and the bar under it shows how far (no percent besides)
   // Finished: when, and what it's worth. Otherwise the group's own line.
   const line = state.time ? `${owned} of ${n} by ${monthOf(state.t)}` : f ? `Finished ${dayOf(f.at)}, worth ${money(worthOf(st.base || st.cards))}.${f.put ? "" : " On the wall."}` : st.sub() + orderNote(st);
-  ctx.fillText(fitText(line, sw), sx, sy + hh * 0.72);
-  drawBar(st, sx, sy + hh * 0.82, sw, Math.max(1.5, 3 * k), now, k);
-  drawNextPin(st, sx, sy + hh * 0.82, sw, Math.max(1.5, 3 * k), now, k); // the next medal to earn, at its point on the bar
-  if (st.natdex && !f?.put && k >= 0.3) drawDexRow(st, sx, sy + hh, k, ctx.globalAlpha); // prints, type, regions
-  if (st.popChips) drawPopRow(st, sx, sy + hh, k, ctx.globalAlpha);
-  else if ((st.chase || f) && k >= 0.3) { for (const b of [st.hdrBtn, st.hdrBtn2]) if (b) drawHdrBtn(st, b, sx, sy + hh + b.y * k, k, ctx.globalAlpha); ctx.textBaseline = "alphabetic"; }
+  if (!flat) ctx.fillText(fitText(line, sw), sx, sy + hh * 0.72);
+  else if (roomW - nameW > 40 * k) ctx.fillText(fitText(line, roomW - nameW), sx + nameW, sy + hh * 0.45);
+  drawBar(st, sx, barY, sw, Math.max(1.5, 3 * k), now, k);
+  drawNextPin(st, sx, barY, sw, Math.max(1.5, 3 * k), now, k); // the next medal to earn, at its point on the bar
+  // The header's buttons and chips are for the framed binder: zoomed in toward a card they fade rather than grow
+  // past legible (and behind the top strip).
+  const ca = headChrome(k), a0 = ctx.globalAlpha;
+  if (ca > 0) {
+    ctx.globalAlpha = a0 * ca;
+    if (st.natdex && !f?.put && k >= 0.3) drawDexRow(st, sx, sy + hh, k, ctx.globalAlpha); // prints, type, regions
+    if (st.popChips) drawPopRow(st, sx, sy + hh, k, ctx.globalAlpha);
+    else if ((st.chase || f) && k >= 0.3) { for (const b of [st.hdrBtn, st.hdrBtn2]) if (b) drawHdrBtn(st, b, sx, sy + hh + b.y * k, k, ctx.globalAlpha); ctx.textBaseline = "alphabetic"; }
+    ctx.globalAlpha = a0;
+  }
   if (st.burst) {
     const p = (now - st.burst) / 1400;
     if (p < 1) {
@@ -333,6 +344,8 @@ function drawHeader(st, now, C = cam, ox = 0, alpha = 1) {
   }
   ctx.globalAlpha = 1;
 }
+// The header's chrome at a zoom (1 = framed): whole up to 1.3 times framed, gone by 1.8 (a card up close is 3 or more).
+const headChrome = (k) => clamp((1.8 - k) / 0.5, 0, 1);
 const ownedNow = (list) => (state.time ? list.filter((c) => c.owned && c.got && c.got <= state.t).length : ownedIn(list));
 
 // A mosaic panel: the group's name and how it's going, over a field of its cards.
@@ -340,7 +353,7 @@ function panelStat(g) {
   if (picking()) return "\u2003\u2003"; // the tick's place
   const n = g.cards.length, owned = ownedNow(g.cards);
   if (state.matches) { const m = g.cards.filter((c) => state.matches.has(rootOf(c))).length; return m ? `${m} found` : ""; }
-  if (state.lens === "chase") { const d = g.cards.filter(isChase).length; return d ? `${d} to find` : "Nothing to chase"; }
+  if (state.lens === "chase") { const d = g.cards.filter(isChase).length; return d ? `${d} to go` : "Nothing to chase"; } // "to go", as Show: Missing and the sets say it
   if (state.show === "missing") return `${n - owned} to go`;
   if (state.value) return short(worthOf(g.cards));
   return `${owned}/${n}`;

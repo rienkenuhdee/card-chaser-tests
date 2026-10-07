@@ -97,7 +97,7 @@ function listingsOf(c) {
 }
 // ----- the Feed's own filters and sort (kept on this device): production's condition and damaged rules -----
 // Condition filters by what a listing's title states (a title that doesn't say still shows, as in production). A
-// damaged or heavily played copy stays hidden unless you pick "Damaged too" (production's separate switch; it only
+// damaged or heavily played copy stays hidden unless you pick "Any, damaged too" (production's separate switch; it only
 // matters with any condition, so it's the last choice of the same picker). The filter counts everywhere the Feed is
 // counted (the rooms button, the map), like a source switched off. The sort is only how the page reads.
 const feedView = { sort: "newest", cond: "" }; // cond: "" any but damaged, NM, LP or MP and better, "any" damaged too

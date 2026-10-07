@@ -124,7 +124,9 @@ function copyTile(c, r, a) {
   ctx.globalAlpha = a;
   const marked = marking && session.has(c) && session.get(c) !== c.owned;
   const size = r.w >= 90 ? 13 : 10.5, inset = Math.max(3, r.w * 0.05);
-  countPill(n, spare, r.x + inset + (marked ? clamp(r.w * 0.11, 5, 12) * 2 + 4 : 0), r.y + inset, size);
+  // At the top left of the art, under the name band (a card prints its name along the top; the drawn face's window
+  // starts there too), so the count never covers the name.
+  countPill(n, spare, r.x + inset + (marked ? clamp(r.w * 0.11, 5, 12) * 2 + 4 : 0), r.y + Math.max(inset, r.h * 0.12), size);
 }
 function drawCopies() {
   if (state.lens !== "have" || state.time || state.trans || shuffle || room.on || tbl.on || bnd.on || preview) return;

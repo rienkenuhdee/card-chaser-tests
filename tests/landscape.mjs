@@ -42,6 +42,19 @@ const turn = async (p, width, height) => {
 const rect = (p, sel) => p.evaluate((sel) => { const el = document.querySelector(sel); if (!el) return null; const r = el.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height, r: r.right, b: r.bottom }; }, sel);
 const inside = (r, W, H, l = 0, rt = 0) => r && r.x >= l - 1 && r.r <= W - rt + 1 && r.y >= -1 && r.b <= H + 1;
 const R = [];
+// A binder on a phone on its side opens on at least three rows of cards, all of them above the bottom edge, and Mark's
+// bar (in the top row, where the lens bar was) clear of them (round 22 polish).
+async function rowsCheck(p, tag) {
+  await p.evaluate(() => __w.enterGroup(__w.groupsNow.find((g) => g.set && g.set.id === "base1"))); await wait(1400);
+  const rows = () => p.evaluate(() => { const g = __w.state.g, C = __w.cam, r = [0, 1, 2].map((k) => { const c = g.cards.find((x) => x.row === k); return c && { top: (c.y - C.y) * C.s, bot: (c.y + 88 * c.sz - C.y) * C.s }; }); return { r, cols: g.cols, vh: innerHeight }; });
+  const a = await rows();
+  R.push([`${tag}a set opens showing three rows of cards (${a.cols} across, the third ending at ${Math.round(a.r[2]?.bot)} of ${a.vh})`, a.r.every(Boolean) && a.r[2].bot <= a.vh - 4 && a.r[0].top > 60]);
+  await p.click("#mark"); await wait(800);
+  const b = await rows(), bar = await rect(p, "#markbar");
+  R.push([`${tag}in Mark the bar stands clear of those three rows`, Boolean(bar) && b.r[2].bot <= a.vh - 4 && (bar.b <= b.r[0].top || bar.y >= b.r[2].bot)]);
+  await p.click("#m-done"); await wait(400);
+  await p.click("#back"); await wait(1100);
+}
 
 // ----- the wall, a set, a card, on a phone on its side with a notch at each side -----
 {
@@ -55,6 +68,9 @@ const R = [];
   const set = () => p.evaluate((n) => { const g = __w.state.g, C = __w.cam, l = (g.x - C.x) * C.s, r = (g.x + g.w - C.x) * C.s; return { view: __w.view, name: g?.name, l, r, s: C.s, fit: (innerWidth - 24 - 2 * n) / g.w, top: (g.y - C.y) * C.s }; }, NOTCH);
   const s1 = await set();
   R.push(["a set opens framed between the notches", s1.view === "set" && Math.abs(s1.s - s1.fit) < 0.01 && s1.l >= NOTCH + 11 && s1.r <= W - NOTCH - 11]);
+  // A set's header on its side is compact: title and count on one line, its switch and People chase on one more.
+  const hd = await p.evaluate(() => { const g = __w.state.g; return { head: g.head * __w.cam.s, chips: g.popChips ? new Set(g.popChips.map((c) => c.y)).size : 0 }; });
+  R.push([`a set's header takes under a third of the height (${Math.round(hd.head)}px), People chase on one line`, hd.head < H / 3 && hd.chips <= 1]);
   const c = await p.evaluate(() => { const g = __w.state.g, C = __w.cam, c = g.cards[2]; return { x: (c.x - C.x) * C.s + 20 * C.s, y: (c.y - C.y) * C.s + 30 * C.s, id: c.id }; });
   await t.tap(c.x, c.y); await wait(1000);
   const card = () => p.evaluate(() => { const c = __w.state.focus; if (!c) return null; const C = __w.cam, x = (c.x - C.x) * C.s, y = (c.y - C.y) * C.s, w = 63 * c.sz * C.s, h = 88 * c.sz * C.s, pr = document.getElementById("panel").getBoundingClientRect(); return { id: c.id, x, y, r: x + w, b: y + h, h, panel: { x: pr.left, r: pr.right, y: pr.top, b: pr.bottom } }; });
@@ -96,6 +112,7 @@ const R = [];
 // ----- the trade binder: two facing pages, a turn under the thumb, Back and a pinch close it -----
 for (const [W, H, notch] of [[844, 390, 0], [932, 430, NOTCH]]) {
   const p = await open(W, H, { notch, setup: imported }), t = await installTouch(p), tag = `${W}x${H}${notch ? " with a notch" : ""}: `;
+  await rowsCheck(p, tag);
   await p.click("#rooms"); await wait(900); await p.evaluate(() => __w.openPlace("trade")); await wait(1100);
   const cov = await rect(p, "#pt-page");
   R.push([`${tag}the Trade room shows the binder closed, its cover`, Boolean(cov) && cov.w > 60 && cov.h > cov.w * 1.3 && (await p.evaluate(() => getComputedStyle(document.getElementById("pt-page")).backgroundImage.includes("gradient")))]);
@@ -108,9 +125,12 @@ for (const [W, H, notch] of [[844, 390, 0], [932, 430, NOTCH]]) {
   let b = await bd();
   R.push([`${tag}the binder opens as two facing pages (it was part way open at ${mid.q.toFixed(2)})`, mid.on && mid.q > 0.05 && mid.q < 1 && b.on && b.q === 1 && b.spread === 2]);
   const P = b.pages;
-  R.push([`${tag}the pages face each other across the spine, whole on screen and clear of the notch`, P[1].x - P[0].r >= 12 && Math.abs(P[0].y - P[1].y) < 1 && P[0].x >= notch + 60 && P[1].r <= W - notch - 60 && P[0].y >= 0 && P[0].b <= H - 20 && P[0].b - P[0].y > H * 0.8]);
+  // Full frame (round 22 polish): the paper fills the screen; the pockets and the chrome stay clear of the notch.
+  const pk = await p.evaluate(() => { const G = __w.bnd.L, list = __w.tbList(), v = __w.bnd.vi * 2, r = (i) => __w.tbPocketRect(list[i]); return { l: r(v * 9), r: r(v * 9 + 9 + 2) }; });
+  const cover = (P[0].r - P[0].x + P[1].r - P[1].x) * (P[0].b - P[0].y) / (W * H);
+  R.push([`${tag}the pages face each other across the spine and fill the screen (${Math.round(cover * 100)}% of it)`, P[1].x - P[0].r >= 12 && Math.abs(P[0].y - P[1].y) < 1 && cover >= 0.9 && P[0].x >= 0 && P[1].r <= W + 1 && P[0].y >= 0 && P[0].b <= H + 1 && pk.l.x >= notch + 8 && pk.r.x + pk.r.w <= W - notch - 8]);
   const back = await rect(p, "#back"), show = await rect(p, "#bb-show");
-  R.push([`${tag}Back and Show mode sit in the margins beside the spread`, inside(back, W, H, notch) && back.r <= P[0].x && inside(show, W, H, 0, notch) && show.x >= P[1].r]);
+  R.push([`${tag}Back and Show mode sit on the pages' outer edges, clear of the pockets and the notch`, inside(back, W, H, notch) && back.r <= pk.l.x && inside(show, W, H, 0, notch) && show.x >= pk.r.x + pk.r.w]);
   // A turn under the thumb: hold a drag from the right page's outer edge to the spine, and the leaf is half over.
   const y = (P[0].y + P[0].b) / 2, x0 = P[1].r - 20, spine = (P[0].r + P[1].x) / 2;
   await p.evaluate(async (a) => {
@@ -133,14 +153,15 @@ for (const [W, H, notch] of [[844, 390, 0], [932, 430, NOTCH]]) {
   await p.click("#bb-show"); await wait(900);
   const sh = await bd();
   R.push([`${tag}Show mode is the same spread, full screen`, sh.show && sh.spread === 2 && Math.abs(sh.pages[0].x - P[0].x) < 1 && Math.abs(sh.pages[0].y - P[0].y) < 1 && (await p.evaluate(() => getComputedStyle(document.querySelector(".top")).opacity === "0"))]);
-  const done = await rect(p, "#sb-done");
-  R.push([`${tag}its Done sits in the margin, clear of the pages`, inside(done, W, H, 0, notch) && done.x >= sh.pages[1].r - 1]);
+  const done = await rect(p, "#sb-done"), last = await p.evaluate(() => { const list = __w.tbList(), c = list[Math.min(list.length - 1, __w.bnd.vi * 18 + 9 + 2)]; return __w.tbPocketRect(c); });
+  R.push([`${tag}its Done sits on the right page's outer edge, clear of the pockets`, inside(done, W, H, 0, notch) && done.x >= last.x + last.w - 1]);
   await p.click("#sb-done"); await wait(700);
   // Turning the phone with the binder open: one page at a time in portrait, two facing on its side, the same page.
   await t.drag(P[1].r - 30, y, y, 110, -260); await wait(800); // to the second spread: pages 3 and 4
   await turn(p, H, W);
   let r1 = await bd();
-  R.push([`${tag}turning to portrait leaves the binder open at the same page, one at a time`, r1.on && r1.spread === 1 && r1.vi === 2 && r1.pages[0].x >= 0 && r1.pages[0].r <= H + 1]);
+  const pc = (r1.pages[0].r - r1.pages[0].x) * (r1.pages[0].b - r1.pages[0].y) / (W * H);
+  R.push([`${tag}turning to portrait leaves the binder open at the same page, one at a time, full frame (${Math.round(pc * 100)}%)`, r1.on && r1.spread === 1 && r1.vi === 2 && r1.pages[0].x >= 0 && r1.pages[0].r <= H + 1 && pc >= 0.9]);
   await turn(p, W, H);
   r1 = await bd();
   R.push([`${tag}and on its side again, the same spread`, r1.on && r1.spread === 2 && r1.vi === 1]);

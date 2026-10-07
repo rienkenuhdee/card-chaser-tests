@@ -143,7 +143,9 @@ function pagePose(T, now = performance.now()) {
 // ----- moving between a room and the map: one transition with a position (q: 0 the room, 1 the map) -----
 // Getting a room ready to be drawn or shown (into it from the map, or sideways from the next one).
 function enterPrep(id) {
-  if (id === "medal") { if (mode !== "set") { arrange("set"); markFilters(); } roomOn(); } // the trophy room is a level of the set wall
+  // The trophy room is a level of the set wall: another grouping steps aside while you're in it and comes back with
+  // the wall when you leave (endRoom), so Trophies never changes Group by.
+  if (id === "medal") { if (mode !== "set" && !room.on) { room.mode = mode; arrange("set"); } roomOn(); }
   else if (id === "feed") feedEnter();
   else if (PAGES[id]) renderPage(id);
 }

@@ -138,7 +138,7 @@ function addChase(r, { quiet = false } = {}) {
   const lit = applyRules();
   tick(8); chasesChanged(lit);
   if (!quiet && r.kind === "natdex") toast(dexAddedText(r), () => removeChase(r, { quiet: true }));
-  else if (!quiet) { const left = ruleLeft(r), d = left.filter((c) => c.deal).length; toast(`${r.label} is on your wall. ${left.length ? `${left.length} to find${d ? `, ${d} with a live deal` : ""}.` : "You have them all."}`, () => removeChase(r, { quiet: true })); }
+  else if (!quiet) { const left = ruleLeft(r), d = left.filter((c) => c.deal).length; toast(`${r.label} is on your wall. ${left.length ? `${left.length} to go${d ? `, ${d} with a live deal` : ""}.` : "You have them all."}`, () => removeChase(r, { quiet: true })); }
   return r;
 }
 function removeChase(r, { quiet = false } = {}) {
@@ -190,7 +190,7 @@ const panelMore = moreLikeEl(panel, ".hint"), popMore = moreLikeEl(offersEl, ".o
 function fillChips(el, c) {
   const list = rulesFor(c), row = el.querySelector(".ml-row"), sl = row.scrollLeft;
   el.list = list; el.hidden = !list.length;
-  row.innerHTML = list.map((x, i) => `<button type="button" class="chip" aria-pressed="${x.on}" data-i="${i}" aria-label="${esc(x.label)}, ${x.n} to find"><b>${esc(x.label)}</b><span>${x.n}</span></button>`).join("");
+  row.innerHTML = list.map((x, i) => `<button type="button" class="chip" aria-pressed="${x.on}" data-i="${i}" aria-label="${esc(x.label)}, ${x.n} to go"><b>${esc(x.label)}</b><span>${x.n}</span></button>`).join("");
   row.scrollLeft = sl;
 }
 function refreshChips() { if (state.focus) fillPanel(state.focus, 0); if (pop.c) fillOffers(pop.c); }
@@ -287,25 +287,28 @@ const POP_CHIP = 24, POP_GAP = 6, POP_ROWS = 3, SEG_W = 72, SEG_H = 26;
 const SCOPES = [["set", "Set"], ["master", "Master set"], ["grand", "Grand set"]];
 function popLayout(g) {
   const st = g.set, W = frameW(), chips = [];
-  // line one: the view (Set, Master set, Grand set) and Chase these; then People chase and its chips
+  // line one: the view (Set, Master set, Grand set) and Chase these; then People chase and its chips (portrait)
   g.seg = st.master.length || st.grand.length ? SCOPES.map(([key, label], i) => ({ key, label, x: i * (SEG_W + 2), y: 2, w: SEG_W, h: SEG_H })) : null;
   g.hdrBtn = { x: W - 112, y: 4, w: 112, h: 22, pop: true };
-  // A phone on its side has width to spare and no height: both buttons share line one, and People chase leads its
-  // chips on the next (two rows at most).
-  const flat = landPhone(), top = flat ? 40 : g.seg ? 46 : 0, maxRows = flat ? 2 : POP_ROWS, x0 = flat ? 86 : 0;
-  if (flat) { g.hdrBtn.y = 10; if (g.seg) for (const sg of g.seg) sg.y = 8; } // clear of the next medal hanging under the bar
-  g.hdrBtn2 = flat ? { x: W - 112 - 8 - 96, y: 10, w: 96, h: 22, remove: true } : { x: W - 96, y: top + 2, w: 96, h: 22, remove: true }; // Remove set, on the People chase line (Ryan: every set removable, both buttons kept)
+  // A phone on its side has width to spare and no height (round 22 polish): Remove set and Chase these sit at the right
+  // of the title's line, and the view switch, People chase and its chips share one line under the bar (the chips
+  // that don't fit are "and 3 more"; Chase these takes them all).
+  const flat = landPhone(), top = flat ? 0 : g.seg ? 46 : 0, maxRows = flat ? 1 : POP_ROWS;
+  if (flat) { g.hdrBtn.y = 10 - headH(); if (g.seg) for (const sg of g.seg) sg.y = 2; }
+  g.hdrBtn2 = flat ? { x: W - 112 - 8 - 96, y: g.hdrBtn.y, w: 96, h: 22, remove: true } : { x: W - 96, y: top + 2, w: 96, h: 22, remove: true }; // Remove set, on the People chase line (Ryan: every set removable, both buttons kept)
+  g.popLabelX = flat && g.seg ? 3 * (SEG_W + 2) + 10 : 0;
+  const x0 = flat ? g.popLabelX + 76 : 0;
   let x = x0, row = 0, more = 0;
   for (const c of st.pop) {
     const price = short(c.price), w = Math.min(W - x0, Math.round(c.name.length * 6.1 + price.length * 6.4 + 26));
-    if (x + w > W && x > x0) { row++; x = x0; }
+    if (x + w > W - (flat ? 70 : 0) && x > x0) { row++; x = x0; } // on one line, room is kept for "and 3 more"
     if (row >= maxRows) { more++; continue; }
-    chips.push({ c, x, y: top + (flat ? 0 : 30) + row * (POP_CHIP + POP_GAP), w, h: POP_CHIP, price });
+    chips.push({ c, x, y: flat ? 3 : top + 30 + row * (POP_CHIP + POP_GAP), w, h: POP_CHIP, price });
     x += w + POP_GAP;
   }
   const rows = chips.length ? Math.min(maxRows, row + 1) : 0;
-  g.popChips = chips; g.popMore = more; g.popTop = top;
-  g.popH = flat ? top + Math.max(1, rows) * (POP_CHIP + POP_GAP) + 2 : top + 32 + rows * (POP_CHIP + POP_GAP) + 2;
+  g.popChips = chips; g.popMore = more; g.popTop = flat ? 3 : top;
+  g.popH = flat ? 34 : top + 32 + rows * (POP_CHIP + POP_GAP) + 2;
 }
 // The set, its master set (every printing), or its grand set (the reprints too): the binder reshuffles, the new
 // printings springing out of the cards they print.
@@ -346,6 +349,7 @@ function removeSet(st) {
 // The chip or the button under a point in a binder's header, in framed pixels.
 function headAt(g, sx, sy) {
   const p = toWorld(sx, sy), k = frameW() / g.w, fx = (p.x - g.x) * k, fy = (p.y - g.y) * k, H = headH();
+  if (headChrome(cam.s / k) < 0.5) return null; // zoomed in, the header's chrome has faded (40-render)
   for (const b of [g.hdrBtn, g.hdrBtn2]) if (b) { const by = H + b.y; if (fx >= b.x - 6 && fx <= b.x + b.w + 6 && fy >= by - 4 && fy <= by + b.h + 4) return { btn: b }; }
   if (g.natdex && !finishOf(g)?.put) return dexHeadAt(g, fx, fy - H); // the Dex's prints, type and regions
   if (!g.popChips) return null;
@@ -377,7 +381,7 @@ function drawPopRow(g, sx, y0, k, alpha) {
     }
     ctx.textAlign = "left";
   }
-  ctx.fillStyle = theme.muted; font(600, 11 * k); ctx.fillText("People chase", sx, y0 + (g.popTop + 16) * k);
+  ctx.fillStyle = theme.muted; font(600, 11 * k); ctx.fillText("People chase", sx + (g.popLabelX || 0) * k, y0 + (g.popTop + 16) * k);
   drawHdrBtn(g, g.hdrBtn, sx, y0 + g.hdrBtn.y * k, k, alpha);
   if (g.hdrBtn2) drawHdrBtn(g, g.hdrBtn2, sx, y0 + g.hdrBtn2.y * k, k, alpha);
   for (const ch of g.popChips) {

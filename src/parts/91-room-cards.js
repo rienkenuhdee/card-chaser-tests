@@ -77,7 +77,7 @@ const PAINT = {
     cardTitle("trade", w, cl.t, { col: cl.col });
     // the binder's first page, small: what grows into the binder when you open it from the room
     const open = trades.filter((r) => r.state === "proposed" || r.state === "countered").length;
-    const G = tbGeom(false, 1), gh = clamp(h - CARD_HEAD - (open ? 44 : 16), 44, 150), gw = gh * G.pw / G.ph, gx = Math.round((w - gw) / 2), gy = CARD_HEAD + 4, k = gw / G.pw; // the page takes the card, less a line for trades waiting
+    const G = tbGeom(false, 1, false), gh = clamp(h - CARD_HEAD - (open ? 44 : 16), 44, 150), gw = gh * G.pw / G.ph, gx = Math.round((w - gw) / 2), gy = CARD_HEAD + 4, k = gw / G.pw; // the page takes the card, less a line for trades waiting
     rr(gx, gy, gw, gh, 5); ctx.fillStyle = theme.slot; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = theme["slot-line"]; ctx.stroke();
     ctx.fillStyle = theme.gold; rr(gx + 3, gy + 8, 2.5, gh - 16, 1.2); ctx.fill(); // the spine
     for (let i = 0; i < 9; i++) {
@@ -104,8 +104,11 @@ const PAINT = {
     let y = sy + 22;
     if (y > h - 8) return;
     ctx.fillStyle = theme.ink; font(700, 13.5, true);
-    const best = E.length ? `${E[0].name}${MD_RANK[E[0].rank] ? `, ${MD_RANK[E[0].rank]}` : ""}` : "Fill a set to earn one";
-    ctx.fillText(textW(best) <= w - 28 || !E.length ? fitText(best, w - 28) : fitText(E[0].name, w - 28), 14, y); // the luck goes first when the name needs the room
+    // Its lead names a trophy, not a section: "Rarest: Trophy Cabinet, Critical" (the luck goes first when the name needs the room).
+    const best = E.length ? `Rarest: ${E[0].name}${MD_RANK[E[0].rank] ? `, ${MD_RANK[E[0].rank]}` : ""}` : "Fill a set to earn one";
+    const lead = wrapLines(best, w - 28, 2); // on a narrow card it takes a second line
+    lead.forEach((l, i) => { if (!i || y + 17 < h - 8) ctx.fillText(l, 14, y + i * 17); });
+    if (lead.length > 1) y += 17;
     if (next && y + 34 < h) {
       y += 18; ctx.fillStyle = theme.muted; font(500, 12.5);
       wrapLines(`Next: ${next.t.name}, ${next.left} to go`, w - 28, 2).forEach((l, i) => { if (y + i * 16 < h - 6) ctx.fillText(l, 14, y + i * 16); });

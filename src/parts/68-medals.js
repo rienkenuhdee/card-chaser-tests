@@ -59,10 +59,14 @@ const mdInitials = (t) => String(t || "").split(/[\s,.-]+/).filter(Boolean).map(
 function mdPlate(kind, r, name) {
   if (kind === "pokemon") return `#${r.dex}`;
   if (kind === "artist") return mdInitials(r.artist);
-  if (kind === "type") return (TYPE[r.type] || TYPE.C)[0].slice(0, 3).toUpperCase();
+  if (kind === "type") return mdWord((TYPE[r.type] || TYPE.C)[0]);
   if (kind === "rarity") return "★";
-  return String(name || "").slice(0, 2).toUpperCase();
+  return mdInitials(name);
 }
+// A nameplate holds about six letters: a word whole when it fits, else a short form that still reads as the word
+// (never a word with letters dropped from its middle, like "CABNET").
+const MD_SHORT = { Lightning: "LIGHT", Psychic: "PSYCH", Fighting: "FIGHT", Darkness: "DARK", Colorless: "PLAIN", Trainer: "TRAINER" };
+const mdWord = (w) => MD_SHORT[w] || String(w).toUpperCase();
 const mdBucket = (c) => { const r = c.rname; if (/^(common|uncommon)$/i.test(r)) return "easy"; if (/secret|illustration|hyper|special|rainbow|gold|shiny|amazing|radiant|ultra|double|ace spec|v\b|vmax|vstar|ex\b|gx/i.test(r)) return "chase"; if (/holo/i.test(r)) return "holo"; return "other"; };
 // Luck: rolled once per medal, seeded by its id, so it can't be rerolled (a chase is keyed by its rule, not its name).
 const mdRoll = (id) => { const r = h32(`${Math.floor(h32(`luck|${id}`) * 1e9)}|${id}|roll`); return r < 0.01 ? "shiny" : r < 0.11 ? "crit" : "normal"; };
@@ -84,7 +88,7 @@ function mdSigs(c) {
       sig("professors", "Professor's Lab", "Professor Oak and the Impostor.", "silver", "OAK", named("Professor Oak", "Impostor Professor Oak"), 2);
     }
     if (sid === "base3") sig("birds", "Legendary Birds", "Articuno, Zapdos and Moltres.", "gold", "BIRD", named("Articuno", "Zapdos", "Moltres").filter((x) => /holo/i.test(x.rname)), 3);
-    if (sid === "base2") sig("eevee", "Jungle Eeveelutions", "Eevee and its three evolutions, holo and non-holo.", "gold", "EEV", base.filter((x) => MD_EEVEE.has(x.dex)), 4);
+    if (sid === "base2") sig("eevee", "Jungle Eeveelutions", "Eevee and its three evolutions, holo and non-holo.", "gold", "EEVEE", base.filter((x) => MD_EEVEE.has(x.dex)), 4);
     if (sid === "me55") sig("rgb", "Red, Green and Blue", "All three Mews: R, G and B.", "holo", "RGB", base.filter((x) => /^[RGB]$/.test(x.num)), 3);
     if (sid === "base5") sig("dark", "Dark Side", "Every Dark Pokémon card.", "gold", "DARK", base.filter((x) => /^Dark /.test(x.name) && !trainer(x)), 3);
     if (sid === "neo1") anyOf("johto", "Johto Starters", "A holo Meganium, Typhlosion and Feraligatr.", "holo", "JOHTO", ["Meganium", "Typhlosion", "Feraligatr"].map((n) => named(n).filter((x) => /holo/i.test(x.rname))).filter((g) => g.length), 3);
@@ -94,16 +98,16 @@ function mdSigs(c) {
       const byDex = []; for (let d = 1; d <= 151; d++) { const g = base.filter((x) => !trainer(x) && x.dex === d); if (g.length) byDex.push(g); }
       anyOf("kanto", "Kanto Complete", "One card of every Pokémon from #1 to #151.", "holo", "151", byDex, 100);
     }
-    if (sid !== "base3") sig("legends", "Legends", "Every legendary and mythical Pokémon card.", "gold", "LEG", base.filter((x) => x.dex && mdInRanges(x.dex, MD_LEGENDS)), 2);
-    sig("starters", "Starter Squad", "Every starter Pokémon card, evolutions included.", "silver", "STR", base.filter((x) => x.dex && mdInRanges(x.dex, MD_STARTERS)), 3);
-    if (sid !== "base2") sig("eevee", "Eeveelutions", "Eevee and every evolution.", "silver", "EEV", base.filter((x) => MD_EEVEE.has(x.dex)), 3);
-    sig("trainers", "Trainer's Toolbox", "Every Trainer card.", "bronze", "TRN", base.filter(trainer), 5);
+    if (sid !== "base3") sig("legends", "Legends", "Every legendary and mythical Pokémon card.", "gold", "LEGEND", base.filter((x) => x.dex && mdInRanges(x.dex, MD_LEGENDS)), 2);
+    sig("starters", "Starter Squad", "Every starter Pokémon card, evolutions included.", "silver", "START", base.filter((x) => x.dex && mdInRanges(x.dex, MD_STARTERS)), 3);
+    if (sid !== "base2") sig("eevee", "Eeveelutions", "Eevee and every evolution.", "silver", "EEVEE", base.filter((x) => MD_EEVEE.has(x.dex)), 3);
+    sig("trainers", "Trainer's Toolbox", "Every Trainer card.", "bronze", "TOOLS", base.filter(trainer), 5);
     const printed = sid ? setById(sid).printed : 0;
     if (printed) sig("secret", "Secret Stash", "Every card numbered past the set's printed total.", "gold", "SECRET", base.filter((x) => /^\d+$/.test(x.num) && Number(x.num) > printed), 2);
     sig("holo-wall", "Holo Wall", "Every Rare Holo.", "silver", "HOLO", base.filter((x) => x.rname === "Rare Holo"), 3);
-    sig("rainbow", "Rainbow Road", "Every Rainbow Rare and Hyper Rare.", "gold", "RAINBW", base.filter((x) => /^(Rainbow Rare|Hyper Rare)$/.test(x.rname)), 3);
+    sig("rainbow", "Rainbow Road", "Every Rainbow Rare and Hyper Rare.", "gold", "RAINBOW", base.filter((x) => /^(Rainbow Rare|Hyper Rare)$/.test(x.rname)), 3);
     sig("ace", "Ace in the Hole", "Every ACE SPEC card.", "silver", "ACE", base.filter((x) => /ACE SPEC/i.test(x.rname)), 2);
-    sig("special-energy", "Special Delivery", "Every Special Energy.", "bronze", "NRG", base.filter((x) => x.type === "e" && !/^(Basic )?(Grass|Fire|Water|Lightning|Psychic|Fighting|Darkness|Metal|Fairy) Energy$/.test(x.name)), 2);
+    sig("special-energy", "Special Delivery", "Every Special Energy.", "bronze", "ENERGY", base.filter((x) => x.type === "e" && !/^(Basic )?(Grass|Fire|Water|Lightning|Psychic|Fighting|Darkness|Metal|Fairy) Energy$/.test(x.name)), 2);
     sig("gallery", "Gallery Wall", "Every Illustration Rare and Special Illustration Rare.", "gold", "ART", base.filter(art), 3);
   }
   if (kind === "pokemon") {
@@ -127,7 +131,7 @@ function mdSigs(c) {
   }
   if (kind === "artist") {
     const dec = new Map(); for (const x of base) { const d = Math.floor(sets[x.si].year / 10) * 10; if (!dec.has(d)) dec.set(d, []); dec.get(d).push(x); }
-    if (dec.size >= 3) anyOf("decades", "Across the Decades", `A card from each decade they've illustrated in (${[...dec.keys()].sort().map((d) => `${d}s`).join(", ")}).`, "gold", "DEC", [...dec.values()], 3);
+    if (dec.size >= 3) anyOf("decades", "Across the Decades", `A card from each decade they've illustrated in (${[...dec.keys()].sort().map((d) => `${d}s`).join(", ")}).`, "gold", "DECADE", [...dec.values()], 3);
     if (bySet.size >= 10) anyOf("ten-sets", "Ten Sets Deep", "Their cards from ten different sets.", "silver", "10", [...bySet.values()], 10, 10);
   }
   return out;
@@ -195,7 +199,7 @@ function mdCompute() {
   H({ id: "g:last-page", name: "Last Page", desc: "The highest-numbered card in five different sets.", tier: "gold", plate: "LAST", units: sets.map((s) => { const ns = s.cards.filter((x) => /^\d+$/.test(x.num)); return ns.length ? [ns.reduce((a, b) => (Number(b.num) > Number(a.num) ? b : a))] : []; }).filter((g) => g.length), need: 5 });
   const stored = Object.values(mdStore);
   H({ id: "g:crown-collector", name: "Crown Collector", desc: "Earn five signature trophies.", tier: "gold", plate: "CROWN", haveN: stored.filter((t) => t.sig).length, need: 5, noCards: true });
-  H({ id: "g:trophy-cabinet", name: "Trophy Cabinet", desc: "Earn 25 trophies of any kind.", tier: "holo", plate: "CABNET", haveN: stored.length, need: 25, noCards: true });
+  H({ id: "g:trophy-cabinet", name: "Trophy Cabinet", desc: "Earn 25 trophies of any kind.", tier: "holo", plate: "25", haveN: stored.length, need: 25, noCards: true });
   const dn = mdTradesDone();
   for (const [n, name] of [[1, "First trade"], [5, "Trader"], [25, "Dealmaker"]]) mk(G, { id: `g:trade-${n}`, name, desc: `Finish ${n === 1 ? "a trade" : `${n} trades`}.`, tier: n >= 25 ? "gold" : n >= 5 ? "silver" : "bronze", haveN: dn.length, need: n, noCards: true, dates: dn.map((r) => r.doneAt || r.at || Date.now()) });
   out.forEach((t, i) => { t.ord = i; });
@@ -774,7 +778,7 @@ function openMedal(id) {
   mdOpenId = id; tick(5); cancelPress();
   const lucky = mdLucky(t), cs = mdCardsOf(t), MAX = 24, have = cs.filter((c) => c.owned).length, groupsU = t.units && t.units.some((u) => Array.isArray(u));
   const openable = t.open && mode === "set" && mdGroupOf(t.open);
-  const tags = [t.sig ? "signature" : "", t.hidden ? "hidden" : ""].filter(Boolean).join(", ");
+  const tags = [t.sig ? "signature" : "", t.hidden ? (t.earned ? "found" : "hidden") : ""].filter(Boolean).join(", "); // a hidden one, once earned, is found
   mdSheet.innerHTML = `<div class="ms-scroll">
       <div class="ms-medal${t.earned ? "" : " locked"}">${medalSvg(t, { locked: !t.earned, cls: "big" })}</div>
       <div class="ms-text">

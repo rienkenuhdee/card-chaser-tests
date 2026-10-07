@@ -128,6 +128,7 @@ function closeRoom(instant = false) {
 function endRoom() {
   room.on = false; room.closing = false; room.anim = null; room.q = 0; room.fan = null;
   if (rooms.at === "medal") rooms.at = "chase"; // leaving the room lands on the wall
+  if (room.mode) { arrange(room.mode); room.mode = null; } // the grouping it had before Trophies (90-rooms enterPrep)
   mScroll = room.wallScroll; layoutAll();
   document.body.classList.remove("inroom"); setChrome(); kick();
 }
