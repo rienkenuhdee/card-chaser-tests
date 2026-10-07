@@ -363,9 +363,10 @@ function drawBinder(side, now, alpha, value) {
   let tx = R.x + 12;
   if (side === "their") { ctx.beginPath(); ctx.arc(R.x + 26, R.y + 22, 14, 0, Math.PI * 2); ctx.fillStyle = t.ink; ctx.fill(); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = "#fff"; font(800, 13); ctx.fillText(t.name[0], R.x + 26, R.y + 23); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; tx = R.x + 48; }
   const n = list.length, litN = list.filter(lit0).length;
-  ctx.fillStyle = theme.ink; font(800, 17, true); ctx.fillText(fitText(side === "their" ? `${t.name}'s spares` : "Your spares", R.w - 24), tx, R.y + 20);
+  const tw = R.x + R.w - 12 - tx; // the words fit the binder's own width (narrow when the table runs across)
+  ctx.fillStyle = theme.ink; font(800, 17, true); ctx.fillText(fitText(side === "their" ? `${t.name}'s spares` : "Your spares", tw), tx, R.y + 20);
   ctx.fillStyle = theme.muted; font(500, 12.5);
-  ctx.fillText(fitText(side === "their" ? `${t.where}. ${n} spares, ${litN ? `${litN} you chase` : "none you chase"}` : `${n} spares, ${litN ? `${litN} ${t.name} wants` : `none ${t.name}'s after`}`, R.w - 24), tx, R.y + 36);
+  ctx.fillText(fitText(side === "their" ? `${t.where}. ${n} spares, ${litN ? `${litN} you chase` : "none you chase"}` : `${n} spares, ${litN ? `${litN} ${t.name} wants` : `none ${t.name}'s after`}`, tw), tx, R.y + 36);
   // the cards, column by column, only the columns on screen
   ctx.save(); ctx.beginPath(); ctx.rect(R.x, R.y + L.head - 4, R.w, R.h - L.head + 4); ctx.clip();
   const step = L.across ? L.ch + L.gap : L.cw + L.gap, c0 = Math.max(0, Math.floor((S.sx - 12) / step)), c1 = Math.ceil((S.sx + (L.across ? R.h : R.w)) / step);

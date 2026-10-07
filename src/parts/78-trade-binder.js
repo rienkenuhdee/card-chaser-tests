@@ -233,7 +233,7 @@ function tbHeader(G, a, sq) {
 function tbLeaf(img, hinge, y, pw, ph, dir, f, mirror = false) {
   if (!img || f >= 0.999) return;
   const w = pw * Math.cos((f * Math.PI) / 2); if (w < 0.5) return;
-  const N = reduced ? 1 : 8, lift = 0.07 * Math.sin(f * Math.PI), iw = img.width, ih = img.height;
+  const N = reduced ? 1 : 16, lift = 0.05 * Math.sin(f * Math.PI), iw = img.width, ih = img.height;
   for (let k = 0; k < N; k++) {
     const u0 = k / N, u1 = (k + 1) / N, um = (u0 + u1) / 2, sh = ph * (1 + lift * um), x0 = hinge + dir * w * u0, x1 = hinge + dir * w * u1;
     const su0 = mirror ? 1 - u0 : u0, su1 = mirror ? 1 - u1 : u1, sx = Math.min(su0, su1) * iw, sw = Math.abs(su1 - su0) * iw;

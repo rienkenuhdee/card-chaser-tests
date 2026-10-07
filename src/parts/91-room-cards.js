@@ -145,8 +145,8 @@ const PAINT = {
 function feedChip(L, x, y, w, h, now) {
   const c = L.c;
   rr(x, y, w, h, 10); ctx.fillStyle = dealTint(); ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = theme.deal; ctx.stroke();
-  const ch = h - 14, cw = ch * TW / TH;
-  foilOff = true; cardFace(c, x + 7, y + 7, cw, ch, now, false); foilOff = false;
+  const bare = h < 80 && w < 150, ch = h - 14, cw = bare ? -1 : ch * TW / TH; // bare: a narrow chip in a stack keeps its words and leaves out the card
+  if (!bare) { foilOff = true; cardFace(c, x + 7, y + 7, cw, ch, now, false); foilOff = false; }
   ctx.globalAlpha = 1; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
   // low: a chip in a stack (the map on a phone on its side), where NEW is a dot in the corner rather than a tag
   const tx = x + 7 + cw + 8, tw = x + w - 8 - tx, low = h < 80, fresh = isNewL(L);

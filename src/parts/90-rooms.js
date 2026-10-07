@@ -60,7 +60,7 @@ function mapLayout() {
 function mapAcross(key) {
   const gap = 10, x0 = 10 + SAFE.left, W = vw - 20 - SAFE.left - SAFE.right, top = topPad() - 2, bottom = vh - SAFE.bottom - 30, h = bottom - top;
   const B = wallBand(), asp = B.w / B.h, FOOT = 50, U = W - gap * 3;
-  let cw = Math.round(U * 0.46), thW = cw - 16, thH = thW / asp;
+  let cw = Math.round(Math.min(U * 0.42, U - 3 * 150)), thW = cw - 16, thH = thW / asp; // the others keep a readable width
   if (thH > h - CARD_HEAD - FOOT) { thH = h - CARD_HEAD - FOOT; thW = thH * asp; cw = Math.round(thW + 16); }
   const sw = Math.round((U - cw) / 3), fx = x0, cx = fx + sw + gap, tx = cx + cw + gap, sx = tx + sw + gap, sW = x0 + W - sx, th = Math.round((h - gap) / 2);
   const r = {
