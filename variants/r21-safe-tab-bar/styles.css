@@ -12,11 +12,13 @@
 .hdr .lens button { flex: 1 1 0; min-width: 0; height: 36px; padding: 0 8px; border-radius: 8px; font: 600 14.5px var(--font); }
 .hdr .lens .ink { top: 3px; bottom: 3px; border-radius: 8px; background: var(--panel-solid); box-shadow: 0 1px 3px rgb(0 0 0 / .14), 0 0 0 .5px rgb(0 0 0 / .04); }
 .hdr .lens .lbadge { display: none; } /* the new-deal count lives on the Feed tab */
-/* The segment belongs to the Chase tab's wall: it folds away under a card, in Mark, in the room or the binder, and on
-   every other tab. */
+/* The segment belongs to the Chase tab's wall, and stays with the header wherever the wall does (in a set, under a card,
+   in Mark), so the wall's top never moves under you. It folds away in the trophy room and the trade binder, which are
+   levels with their own titles (the wall's top moves up with it there, see topPad), and on every other tab. */
 body:not([data-tab="chase"]) .hdr .lens { display: none; }
-body.focused .hdr .lens, body.offering .hdr .lens, body.marking .hdr .lens, body.trading .hdr .lens, body.inroom .hdr .lens, body.inbinder .hdr .lens,
-body.welcoming .hdr .lens, body.building .hdr .lens, body.arriving .hdr .lens { max-height: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; opacity: 0; pointer-events: none; }
+/* (The base fades the bottom lens bar under the welcome, a card, Mark and the rest; up here it stays.) */
+body[data-tab="chase"] .hdr .lens { opacity: 1; pointer-events: auto; }
+body[data-tab].inroom .hdr .lens, body[data-tab].inbinder .hdr .lens { max-height: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; opacity: 0; pointer-events: none; }
 /* Toasts and the Chase lens's deal banner sit under the taller header. */
 body[data-tab="chase"]:not(.inroom):not(.inbinder) .toast { top: calc(env(safe-area-inset-top, 0px) + 116px + var(--shelf-h, 0px)); }
 body[data-tab="chase"]:not(.inroom):not(.inbinder):not(.focused):not(.marking):not(.offering) .dealbar { top: calc(env(safe-area-inset-top, 0px) + 112px + var(--shelf-h, 0px)); }
@@ -59,8 +61,10 @@ body[data-tab="medal"] #filter { display: none; }
 @media (prefers-reduced-motion: reduce) { .tabbar button.tglow::after { animation: none; } .tabbar, .hdr .lens { transition: none; } }
 /* The bars that own the bottom of the screen take the tab bar's place: a card up close, Mark, the offers, the table,
    the binder, Show mode, the welcome, the import's story and summary, a new chase, the keypad. */
-body.focused .tabbar, body.offering .tabbar, body.marking .tabbar, body.trading .tabbar, body.inbinder .tabbar, body.showing .tabbar, body.welcoming .tabbar,
-body.storying .tabbar, body.arriving .tabbar, body.building .tabbar, body.paying .tabbar { transform: translateY(110%); opacity: 0; pointer-events: none; }
+body.focused .tabbar, body.offering .tabbar, body.marking .tabbar, body.trading .tabbar, body.inbinder .tabbar, body.showing .tabbar,
+body.building .tabbar, body.paying .tabbar { transform: translateY(110%); opacity: 0; pointer-events: none; }
+/* Under a sheet that rises over it (the welcome, the import's story and summary) it fades where it is, as the lens bar did. */
+body.welcoming .tabbar, body.storying .tabbar, body.arriving .tabbar { transform: translateY(12px); opacity: 0; pointer-events: none; }
 /* Things that floated above the lens bar now float above the tab bar. */
 .caption { bottom: calc(env(safe-area-inset-bottom, 0px) + 70px); }
 
@@ -87,27 +91,25 @@ body[data-tab="feed"] .caption, body[data-tab="source"] .caption, body[data-tab=
 
 /* The feed: one row per listing, the card, the price against market, where it was found, NEW. */
 .feed { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.fd-row { width: 100%; display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; grid-template-areas: "card main price" "card src src"; align-items: center; column-gap: 12px; row-gap: 4px; padding: 10px 12px 10px 10px; text-align: left; cursor: pointer;
+.fd-row { width: 100%; display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; grid-template-areas: "card name deal" "card meta mkt" "card src pct"; align-items: baseline; column-gap: 12px; row-gap: 3px; padding: 10px 12px 10px 10px; text-align: left; cursor: pointer;
   border: 1px solid var(--line); border-radius: 14px; background: var(--panel-fill); color: var(--ink); font: inherit; transition: transform .15s, background .15s; }
 .fd-row:active { transform: scale(.985); }
 .fd.is-new .fd-row { border-color: color-mix(in srgb, var(--c-blue) 45%, var(--line)); box-shadow: inset 4px 0 0 var(--c-blue); }
-.fd-card { grid-area: card; position: relative; width: 44px; height: 61px; border-radius: 3px; background: var(--t); overflow: hidden; box-shadow: 0 1px 2px rgb(0 0 0 / .18), inset 0 0 0 1px rgb(0 0 0 / .12); }
+.fd-card { grid-area: card; align-self: center; position: relative; width: 44px; height: 61px; border-radius: 3px; background: var(--t); overflow: hidden; box-shadow: 0 1px 2px rgb(0 0 0 / .18), inset 0 0 0 1px rgb(0 0 0 / .12); }
 .fd-card::before { content: ""; position: absolute; left: 3px; right: 3px; top: 3px; height: 34%; border-radius: 2px; background: rgb(255 255 255 / .2); }
 .fd-card::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 24%; background: var(--paper); border-top: 1px solid rgb(0 0 0 / .14); }
 .fd-card em { position: absolute; z-index: 1; left: 3px; bottom: 2px; font: 700 8px/1 var(--font); font-style: normal; color: var(--paper-ink); opacity: .75; }
-.fd-main { grid-area: main; min-width: 0; display: grid; gap: 2px; align-self: end; }
-.fd-name { font: 800 16.5px/1.15 var(--font); font-stretch: 85%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.fd-meta { color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.fd-src { grid-area: src; align-self: start; display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 13px; color: var(--ink); white-space: nowrap; overflow: hidden; }
+.fd-name { grid-area: name; min-width: 0; font: 800 16.5px/1.15 var(--font); font-stretch: 85%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fd-meta { grid-area: meta; min-width: 0; color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fd-src { grid-area: src; display: flex; align-items: baseline; gap: 6px; min-width: 0; font-size: 13px; color: var(--ink); white-space: nowrap; overflow: hidden; }
 .fd-src > span:first-of-type { overflow: hidden; text-overflow: ellipsis; }
 .fd-ago { color: var(--muted); flex: none; }
 .fd-ago::before { content: "·"; margin-right: 6px; }
-.fd-new { flex: none; padding: 1px 6px; border-radius: 5px; background: var(--c-blue); color: #fff; font: 800 10.5px/1.5 var(--font); letter-spacing: .06em; }
-.fd-price { grid-area: price; align-self: end; display: grid; justify-items: end; gap: 1px; text-align: right; font-variant-numeric: tabular-nums; }
-.fd-price b { font: 800 17px var(--font); color: var(--deal); }
-.fd-price b s { font: 600 12.5px var(--font); color: var(--muted); margin-right: 2px; }
-.fd-price small { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
-.fd-price em { font-style: normal; font-weight: 700; color: var(--deal); }
+.fd-new { flex: none; align-self: center; padding: 1px 6px; border-radius: 5px; background: var(--c-blue); color: #fff; font: 800 10.5px/1.5 var(--font); letter-spacing: .06em; }
+.fd-deal { grid-area: deal; justify-self: end; font: 800 17px var(--font); color: var(--deal); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.fd-deal s { font: 600 12.5px var(--font); color: var(--muted); margin-right: 2px; }
+.fd-mkt { grid-area: mkt; justify-self: end; font-size: 12.5px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.fd-pct { grid-area: pct; justify-self: end; font-size: 12.5px; font-style: normal; font-weight: 700; color: var(--deal); white-space: nowrap; }
 .fd-in .fd-row { animation: fdin .55s cubic-bezier(.2,.9,.25,1.04) both; }
 @keyframes fdin { from { opacity: 0; transform: translateY(-14px); background: color-mix(in srgb, var(--deal) 18%, var(--panel-fill)); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .fd-in .fd-row { animation: none; } }

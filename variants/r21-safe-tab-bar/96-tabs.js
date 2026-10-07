@@ -44,6 +44,7 @@ function dropRoom() {
   document.body.classList.remove("inroom");
 }
 function leaveTab(t) {
+  if (t === "feed") feedSeenAt = Date.now(); // everything in the feed has been seen: the count starts again from here
   if (!canvasTab(t) || (t === "medal" && !room.on)) { const el = pageOf(t); if (el && tabState[t]) tabState[t].scroll = el.scrollTop; if (t !== "medal") return; }
   settleWall();
   const s = tabState[t];
@@ -54,6 +55,7 @@ function leaveTab(t) {
 }
 function enterTab(t, lens = null) {
   hideCaption();
+  if (t === "feed") { feedPrevSeen = feedSeenAt; feedSeenAt = Date.now(); } // NEW: what landed since you last looked
   if (!canvasTab(t)) { renderPage(t); const el = pageOf(t); el.scrollTop = tabState[t].scroll || 0; drawList(); return; }
   const s = tabState[t];
   state.lens = t === "trade" ? "trade" : t === "medal" ? "have" : lens || s.lens || "have";
@@ -89,7 +91,9 @@ function tabTop(t) {
 
 // ----- lenses: Have, Need and Chase belong to the Chase tab; Trade is a tab of its own -----
 function setLens(lens) {
-  if (lens === "trade") { setTab("trade"); return; }
+  // Asked for in code (Trade with Maya on a card, Open on a trader's reply): the Trade tab, at its top level, where the
+  // traders are.
+  if (lens === "trade") { setTab("trade"); if (view === "set" && !state.trans) { if (state.focus) unfocus(); view = "mosaic"; state.g = null; setChrome(); kick(); } return; }
   if (curTab !== "chase") { setTab("chase", { lens }); return; }
   lensIn(lens);
 }
@@ -210,25 +214,34 @@ function feedItems() {
 const feedFresh = new Set(); // arrived while you were looking: they slide in once
 const cogBtn = `<button type="button" class="ib" data-prefs aria-label="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M5.6 18.4l1.6-1.6M16.8 7.2l1.6-1.6"/></svg></button>`;
 const pageHead = (title, sub) => `<header class="phead"><h1 tabindex="-1">${title}</h1>${cogBtn}</header><p class="psub">${sub}</p><div class="colorbar" aria-hidden="true"></div>`;
+// How long ago, in the feed's words ("Yesterday" rather than "1 days ago").
+function feedAgo(at, now) {
+  const d = Math.max(0, now - at);
+  if (d >= 86400e3 && d < 2 * 86400e3) return "yesterday";
+  return d >= 86400e3 ? `${Math.round(d / 86400e3)} days ago` : agoText(at, now);
+}
 function renderFeed() {
   const items = feedItems(), chased = cards.filter(isChase).length, now = Date.now(), all = cards.filter((c) => c.deal && !c.owned && isChase(c)).length;
   const isNew = (it) => Boolean(it.c.dealAt) && it.at > feedPrevSeen;
   const news = items.filter(isNew).length;
   let body;
   if (!chased) body = `<div class="pempty"><b>Nothing to look for yet</b><span>Listings for the cards you chase land here, each against its market price. Open a card on the wall and choose Chase it.</span><button type="button" class="mbtn primary" data-go="chase">Go to the wall</button></div>`;
-  else if (!items.length && all) body = `<div class="pempty"><b>Every source is off</b><span>${all} listing${all === 1 ? "" : "s"} for your chases are hidden. Switch a source back on to see them.</span><button type="button" class="mbtn primary" data-go="source">Open Source</button></div>`;
+  else if (!items.length && all) body = `<div class="pempty"><b>Every source is off</b><span>${all} listing${all === 1 ? "" : "s"} for your chases ${all === 1 ? "is" : "are"} hidden. Switch a source back on to see them.</span><button type="button" class="mbtn primary" data-go="source">Open Source</button></div>`;
   else if (!items.length) body = `<div class="pempty"><b>Looking for your chases</b><span>New listings land here as they're found, newest first.</span></div>`;
   else body = `<ul class="feed">${items.map((it) => {
     const { c, s } = it, st = sets[c.si], pct = Math.round((1 - c.deal / c.price) * 100), n = isNew(it), fresh = feedFresh.has(c.id);
     return `<li class="fd${n ? " is-new" : ""}${fresh && !reduced ? " fd-in" : ""}"><button type="button" class="fd-row" data-ci="${c.i}" aria-label="${esc(c.name)}, ${money(c.deal)} on ${esc(s.name)}, ${pct}% under market${n ? ", new" : ""}. Show it on the wall.">
       <span class="fd-card" style="--t:${typeColor(c)}" aria-hidden="true"><em>${esc(c.num)}</em></span>
-      <span class="fd-main"><span class="fd-name">${esc(c.name)}</span><span class="fd-meta">${esc(st.name)} #${esc(c.num)}, ${esc(c.rname)}</span></span>
-      <span class="fd-price"><b>${c.dealWas ? `<s>${money(c.dealWas)}</s> ` : ""}${money(c.deal)}</b><small>Market ${money(c.price)}, <em>${pct}% under</em></small></span>
-      <span class="fd-src">${n ? `<b class="fd-new">NEW</b>` : ""}<span>${esc(s.name)}, ${esc(s.how)}</span><span class="fd-ago">${agoText(it.at, now)}</span></span>
+      <span class="fd-name">${esc(c.name)}</span><b class="fd-deal">${c.dealWas ? `<s>${money(c.dealWas)}</s> ` : ""}${money(c.deal)}</b>
+      <span class="fd-meta">${esc(st.name)} #${esc(c.num)}</span><span class="fd-mkt">Market ${money(c.price)}</span>
+      <span class="fd-src">${n ? `<b class="fd-new">NEW</b>` : ""}<span>${esc(s.name)}, ${esc(s.how)}</span><span class="fd-ago">${feedAgo(it.at, now)}</span></span><em class="fd-pct">${pct}% under</em>
     </button></li>`;
   }).join("")}</ul><p class="pnote">Made up for the demo: a new listing for one of your chases lands every few seconds. Tap one to see the card on the wall.</p>`;
   const sub = !chased ? "Listings for the cards you chase." : `${items.length} listing${items.length === 1 ? "" : "s"} for ${chased} chased card${chased === 1 ? "" : "s"}, newest first.${news ? ` <b class="psub-new">${news} new</b>` : ""}`;
+  // A listing landing at the top while you're further down doesn't push the one you're reading away.
+  const el = pgFeed, keep = el.scrollTop > 8 ? el.scrollHeight - el.scrollTop : null;
   document.getElementById("pg-feed-body").innerHTML = pageHead("Feed", sub) + body;
+  if (keep !== null) el.scrollTop = el.scrollHeight - keep;
   feedFresh.clear();
 }
 // From a listing to the card itself: the Chase tab, its set opening, the card coming up close.
