@@ -5,8 +5,8 @@ try { const t = localStorage.getItem("wall-theme"); if (t === "light" || t === "
 readTheme();
 arrange(mode);
 vw = innerWidth; vh = innerHeight;
-lensBox.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.lens === state.lens)));
-markFilters(); // Value is remembered; Time starts from the beginning when you pick it, so it isn't
+lensBtns.forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.lens === state.lens)));
+markFilters(); // Show, Value, Group by and the orders are remembered; Time starts from the beginning when you pick it, so it isn't
 resize();
 started = true;
 setChrome();

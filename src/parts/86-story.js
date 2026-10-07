@@ -140,6 +140,7 @@ function calOf(K, r) {
 function startStory(P) {
   if (state.time) setTime(false);
   if (state.lens !== "have") { setLens("have"); toastEl.classList.remove("show"); }
+  if (state.show !== "all") setShow("all", { quiet: true }); // the story is your whole collection filling in
   if (state.trans) finishTransition();
   const S = { P, meds: P.meds };
   S.order = P.got.slice().sort((a, b) => a.got - b.got);

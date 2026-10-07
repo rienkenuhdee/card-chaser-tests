@@ -23,7 +23,7 @@
       <button class="count" id="count" aria-label="Show the whole wall"></button>
       <button class="clear" id="clear" aria-label="Clear search"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" style="stroke:currentColor;stroke-width:2.2;stroke-linecap:round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </label>
-    <button class="ib" id="filter" aria-haspopup="menu" aria-expanded="false" aria-controls="filter-menu" aria-pressed="false" aria-label="Filters: value and time"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="9" cy="7" r="2.2" fill="var(--panel-solid)"/><circle cx="15" cy="12" r="2.2" fill="var(--panel-solid)"/><circle cx="8" cy="17" r="2.2" fill="var(--panel-solid)"/></svg></button>
+    <button class="ib" id="filter" aria-haspopup="dialog" aria-expanded="false" aria-controls="filter-menu" aria-pressed="false" aria-label="Filters"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="9" cy="7" r="2.2" fill="var(--panel-solid)"/><circle cx="15" cy="12" r="2.2" fill="var(--panel-solid)"/><circle cx="8" cy="17" r="2.2" fill="var(--panel-solid)"/></svg></button>
     <button class="ib" id="settings" aria-label="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M5.6 18.4l1.6-1.6M16.8 7.2l1.6-1.6"/></svg></button>
     <button class="ib" id="info" aria-label="About this experiment"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.8v.4"/></svg></button>
   </div>
@@ -42,15 +42,19 @@
 </div>
 <div class="lens glass" role="group" aria-label="Lens">
   <span class="ink" aria-hidden="true"></span>
-  <button data-lens="have" aria-pressed="true">Have</button>
-  <button data-lens="need" aria-pressed="false">Need</button>
+  <button data-lens="have" aria-pressed="true">Collection</button>
   <button data-lens="chase" aria-pressed="false">Chase</button>
+  <span class="fchip" id="fchip" hidden><button type="button" id="fchip-open" aria-label="Filters on"></button><button type="button" id="fchip-clear" aria-label="Clear filters"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17"/></svg></button></span>
 </div>
 <div class="arrange-menu tradehow glass" id="trade-how" role="menu" aria-label="How to trade" hidden><p class="th-head" id="th-head">Trade with Maya</p><button role="menuitem" data-how="person"><span><b>In person</b><small>Across the table, card for card</small></span><span class="tick" aria-hidden="true">›</span></button><button role="menuitem" data-how="online" aria-disabled="true"><span><b>Online</b><small>Send an offer and ship the cards</small></span><span class="soon">Soon</span></button></div>
-<div class="arrange-menu right glass" id="filter-menu" role="menu" aria-label="Filters" hidden>
-  <button role="menuitemcheckbox" data-filter="value" aria-checked="false"><span><b>Value</b><small>The more it's worth, the hotter</small></span><span class="tick" aria-hidden="true">✓</span></button>
-  <button role="menuitemcheckbox" data-filter="bands" aria-checked="false"><span><b>Group by price</b><small>Price bands, the dearest biggest</small></span><span class="tick" aria-hidden="true">✓</span></button>
-  <button role="menuitemcheckbox" data-filter="time" aria-checked="false"><span><b>Time</b><small>Play through when you got each card</small></span><span class="tick" aria-hidden="true">✓</span></button>
+<div class="arrange-menu right fsheet glass" id="filter-menu" role="dialog" aria-label="Filters" hidden>
+  <div class="fs-row" data-row="show"><span class="fs-lbl" id="fl-show">Show</span><div class="seg" role="group" aria-labelledby="fl-show"><button type="button" data-show="all">All</button><button type="button" data-show="missing">Missing</button><button type="button" data-show="have">Have</button></div></div>
+  <div class="fs-row" data-row="corder" hidden><span class="fs-lbl" id="fl-corder">Chase list</span><div class="seg" role="group" aria-labelledby="fl-corder"><button type="button" data-corder="deal">Best deal</button><button type="button" data-corder="dear">Dearest</button><button type="button" data-corder="cheap">Cheapest</button></div></div>
+  <div class="fs-row"><span class="fs-lbl" id="fl-color">Color by</span><div class="seg" role="group" aria-labelledby="fl-color"><button type="button" data-color="type">Type</button><button type="button" data-color="value">Value</button></div></div>
+  <div class="fs-row"><span class="fs-lbl" id="fl-group">Group by</span><div class="seg" role="group" aria-labelledby="fl-group"><button type="button" data-group="set">Set</button><button type="button" data-group="value">Price</button><button type="button" data-group="rarity">Rarity</button><button type="button" data-group="type">Type</button></div></div>
+  <div class="fs-row"><span class="fs-lbl" id="fl-order">In a binder</span><div class="seg" role="group" aria-labelledby="fl-order"><button type="button" data-order="number">Number</button><button type="button" data-order="price">Price</button><button type="button" data-order="name">Name</button><button type="button" data-order="rarity">Rarity</button></div></div>
+  <button type="button" class="fs-time" data-filter="time" role="switch" aria-checked="false"><span><b>Time</b><small>Play through when you got each card</small></span><i class="sw" aria-hidden="true"></i></button>
+  <div class="fs-foot"><button type="button" class="mbtn" id="f-clear">Clear filters</button><button type="button" class="mbtn primary" id="f-done">Done</button></div>
 </div>
 <main id="list" aria-label="Your collection as a list">
   <div class="lwrap">
@@ -63,6 +67,12 @@
   <div class="rp-wrap">
     <header class="rp-head"><h1 id="pf-h" tabindex="-1">Feed</h1><span class="rp-count" id="pf-count"></span></header>
     <p class="rp-sub" id="pf-sub"></p>
+    <div class="fd-tools" id="pf-tools">
+      <label class="fd-pick"><span class="sr">Sort</span><select id="pf-sort"><option value="newest">Newest first</option><option value="best">Best deals first</option><option value="price">Cheapest first</option><option value="pct">Most under market</option></select></label>
+      <label class="fd-pick"><span class="sr">Condition</span><select id="pf-cond"><option value="">Any condition</option><option value="NM">Near Mint</option><option value="LP">Lightly Played or better</option><option value="MP">Moderately Played or better</option></select></label>
+      <button type="button" class="fd-chip" id="pf-dmg" aria-pressed="false">Show damaged</button>
+    </div>
+    <p class="fd-hidden" id="pf-hidden" hidden></p>
     <div class="rp-stripe" aria-hidden="true"></div>
     <ul class="feed" id="pf-list"></ul>
     <p class="rp-note" id="pf-note"></p>
@@ -156,13 +166,13 @@
     <li><b>Starting out</b>: import your collection from TCGplayer or Collectr, or pick the sets you collect and mark by hand. Choose your sets again any time in Settings.</li>
     <li><b>Tap a set</b> (or spread two fingers on it) to open it. Its cards grow into a binder. Scroll down it; flick sideways for the next set; pinch out or tap back to close it.</li>
     <li><b>Tap a card</b> to bring it up close. Flick it sideways to move along the set.</li>
-    <li><b>Have, Need, Chase</b> at the bottom are lenses: they recolor the wall rather than taking you somewhere else.</li>
+    <li><b>Collection and Chase</b> at the bottom are lenses: they recolor the wall rather than taking you somewhere else. Collection is the wall as it is, what you have in color and what you're missing as empty pockets.</li>
     <li><b>The wall is live.</b> When a copy of a card you chase comes up for less, its tile flashes where it sits and the listing lands in the Feed, which the rooms button counts. Nothing nags.</li>
     <li><b>Chase</b> is your chase list: one tile for each card you're after, dealt out of the wall, its best deal leading or the most you'd pay. (Every listing, several per card where there are, is in the Feed.) Tap one and it pops up with every copy online: swipe through them, or switch to the packs and boxes it comes in. Got it asks what you paid. <b>Chase it</b> on any card adds it; On a card you own, <b>+</b> counts a copy: every copy past your first is a spare, up for trade.</li>
     <li><b>The Complete Dex</b> is a chase with one slot for every Pokémon, #1 to #1,025, in Dex order. Add it from New chase, or in Choose your sets. A slot fills when you have any card of that Pokémon; the ones your sets don't print read "Not in your sets". Its settings count only holo or full art prints, or one type.</li>
     <li><b>Trade</b> (a room) holds the <b>trade binder</b>, every card you have a spare of, most wanted first: swipe its pages, tap a card to trade it, or use <b>Show mode</b> to hand it across a table and let the other person pick. The <b>trade checker</b> says whether a trade is fair, cards or cash, by condition. Tap a collector and the screen becomes a table between you: their spares above, yours below. Drag cards onto the table and shake hands.</li>
     <li><b>Trophies</b>: every set and chase earns them as it fills, with production's names and luck (now and then one comes up Critical or Shiny). Inside a set the next one hangs on the bar; mark the card that tips it and it mints right there. A finished set becomes a plaque. A trophy sits on the shelf at the top of the wall for its first day, then lives in the <b>trophy room</b>, the Medal room: tap a trophy to see the cards behind it.</li>
-    <li><b>Filters</b> (top, by the search) add <b>Value</b>, the more it's worth the hotter, and <b>Time</b>: scrub or play through when you got each card.</li>
+    <li><b>Filters</b> (top, by the search): <b>Show</b> all, only what's missing, or only what you have; <b>Color by</b> type or value (the more it's worth, the hotter); <b>Group by</b> set, price, rarity or type, every card flying to its new place; the order <b>in a binder</b> (number, price, name or rarity); and <b>Time</b>, to scrub or play through when you got each card. In Chase, the chase list sorts by best deal, dearest or cheapest. While a filter is on, it's named beside the lenses, with ✕ to clear it.</li>
     <li><b>Search</b> flies you to the cards that match.</li>
     <li><b>Press and hold</b> any card to mark it, then keep the finger down and sweep along the row. <b>Mark</b> (top, inside a set) does the same by tapping: a handful at once, Done sums it up. <b>Tap the count</b> to see everything again.</li>
   </ul>

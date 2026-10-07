@@ -69,8 +69,9 @@ function emphasis(c) {
   if (c.away) return 0; // out on the trade table: its tile is empty
   if (preview) return preview.has(c.base || c) ? (c.owned ? 0.42 : 1) : 0.1; // the New chase form: what it would match
   if (state.matches) return state.matches.has(rootOf(c)) ? 1 : 0.1;
-  if (state.lens === "need") return c.owned ? 0.1 : c.ph ? 0.3 : 1; // a Dex pocket your sets can't fill stays quieter
   if (state.lens === "chase") return isChase(c) ? 1 : 0.18;
+  if (state.show === "missing") return c.owned ? 0.1 : c.ph ? 0.3 : 1; // Show: Missing (Filters); a Dex pocket your sets can't fill stays quieter
+  if (state.show === "have") return c.owned ? 1 : 0.1;
   return 1;
 }
 
@@ -92,9 +93,9 @@ function drawTile(c, sx, sy, w, h, now, mult = 1) {
     ctx.beginPath(); ctx.moveTo(sx + w - s, sy); ctx.lineTo(sx + w - r, sy); ctx.lineTo(sx + w, sy + r); ctx.lineTo(sx + w, sy + s); ctx.closePath(); ctx.fill();
     ctx.globalAlpha = 1;
   }
-  // In the Need lens the cards you're chasing stand out further still: a gold ring.
-  if (state.lens === "need" && !c.owned && w >= 5 && c.e > 0.5 && !c.lift && isChase(c)) {
-    ctx.globalAlpha = Math.min(1, mult); ctx.lineWidth = Math.max(1.5, w * 0.07); ctx.strokeStyle = theme.gold;
+  // Showing what's missing, the cards you're chasing stand out further still: a gold ring (green where a deal waits).
+  if (showNow() === "missing" && !c.owned && w >= 5 && c.e > 0.5 && !c.lift && isChase(c)) {
+    ctx.globalAlpha = Math.min(1, mult); ctx.lineWidth = Math.max(1.5, w * 0.07); ctx.strokeStyle = c.deal && !state.time ? theme.deal : theme.gold;
     rr(sx + 0.5, sy + 0.5, w - 1, h - 1, w * 0.09); ctx.stroke(); ctx.globalAlpha = 1;
   }
   // The green: the flash on the card that changed, and the ripple's tint on its neighbours.
@@ -261,7 +262,7 @@ function drawHeader(st, now, C = cam, ox = 0, alpha = 1) {
   ctx.textAlign = "right"; ctx.fillStyle = f ? theme.gold : theme.ink; ctx.fillText(pct, sx + sw, sy + hh * 0.72);
   ctx.textAlign = "left"; ctx.fillStyle = theme.muted; font(500, sub);
   // Finished: when, and what it's worth. Otherwise the group's own line.
-  const line = state.time ? `${owned} of ${n} by ${monthOf(state.t)}` : f ? `Finished ${dayOf(f.at)}, worth ${money(worthOf(st.base || st.cards))}.${f.put ? "" : " On the wall."}` : st.sub();
+  const line = state.time ? `${owned} of ${n} by ${monthOf(state.t)}` : f ? `Finished ${dayOf(f.at)}, worth ${money(worthOf(st.base || st.cards))}.${f.put ? "" : " On the wall."}` : st.sub() + orderNote(st);
   ctx.fillText(fitText(line, sw - pw - 12), sx, sy + hh * 0.72);
   drawBar(st, sx, sy + hh * 0.82, sw, Math.max(1.5, 3 * k), now, k);
   drawNextPin(st, sx, sy + hh * 0.82, sw, Math.max(1.5, 3 * k), now, k); // the next medal to earn, at its point on the bar
@@ -286,8 +287,8 @@ function panelStat(g) {
   if (picking()) return "\u2003\u2003"; // the tick's place
   const n = g.cards.length, owned = ownedNow(g.cards);
   if (state.matches) { const m = g.cards.filter((c) => state.matches.has(rootOf(c))).length; return m ? `${m} found` : ""; }
-  if (state.lens === "need") return `${n - owned} to go`;
   if (state.lens === "chase") { const d = g.cards.filter(isChase).length; return d ? `${d} to find` : "Nothing to chase"; }
+  if (state.show === "missing") return `${n - owned} to go`;
   if (state.value) return short(worthOf(g.cards));
   return `${owned}/${n}`;
 }

@@ -63,7 +63,7 @@ const ruleLeft = (r) => ruleCards(r).filter((c) => !c.owned && chasing[c.id] !==
 // cards that just joined the chase list.
 function applyRules() {
   const lit = [];
-  for (const c of cards) { const was = isChase(c); c.chase0 = chases.some((r) => r.kind !== "natdex" && matchRule(r, c)); if (!was && isChase(c)) lit.push(c); } // the Complete Dex adds nothing: its Need lens is the list
+  for (const c of cards) { const was = isChase(c); c.chase0 = chases.some((r) => r.kind !== "natdex" && matchRule(r, c)); if (!was && isChase(c)) lit.push(c); } // the Complete Dex adds nothing: Show, Missing is its list
   return lit;
 }
 // A wall that has never had a chase starts with a few, so the shape is there to see: a Pokémon, an artist, a rarity in a set, a set's popular cards.
@@ -90,7 +90,7 @@ function chaseGroup(r, i) {
   let g = chaseGroups.get(r.id);
   if (!g) { g = { key: `chase:${r.id}`, chase: r }; chaseGroups.set(r.id, g); }
   g.name = r.label; g.ink = CHASE_INKS[i % CHASE_INKS.length]; g.cards = list; g.base = list;
-  g.sub = () => (state.value ? `Your chase. Yours is worth ${money(worthOf(list))}` : state.lens === "need" ? `Your chase. ${list.length - ownedIn(list)} to go` : `Your chase. ${ownedIn(list)} of ${list.length}`);
+  g.sub = () => (state.value ? `Your chase. Yours is worth ${money(worthOf(list))}` : showNow() === "missing" ? `Your chase. ${list.length - ownedIn(list)} to go` : `Your chase. ${ownedIn(list)} of ${list.length}`);
   return g;
 }
 

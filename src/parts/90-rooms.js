@@ -6,7 +6,7 @@
 // come back. At a room's own level a sideways flick goes to the next room along the map, the way a flick moves
 // between sets in a binder.
 //   Feed    every listing found for the cards you chase, newest first (92-feed.js)
-//   Chase   the wall, with its lenses: Have, Need and Chase
+//   Chase   the wall, with its lenses: Collection and Chase
 //   Trade   the trade binder's cover, the trade checker, who to trade with (94-trade-room.js); the binder and the
 //           table are levels inside it
 //   Medal   the trophy room (67-room.js)
@@ -406,7 +406,7 @@ function chaseLensAt(x, y) {
   if (y < by - 6 || y > by + 34 || x < bx || x > bx + bw) return null;
   return LENSES[clamp(Math.floor(((x - bx) / bw) * LENSES.length), 0, LENSES.length - 1)];
 }
-const LENSES = ["have", "need", "chase"];
+const LENSES = ["have", "chase"], LENS_NAMES = { have: "Collection", chase: "Chase" };
 for (const type of ["touchstart", "touchmove", "touchend", "touchcancel"]) addEventListener(type, (e) => {
   if (e.target !== canvas) return;
   if (type === "touchstart") {

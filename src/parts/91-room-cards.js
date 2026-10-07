@@ -252,7 +252,7 @@ function chaseChrome(R, now, a) {
   LENSES.forEach((k, i) => {
     const on = state.lens === k, cx = bx + i * sw;
     if (on) { rr(cx + 2.5, by + 2.5, sw - 5, bh - 5, 7); ctx.fillStyle = theme["panel-solid"]; ctx.fill(); ctx.strokeStyle = theme["slot-line"]; ctx.stroke(); }
-    ctx.fillStyle = on ? theme.ink : theme.muted; ctx.fillText(fitText(k[0].toUpperCase() + k.slice(1), sw - 4), cx + sw / 2, by + 18.5);
+    ctx.fillStyle = on ? theme.ink : theme.muted; ctx.fillText(fitText(LENS_NAMES[k], sw - 4), cx + sw / 2, by + 18.5);
   });
   ctx.textAlign = "left"; ctx.globalAlpha = 1;
 }

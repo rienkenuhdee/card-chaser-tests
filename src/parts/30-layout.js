@@ -109,8 +109,9 @@ let lifted = false; // whether the current layout is the chase-first one
 let shuffle = null; // the in-set reorder flight when the lens changes inside a binder: { g, t0, dur, end }
 const FOLD = 54, TILE_GAP = 8, REST = 15;
 const feedCols = (w) => clamp(Math.floor((w + TILE_GAP) / (150 + TILE_GAP)), 2, 4);
-// Chased cards first (live deals, best discount first, then the most you'd pay); the rest keep the arrangement's order.
-const chaseOrder = (a, b) => (b.deal ? 1 : 0) - (a.deal ? 1 : 0) || (a.deal && b.deal ? b.price / b.deal - a.price / a.deal : 0) || b.price - a.price || a.i - b.i;
+// Chased cards first, in the chase list's order (Filters: best deal, dearest or cheapest; chaseCmp in 60-lenses.js);
+// the rest keep the arrangement's order.
+const chaseOrder = (a, b) => chaseCmp(a, b) || a.i - b.i;
 let liftKey = null; // which lens the current lift is for
 function orderGroup(g) {
   g.base ||= g.cards;
