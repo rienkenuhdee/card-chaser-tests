@@ -8,7 +8,6 @@
 #rooms svg rect:nth-child(4) { fill: var(--c-yellow); }
 #rooms svg rect:nth-child(5) { fill: var(--c-blue); }
 #rooms.tipglow { background: var(--line); box-shadow: 0 0 0 2px var(--c-blue); }
-.top .ib#rooms:not([hidden]) ~ .search { border-left: 1px solid var(--line); }
 
 /* The first-time tip, under the rooms button. */
 .maptip { position: fixed; z-index: 4; left: 12px; top: calc(env(safe-area-inset-top, 0px) + 68px); max-width: min(300px, calc(100vw - 24px)); padding: 11px 14px 12px; border-radius: 12px;
@@ -27,3 +26,6 @@ body.onmap .dealbar, body.inplace .dealbar, body.maptrans .dealbar,
 body.onmap .caption, body.inplace .caption, body.maptrans .caption,
 body.onmap .bbar, body.maptrans .bbar { display: none; }
 body.maptrans .maptip { opacity: 0; }
+/* Not while the welcome, the import's story or its summary is up: the map waits for a settled wall. */
+body.welcoming #rooms, body.storying #rooms, body.arriving #rooms, body.listmode #rooms { display: none; }
+body:is(.welcoming, .storying, .arriving, .listmode) .top #rooms + #back[hidden] + #mark[hidden] + .search { border-left: 0; }

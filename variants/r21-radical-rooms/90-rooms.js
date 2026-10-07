@@ -9,7 +9,7 @@
 // Pinch the wall closed and it shrinks into its place on the map while the other rooms settle in around it; spread on
 // a room (or tap it) and it grows to fill the screen, the way a set grows into its binder; pinch any room closed to
 // come back. Every step is one transition with a position, held under the fingers and snapped by speed, then position.
-// The grid button at the top left of the wall (where Back sits inside a set) goes up to the map too.
+// The rooms button at the top left of the wall (where Back sits inside a set) goes up to the map too.
 // How it's built: the map, the Feed and the Source are levels drawn over the wall (`spot`), which stays exactly as it
 // was underneath (view "mosaic", its scroll, its lens). Chase is the wall. Medal is the trophy room and Trade the trade
 // binder, opened without their own animation and remembered as `map.from`, so Back and a pinch from them go up to the
@@ -72,7 +72,7 @@ function mapHit(x, y, nearest = false) {
 
 // ----- pictures: a room's screen, taken once -----
 function grabScreen(S, holder = null) {
-  const k = Math.min(dpr, Math.sqrt(3.2e6 / Math.max(1, S.w * S.h)));
+  const k = Math.min(dpr, Math.sqrt(2.4e6 / Math.max(1, S.w * S.h)));
   const cv = holder?.cv || document.createElement("canvas"), W = Math.max(1, Math.ceil(S.w * k)), H = Math.max(1, Math.ceil(S.h * k));
   if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
   const x = cv.getContext("2d"); x.clearRect(0, 0, W, H);
@@ -81,7 +81,7 @@ function grabScreen(S, holder = null) {
 }
 // The nearest of the full and half-size copies for the size it's drawn at (a small thumbnail stays cheap).
 function snapFor(snap, w) {
-  if ((w * dpr) / snap.cv.width > 0.55) return snap.cv;
+  if ((w * dpr) / snap.cv.width > 0.7) return snap.cv;
   if (!snap.half) { const c = document.createElement("canvas"); c.width = Math.max(1, Math.round(snap.cv.width / 2)); c.height = Math.max(1, Math.round(snap.cv.height / 2)); const x = c.getContext("2d"); x.imageSmoothingQuality = "high"; x.drawImage(snap.cv, 0, 0, c.width, c.height); snap.half = c; }
   return snap.half;
 }
@@ -577,7 +577,7 @@ document.getElementById("reset").addEventListener("click", () => { try { for (co
 // ----- finding the map the first time: a tip under the grid button, once, when the wall is quiet -----
 const tipEl = document.createElement("div");
 tipEl.className = "maptip glass"; tipEl.id = "maptip"; tipEl.setAttribute("role", "status");
-tipEl.innerHTML = `<b>Every room is up here</b><span>Pinch the wall closed, or tap the grid, for Feed, Trade, Medal and Source.</span>`;
+tipEl.innerHTML = `<b>Every room is up here</b><span>Pinch the wall closed, or tap this button, for Feed, Trade, Medal and Source.</span>`;
 document.body.append(tipEl);
 let tipShown = false;
 function hideTip() { if (!tipEl.classList.contains("show")) return; tipEl.classList.remove("show"); roomsBtn.classList.remove("tipglow"); }
@@ -589,7 +589,7 @@ const tipTimer = setInterval(() => {
 }, 2500);
 addEventListener("pointerdown", () => hideTip(), true);
 // The About sheet says how the rooms work.
-document.querySelector("#about ul")?.insertAdjacentHTML("afterbegin", `<li><b>Rooms</b>: pinch the wall closed (or tap the grid at the top left) and it shrinks into the app's map, five rooms on one screen, each showing what's happening in it: <b>Feed</b> (listings for your chases, newest first), <b>Chase</b> (this wall), <b>Trade</b> (your trade binder), <b>Medal</b> (the trophy room) and <b>Source</b> (where it looks). Tap a room or spread two fingers on it to go in; pinch any room closed to come back.</li>`);
+document.querySelector("#about ul")?.insertAdjacentHTML("afterbegin", `<li><b>Rooms</b>: pinch the wall closed (or tap the rooms button at the top left) and it shrinks into the app's map, five rooms on one screen, each showing what's happening in it: <b>Feed</b> (listings for your chases, newest first), <b>Chase</b> (this wall), <b>Trade</b> (your trade binder), <b>Medal</b> (the trophy room) and <b>Source</b> (where it looks). Tap a room or spread two fingers on it to go in; pinch any room closed to come back.</li>`);
 
 // ----- live: a find lands in the Feed and pulses in the Source, as well as on the wall -----
 function tickFeed() {

@@ -109,7 +109,7 @@ function cardKey(id, w, h) {
   if (id === "feed") { const F = feedData(), now = Date.now(); return `${base}|${F.chased}|${F.fresh}|${F.list.length}|${F.list.slice(0, 4).map((c) => `${c.id}.${c.deal}.${isNewFind(c) ? 1 : 0}.${agoText(c.dealAt, now)}`).join(",")}`; }
   if (id === "trade") { const l = tbList(); return `${base}|${copiesKey}|${l.length}|${tbMemo.wanted}|${l.slice(0, 9).map((c) => c.id).join(",")}|${trades.length}`; }
   if (id === "medal") { const L = medalList(); return `${base}|${L.sig}|${mdVer}|${theme["m-surface"]}`; }
-  if (id === "source") { const F = feedData(); return `${base}|${srcState.ver}|${srcState.alerts}|${SRC.map((s) => F.counts[s.id] || 0).join(",")}|${F.chased}`; }
+  if (id === "source") { const F = feedData(), f = map.found[0]; return `${base}|${srcState.ver}|${srcState.alerts}|${SRC.map((s) => F.counts[s.id] || 0).join(",")}|${F.chased}|${f ? `${f.c.id}${f.price}${agoText(f.at, Date.now())}` : ""}`; }
   return base;
 }
 function prepCards() {
@@ -156,7 +156,7 @@ const PAINT = {
     ctx.fillText(fitText(n ? (tbMemo.wanted ? `${tbMemo.wanted} someone wants` : "Nobody has asked yet") : "Empty for now", w - 28), tx, ty + 18);
     const open = trades.filter((r) => r.state === "proposed" || r.state === "countered");
     ctx.fillStyle = open.length ? theme[ROOM_COL.trade] : theme.muted; font(open.length ? 600 : 500, 12);
-    if (ty + 35 < h - 4) ctx.fillText(fitText(open.length ? `${plural1(open.length, "trade")} waiting` : n ? `On ${plural1(pages, "page")}` : "+ on a card adds a spare", w - 28), tx, ty + 35);
+    if (ty + 35 < h - 4) ctx.fillText(fitText(open.length ? `${plural1(open.length, "trade")} waiting` : n ? `On ${plural1(pages, "page")}` : "+ on a card adds one", w - 28), tx, ty + 35);
   },
   medal(w, h) {
     cardFrame("medal", w, h, theme["room-bg"]);
@@ -174,11 +174,11 @@ const PAINT = {
     const head = E.length ? (E[0].rank ? `${MD_RANK[E[0].rank]}: ${E[0].name}` : `Latest: ${E[0].name}`) : "No trophies yet";
     ctx.fillText(fitText(E.length ? `${E[0].name}` : head, w - 28), 14, y);
     ctx.fillStyle = theme["room-muted"]; font(500, 12);
-    const sub = E.length ? (E[0].rank ? `${MD_RANK[E[0].rank]}, your rarest` : "Your rarest") : "Fill a set or a chase to earn one";
+    const sub = E.length ? (E[0].rank ? `${MD_RANK[E[0].rank]}, your rarest` : "Your rarest") : "Fill a set to earn one";
     y += 17; ctx.fillText(fitText(sub, w - 28), 14, y);
     if (next && y + 38 < h) {
-      y += 24; ctx.fillStyle = theme["room-plaque"]; font(700, 12.5, true); ctx.fillText(fitText(`Next: ${next.t.name}`, w - 28), 14, y);
-      y += 16; ctx.fillStyle = theme["room-muted"]; font(500, 12); ctx.fillText(fitText(`${next.left} to go`, w - 28), 14, y);
+      y += 24; ctx.fillStyle = theme["room-plaque"]; font(700, 12.5, true);
+      wrapLines(`Next: ${next.t.name}, ${next.left} to go`, w - 28, 2).forEach((l, i) => ctx.fillText(l, 14, y + i * 16));
     }
   },
   source(w, h) {
@@ -203,6 +203,8 @@ const PAINT = {
       font(600, 13); ctx.textAlign = "left"; ctx.fillStyle = c.on ? theme.ink : theme.muted; ctx.fillText(c.label, c.x + 21, c.y + 18.5);
       ctx.fillStyle = theme.muted; ctx.fillText(c.cnt, c.x + 25 + textW(c.label), c.y + 18.5);
     }
+    const f = map.found[0];
+    if (f && h - (y + 28) > 60) { ctx.fillStyle = theme.ink; font(600, 12.5); ctx.fillText(fitText(`Latest: ${f.c.name} ${short(f.price)} from ${SRC_BY.get(f.src).name}, ${agoText(f.at, Date.now())}`, w - 28), 14, y + 28 + 26); }
     if (y + 28 + 24 <= h) { ctx.fillStyle = theme.muted; font(500, 12.5); ctx.fillText(fitText(F.chased ? `Looking for ${plural1(F.chased, "card")} you chase` : "Chase a card and it starts looking", w - 28), 14, h - 13); }
     return { chips };
   },
@@ -232,9 +234,12 @@ function drawCard(id, r, now, a) {
     const p = clamp((now - map.feedIn.t0) / 650, 0, 1), e = 1 - Math.pow(1 - p, 3), E = b.extra;
     if (p < 1) {
       more = true;
-      ctx.save(); ctx.beginPath(); ctx.rect(r.x, r.y, r.w, E.y0 * k); ctx.clip(); ctx.drawImage(b.cv, r.x, r.y, r.w, r.h); ctx.restore();
-      ctx.save(); ctx.beginPath(); ctx.rect(r.x, r.y + E.y0 * k, r.w, r.h - E.y0 * k); ctx.clip();
-      ctx.drawImage(b.cv, 0, Math.round(E.y0 * dpr), b.cv.width, b.cv.height - Math.round(E.y0 * dpr), r.x - E.step * k * (1 - e), r.y + E.y0 * k, r.w, r.h - E.y0 * k);
+      ctx.drawImage(b.cv, r.x, r.y, r.w, r.h); // the card stays put; inside its edges the strip moves
+      const bx = r.x + 6 * k, by = r.y + (E.y0 - 4) * k, bw = r.w - 12 * k, bh = r.h - (E.y0 - 4) * k - 8 * k;
+      ctx.save(); ctx.beginPath(); ctx.rect(bx, by, bw, bh); ctx.clip();
+      ctx.fillStyle = theme["panel-solid"]; ctx.fillRect(bx, by, bw, bh);
+      const sx = Math.round(6 * dpr), sy = Math.round((E.y0 - 4) * dpr), sw = b.cv.width - sx * 2, sh = b.cv.height - sy - Math.round(8 * dpr); // inside the card's edges only
+      ctx.drawImage(b.cv, sx, sy, sw, sh, bx - E.step * k * (1 - e), by, bw, bh);
       ctx.restore();
       ctx.globalAlpha = a * (1 - p); ctx.lineWidth = 2; ctx.strokeStyle = theme.deal; const g = 4 + 8 * p;
       rr(r.x + (12 - g) * k, r.y + (E.y0 - g) * k, (E.tw + g * 2) * k, (E.th + g * 2) * k, 12 + g); ctx.stroke();
@@ -444,7 +449,7 @@ function drawSourceRoom(now) {
   }
   let imp = null; try { imp = localStorage.getItem("wall-imported"); } catch { /* fine */ }
   const owned = cards.filter((c) => c.owned).length;
-  row({ id: "import", group: "Imports", name: imp && imp !== "1" ? `${imp} import` : imp ? "Your import" : "Nothing imported yet", desc: imp ? `${owned.toLocaleString()} cards on your wall. Their sets are what it looks through.` : "Import from TCGplayer or Collectr when you start, or pick your sets in Settings.", toggle: false });
+  row({ id: "import", group: "Imports", name: imp && imp !== "1" ? `${imp} import` : imp ? "Your import" : "Nothing imported yet", desc: imp ? `${owned.toLocaleString()} cards on your wall now.` : "Import from TCGplayer or Collectr when you start, or pick your sets in Settings.", toggle: false });
   row({ id: "alerts", group: "Alerts", name: "Phone alerts", desc: "A find 40% or more under market pings your phone.", toggle: true, on: srcState.alerts });
   srcView.rows = rows;
   srcView.max = Math.max(0, y + 24 - vh);
