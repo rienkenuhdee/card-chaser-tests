@@ -500,6 +500,7 @@ body.inbinder:not(.showing):not(.trading) .bbar > :not(.bb-pages), body.showing 
   .bb-pages, .showbar .mtext span { display: none; }
   .bbar .mtext { flex-direction: column; align-items: flex-start; gap: 0; }
   .bbar b, .showbar b { font-size: 16px; }
+  .showbar b { flex: 0 1 auto; min-width: 0; white-space: normal; line-height: 1.1; }
   .bbar .mtext span { font-size: 12px; }
 }
 body.inbinder .lens, body.inbinder .timebar { transform: translate(-50%, 160%); opacity: 0; pointer-events: none; }
