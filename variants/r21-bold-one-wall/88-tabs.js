@@ -132,8 +132,6 @@ function toTop() {
   const stepTop = (t) => { if (id !== topTween || gesture) return; const p = clamp((t - t0) / 460, 0, 1); mScroll = from * (1 - ease(p)); kick(); if (p < 1) requestAnimationFrame(stepTop); };
   requestAnimationFrame(stepTop);
 }
-// After whatever is moving has landed.
-function whenStill(fn) { const go = () => (state.trans || shuffle || (room.on && room.anim) ? setTimeout(go, 40) : fn()); go(); }
 
 // Medal: the wall flies home (a lifted tab lands back on the wall, an open set closes), then the room's door opens.
 function goMedal() {
@@ -244,7 +242,7 @@ function layoutAll() {
   for (const g of groups) { orderGroup(g); g.done = mode === "set" && isPut(g); }
   groups.forEach(binderLayout);
   const keep = mScroll;
-  if (lifted) { newPanel = null; liftedLayout(); } else { feedBox = null; mosaicLayout(); if (!state.time && !picking()) mMax += HN_H; } // the end of the wall clears Have and Need above the bar
+  if (lifted) { newPanel = null; liftedLayout(); } else { feedBox = null; mosaicLayout(); if (!state.time && !picking()) { mMax += HN_H; mScroll = clamp(keep, 0, mMax); } } // the end of the wall clears Have and Need above the bar
   if (room.on) { if (!roomOk()) { endRoom(); return; } if (room.fan && !inCase(room.fan)) room.fan = null; mScroll = keep; strip = null; roomLayout(); }
   if (bnd.on) { bnd.L = tbGeom(bnd.show); bnd.vi = clamp(bnd.vi, 0, tbViews() - 1); } // the binder fits the new screen
 }
