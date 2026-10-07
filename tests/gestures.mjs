@@ -222,6 +222,8 @@ for (const dpr of [1, 2]) {
   console.log(`  [dpr ${dpr}] the import took ${took.toFixed(1)} s from the tap to the summary`);
   R.push(["the story ends home at the top with the summary and its rows", reached && !done1.story && done1.my === 0 && done1.n === 541 && ["near", "md", "tb"].every((id) => done1.rows.includes(id)) && !done1.mpop && !done1.toast]);
   const nearSet = await p.evaluate(() => /^(.*), \d+ to go$/.exec(__w.summary.rows.find((r) => r.id === "near").title)[1]);
+  // Wait for the sheet to finish sliding up before tapping its row (a tap mid-slide can land on the row below).
+  for (let k = 0, last = null; k < 40; k++) { const y = await p.evaluate(() => document.querySelector('[data-ar="near"]')?.getBoundingClientRect().top ?? -1); if (y === last && y > 0) break; last = y; await wait(80); }
   await p.click('[data-ar="near"]'); await wait(2600);
   const ring = await imp(), gaps = await p.evaluate(() => __w.gaps(__w.state.g).filter((r) => r.y > 70 && r.y < 772).length);
   R.push(["the closest-to-done row opens that set with its missing pockets ringed", ring.view === "set" && ring.set === nearSet && ring.rings?.set === nearSet && gaps > 0 && !ring.sum]);
