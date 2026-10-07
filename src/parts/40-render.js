@@ -251,7 +251,7 @@ function drawnFace(c, sx, sy, w, h, now, value) {
   // (Skipped while things are moving: nobody sees foil mid-gesture, and it's the costliest thing on a card.)
   if (c.tier === 3 && !energy && w > 34) {
     ctx.fillStyle = "rgb(255 255 255 / .13)"; ctx.beginPath();
-    ctx.moveTo(ax + aw * 0.18, ay); ctx.lineTo(ax + aw * 0.5, ay); ctx.lineTo(ax + aw * 0.12, ay + ah); ctx.lineTo(ax - aw * 0.2, ay + ah); ctx.closePath(); ctx.fill();
+    ctx.moveTo(ax + aw * 0.3, ay); ctx.lineTo(ax + aw * 0.56, ay); ctx.lineTo(ax + aw * 0.26, ay + ah); ctx.lineTo(ax, ay + ah); ctx.closePath(); ctx.fill();
   }
   if (c.tier >= 3 && !reduced && !foilOff && !state.trans && !fly && !inertia && !(tbl.on && tableMoving())) {
     frameFoil = true;

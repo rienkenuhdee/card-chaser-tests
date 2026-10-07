@@ -47,7 +47,9 @@ function artWant(u, ask) {
   return e;
 }
 function artFor(c, w) {
-  const big = w * dpr > ART_BIG, [u0, u1] = artUrls(c, big), ask = !ART.far || Boolean(c.lift && !ART.still); // the Chase lens's tiles are close up
+  // Asked for where the card is close up (the Chase lens's tiles count), once the level has landed: not mid-pinch or
+  // mid-flight, when a card passes through sizes and places it won't stay at.
+  const big = w * dpr > ART_BIG, [u0, u1] = artUrls(c, big), ask = (!ART.far || Boolean(c.lift && !ART.still)) && !state.trans && !fly;
   return artWant(u0, ask) || (u1 ? artWant(u1, ask) : null); // the large scan, or the small one meanwhile (or instead)
 }
 // Which picture a card would show at this size, settled: pictures painted once and kept (the trade binder's pages)
@@ -55,6 +57,7 @@ function artFor(c, w) {
 function artMark(c, w) {
   const t = performance.now(), urls = artUrls(c, w * dpr > ART_BIG);
   for (let i = 0; i < urls.length; i++) { const e = ART.map.get(urls[i]); if (e) e.want = t; if (e?.state === "ready" && t - e.t >= 200) return String(i); }
+  if (!ART.map.has(urls[0])) artWant(urls[0], !ART.far && !state.trans && !fly);
   return "-";
 }
 const artFade = (e, now) => (reduced || ART.still ? 1 : clamp((now - e.t) / 200, 0, 1));
@@ -133,7 +136,7 @@ function artDraw(c, e, sx, sy, w, h, now, value, k) {
     const s = clamp(w / 120, 0.62, 1.15), ph = 15 * s, py = sy + h - ph - w * 0.035;
     ctx.textBaseline = "alphabetic";
     if (c.tag) artPill(c.tag, sx + w * 0.035, py, ph, s, "left"); // which print: the scan is the card's
-    if (value || w > 110) artPill(short(c.price), sx + w - w * 0.035, py, ph, s, "right");
+    if (value) artPill(short(c.price), sx + w - w * 0.035, py, ph, s, "right"); // (up close the panel has the price)
   }
   ctx.globalAlpha = a0;
 }
@@ -145,11 +148,18 @@ function artPill(t, x, y, h, s, side) {
 // The note under a card up close, for a vintage scan: shown only while its picture is.
 const artNoteEl = document.createElement("p");
 artNoteEl.id = "p-pic"; artNoteEl.className = "p-pic"; artNoteEl.hidden = true;
-artNoteEl.textContent = "Pictured: a 1st Edition print. Yours counts as the version you own.";
+artNoteEl.textContent = "Pictured: a 1st Edition print.";
 document.getElementById("p-meta")?.after(artNoteEl);
-function artNote(c, shown) {
-  const on = Boolean(shown && artStamped(c));
-  if (artNoteEl.hidden === on) artNoteEl.hidden = !on;
+// As the panel fills (52-focus.js), before the card is framed above it: a vintage card whose picture is in or on its
+// way from a host that answers keeps the note's line, so the panel doesn't grow over the card when the picture lands.
+function artPanel(c) {
+  const u = artUrls(c, true)[0];
+  artNoteEl.hidden = !(artStamped(c) && (ART.oks.has(artHost(u)) || artUrls(c, false).some((x) => ART.seen.has(x))));
+  artNoteEl.style.visibility = "hidden";
+}
+function artNote(c, shown) { // each frame the card is up: the note shows while its picture does
+  const v = shown && !artNoteEl.hidden ? "visible" : "hidden";
+  if (artNoteEl.style.visibility !== v) artNoteEl.style.visibility = v;
 }
 
 // ----- the pages: the same pictures in the markup, over the drawn face (which stays if the picture never comes) -----

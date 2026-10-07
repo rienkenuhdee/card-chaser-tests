@@ -925,7 +925,7 @@ body.trading #pg-trade { opacity: 0; transition: opacity .3s; }
 .ls-photo .cface i { font-size: 8.5px; }
 .ls-photo .cface.slv { box-shadow: 0 10px 24px rgb(0 0 0 / .4), 0 0 0 5px rgb(255 255 255 / .5), 0 0 0 6px rgb(0 0 0 / .1); }
 .ls-photo small { position: absolute; left: 12px; bottom: 9px; color: rgb(255 255 255 / .8); font-size: 11.5px; }
-.ls-photo .ls-cap-pic { display: none; right: 12px; } /* a stock picture, not the seller's: said so */
+.ls-photo .ls-cap-pic { display: none; max-width: calc(50% - 78px); line-height: 1.25; } /* a stock picture, not the seller's: said so, beside the card */
 .ls-photo:has(.cface.pic) .ls-cap { display: none; }
 .ls-photo:has(.cface.pic) .ls-cap-pic { display: block; }
 .ls-x { position: absolute; top: 10px; right: 10px; width: 36px; height: 36px; border-radius: 18px; background: rgb(0 0 0 / .35); color: #fff; }
