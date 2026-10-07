@@ -180,10 +180,10 @@ function drawPlaque(g, m, now, alpha, labelAlpha) {
   const p = plateOf(m);
   ctx.globalAlpha = alpha;
   if (!g.minting && !g.unmint) { ctx.fillStyle = theme["slot-line"]; rr(m.x, p.y + p.h + 2, m.w, 3, 1.5); ctx.fill(); } // the board it sits on
-  rr(p.x, p.y, p.w, p.h, 8); ctx.fillStyle = theme.plaque; ctx.fill();
-  ctx.save(); rr(p.x, p.y, p.w, p.h, 8); ctx.clip();
-  ctx.fillStyle = theme["plaque-hi"]; ctx.fillRect(p.x, p.y, p.w, 1.5);
-  ctx.fillStyle = theme["plaque-lo"]; ctx.fillRect(p.x, p.y + p.h - 1.5, p.w, 1.5);
+  rr(p.x, p.y, p.w, p.h, 7); ctx.fillStyle = theme.plaque; ctx.fill(); // flat gold, a hairline inset: the same plate as in Trophies
+  ctx.save(); rr(p.x, p.y, p.w, p.h, 7); ctx.clip();
+  ctx.fillStyle = theme["plaque-hi"]; ctx.fillRect(p.x, p.y, p.w, 1);
+  ctx.fillStyle = theme["plaque-lo"]; ctx.fillRect(p.x, p.y + p.h - 1, p.w, 1);
   if (g.gleam) { // a gleam crosses the plaque as it lands
     const t = (now - g.gleam) / 1200;
     if (t >= 1) g.gleam = 0;
@@ -194,8 +194,8 @@ function drawPlaque(g, m, now, alpha, labelAlpha) {
     }
   }
   ctx.restore();
-  ctx.lineWidth = 1; ctx.strokeStyle = theme["plaque-lo"]; rr(p.x + 4.5, p.y + 4.5, p.w - 9, p.h - 9, 5); ctx.stroke();
-  if (state.press?.g === g) { ctx.lineWidth = 1.5; ctx.strokeStyle = theme.ink; rr(p.x, p.y, p.w, p.h, 8); ctx.stroke(); }
+  ctx.lineWidth = 1; ctx.strokeStyle = theme["plaque-lo"]; rr(p.x + 4.5, p.y + 4.5, p.w - 9, p.h - 9, 4); ctx.stroke();
+  if (state.press?.g === g) { ctx.lineWidth = 1.5; ctx.strokeStyle = theme.ink; rr(p.x, p.y, p.w, p.h, 7); ctx.stroke(); }
   if (labelAlpha < 0.01 || p.w < 60 || p.h < 40) { ctx.globalAlpha = 1; return; }
   const x = p.x + 10, w = p.w - 20, info = g.plq || (g.plq = plaqueInfo(g));
   ctx.globalAlpha = alpha * labelAlpha;

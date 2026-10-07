@@ -43,8 +43,8 @@ for (const dpr of [1, 2]) {
   R.push(["a cancelled touch leaves no ghost finger", (await st()).my !== g0 && (await st()).view === "mosaic"]);
   g = await G(); await t.tap(g.x, g.y); await wait(200); await t.drag(195, 650, 300, 120); await wait(900);
   R.push(["a touch during the opening takes over", (await st()).view === "set" && (await st()).cy > -40]);
-  // The trophy room (round 21: the Medal room on the map, its only way in; the door at the end of the wall is gone).
-  // A set finished two days ago sits on its shelves. Pinch the wall closed for the map, tap Medal.
+  // Trophies, the trophy room (round 21: a room on the map, its only way in; its id is still "medal").
+  // A set finished two days ago sits on its shelves. Pinch the wall closed for the map, tap Trophies.
   await p.evaluate(() => {
     const g = __w.groups.filter((x) => x.set).sort((a, b) => a.base.length - b.base.length)[0], at = Date.now() - 2 * 86400e3, owned = {};
     for (const c of g.base) owned[c.id] = { on: true, at };
@@ -56,12 +56,12 @@ for (const dpr of [1, 2]) {
   const rm = () => p.evaluate(() => ({ on: __w.room.on, q: __w.room.q, view: __w.view, my: Math.round(__w.mScroll), at: __w.rooms.at, map: __w.rooms.map }));
   const roomCard = (id) => p.evaluate((id) => { const r = __w.mapLayout().r[id]; return { x: r.x + r.w / 2, y: r.y + r.h / 2 }; }, id);
   const d = await p.evaluate(() => __w.caseList().length === 1 && !__w.groupsNow.some((g) => g.done && g.m && g.m.h > 0 && __w.caseList().includes(g)));
-  R.push(["a trophy past its day is in the Medal room, not on the wall", d]);
+  R.push(["a trophy past its day is in Trophies, not on the wall", d]);
   if (d) {
     for (let k = 0; k < 2; k++) { await u.drag(200, 650, 250, 120); await wait(250); } // somewhere down the wall, to come back to
     const wallAt = (await rm()).my;
     await u.pinch(195, 450, 220, 120, 90); await wait(900); R.push(["pinching the wall closed goes up to the map", (await rm()).map && !(await rm()).on]);
-    let c = await roomCard("medal"); await u.tap(c.x, c.y); await wait(900); R.push(["tapping the Medal card opens the trophy room", (await rm()).on && (await rm()).q === 1 && (await rm()).at === "medal" && !(await rm()).map]);
+    let c = await roomCard("medal"); await u.tap(c.x, c.y); await wait(900); R.push(["tapping the Trophies card opens the room", (await rm()).on && (await rm()).q === 1 && (await rm()).at === "medal" && !(await rm()).map]);
     // Something in the room (a rect in room coordinates) dragged into view, then where it is on screen.
     const inView = async (get) => { for (let k = 0; k < 10; k++) { const r = await get(); if (!r) return null; const y = r.y - (await rm()).my; if (y > 110 && y < 640) return { x: r.x, y }; const d = Math.max(-440, Math.min(440, y - 380)); await u.drag(200, d > 0 ? 680 : 220, (d > 0 ? 680 : 220) - d, Math.max(160, Math.abs(d) / 0.15)); await wait(300); } return null; }; // slow enough not to fling
     const pl = await inView(() => p.evaluate(() => { const g = __w.caseList()[0]; return { x: g.m.x + g.m.w / 2, y: g.m.y + 40 }; }));
@@ -70,7 +70,7 @@ for (const dpr of [1, 2]) {
     await u.pinch(195, 450, 220, 120, 90); await wait(900); R.push(["a quick pinch in the room goes up to the map", !(await rm()).on && (await rm()).map]);
     c = await roomCard("chase"); await u.tap(c.x, c.y); await wait(900); R.push(["and Chase comes back where the wall was", (await rm()).at === "chase" && !(await rm()).map && Math.abs((await rm()).my - wallAt) < 4]);
     await p.click("#rooms"); await wait(900); R.push(["the rooms button goes up to the map", (await rm()).map]);
-    c = await roomCard("medal"); await u.pinch(c.x, c.y, 40, 120, 160); await wait(900); R.push(["a spread on the Medal card opens the room", (await rm()).on && !(await rm()).map]);
+    c = await roomCard("medal"); await u.pinch(c.x, c.y, 40, 120, 160); await wait(900); R.push(["a spread on the Trophies card opens the room", (await rm()).on && !(await rm()).map]);
     await u.drag(300, 500, 510, 120, -190); await wait(900); R.push(["a sideways flick in the room goes to the next room along (Source)", !(await rm()).on && (await rm()).at === "source"]);
     await u.pageDrag(80, 500, 505, 120, 200); await wait(900); R.push(["and a flick back on its page returns to the room", (await rm()).on && (await rm()).at === "medal"]);
     // The finished set's shelf (the room is still up): its plaque at the head, Binder Complete mounted on it, its other medals hanging beneath.
