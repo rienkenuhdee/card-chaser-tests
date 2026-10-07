@@ -782,7 +782,7 @@ function openMedal(id) {
       <p class="ms-when">${lucky ? `<span class="rank-tag ${t.rank}">${t.rank === "shiny" ? "Shiny · 1 in 100" : "Critical · 1 in 10"}</span> ` : ""}${t.earned ? `Earned${t.at ? ` ${mdDate(t.at)}` : ""}` : t.goal > 1 ? `${t.goal - t.have} to go` : "Not earned yet"}</p>
       </div>
       ${cs.length ? `<p class="ms-count">${have} of ${cs.length}${groupsU ? "" : " cards"}</p>
-      <div class="ms-cards">${cs.slice(0, MAX).map((c) => { const st = sets[c.si]; return `<button type="button" class="ms-card${c.owned ? " own" : ""}" data-ci="${c.i}" style="--tc:${typeColor(c)}" aria-label="${mdEsc(`${c.name}, ${st.name} ${c.num}, ${c.owned ? "owned" : "missing"}. Go to it`)}"><span class="ms-face"><b>${mdEsc(c.name)}</b><small>${mdEsc(st.code)} ${mdEsc(c.num)}</small></span>${c.owned ? `<i class="ms-check" aria-hidden="true">✓</i>` : ""}</button>`; }).join("")}</div>
+      <div class="ms-cards">${cs.slice(0, MAX).map((c) => { const st = sets[c.si]; return `<button type="button" class="ms-card${c.owned ? " own" : ""}${artIn(c, 64) ? " pic" : ""}" data-ci="${c.i}" style="--tc:${typeColor(c)}" aria-label="${mdEsc(`${c.name}, ${st.name} ${c.num}, ${c.owned ? "owned" : "missing"}. Go to it`)}">${artImg(c, 64)}<span class="ms-face"><b>${mdEsc(c.name)}</b><small>${mdEsc(st.code)} ${mdEsc(c.num)}</small></span>${c.owned ? `<i class="ms-check" aria-hidden="true">✓</i>` : ""}</button>`; }).join("")}</div>
       ${cs.length > MAX ? `<p class="ms-more">and ${cs.length - MAX} more${openable ? " in the binder" : ""}</p>` : ""}` : ""}
     </div>
     <div class="ms-foot">${openable ? `<button type="button" class="mbtn" data-ms-open>Open the binder</button>` : ""}<button type="button" class="mbtn primary" data-ms-close>Close</button></div>`;

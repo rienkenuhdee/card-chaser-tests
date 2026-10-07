@@ -44,6 +44,7 @@ function fillPanel(c, dir) {
     own.setAttribute("aria-pressed", String(c.owned));
     buy.textContent = c.owned ? "Back to the set" : c.deal && isChase(c) ? `Buy for ${money(c.deal)}` : "Find a copy";
     updateFlag(c);
+    artPanel(c); // a vintage scan's note (41-art.js)
     fillChips(panelMore, c);
   };
   if (dir && !reduced) { swap.classList.add("out"); setTimeout(() => { put(); swap.classList.remove("out"); }, 140); } else put();

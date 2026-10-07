@@ -16,7 +16,7 @@ function bake(id, key, w, h, paint) {
   if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
   ctx.clearRect(0, 0, w + 2, h + 2);
-  const extra = paint(w, h) || null;
+  ART.far = ART.still = true; const extra = paint(w, h) || null; ART.far = ART.still = false; // the map is far out: pictures only if already in
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1; ctx.textAlign = "left";
   const x = cv.getContext("2d"); x.clearRect(0, 0, W, H); x.drawImage(canvas, 0, 0, W0, H0, 0, 0, W, H);
   const v = { key, cv, w, h, extra }; baked.set(id, v); return v;

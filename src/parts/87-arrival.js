@@ -204,7 +204,7 @@ function paintLead(el, L) {
     return;
   }
   if (L.kind === "spares") {
-    el.innerHTML = L.list.map((c, i) => `<span class="ar-card" style="--tc:${typeColor(c)};--r:${(i - (L.list.length - 1) / 2) * 9}deg"><span></span></span>`).join("");
+    el.innerHTML = L.list.map((c, i) => `<span class="ar-card${artIn(c, 26) ? " pic" : ""}" style="--tc:${typeColor(c)};--r:${(i - (L.list.length - 1) / 2) * 9}deg">${artImg(c, 26)}<span></span></span>`).join("");
     return;
   }
   // A set or the Dex: its tiles in small, yours in their colours, the rest as empty pockets.
