@@ -321,8 +321,8 @@ function feedRow(c, x, y, w, h, a, now) {
   ctx.globalAlpha = a; ctx.textBaseline = "alphabetic";
   const rx = x + w - 12, rw = Math.min(130, w * 0.34), tx = x + 11 + cw + 12, tw = rx - rw - 8 - tx;
   ctx.textAlign = "left"; ctx.fillStyle = theme.deal; font(800, 23); const price = short(c.deal); ctx.fillText(price, tx, y + 34);
-  if (c.dealWas) { const pw = textW(price); font(600, 12.5); const old = short(c.dealWas), ow = textW(old); if (pw + 8 + ow < tw) { ctx.fillStyle = theme.muted; ctx.fillText(old, tx + pw + 8, y + 34); ctx.fillRect(tx + pw + 8, y + 29.5, ow, 1); } }
-  ctx.fillStyle = theme.deal; font(700, 13); ctx.fillText(fitText(`${dealPct(c)}% under market ${short(c.price)}`, tw), tx, y + 53);
+  { const pw = textW(price); font(600, 12.5); const old = c.dealWas ? short(c.dealWas) : `was ${short(c.price)}`, ow = textW(old); if (pw + 8 + ow < tw) { ctx.fillStyle = theme.muted; ctx.fillText(old, tx + pw + 8, y + 34); if (c.dealWas) ctx.fillRect(tx + pw + 8, y + 29.5, ow, 1); } } // a drop strikes the old asking price; else what it's worth
+  ctx.fillStyle = theme.deal; font(700, 13); ctx.fillText(fitText(`${dealPct(c)}% under market`, tw), tx, y + 53);
   ctx.fillStyle = theme.ink; font(700, 16, true); ctx.fillText(fitText(c.name, tw), tx, y + h - 30);
   ctx.fillStyle = theme.muted; font(500, 12); ctx.fillText(fitText(`${st.name} ${c.num}/${st.printed}`, tw), tx, y + h - 13);
   ctx.textAlign = "right";

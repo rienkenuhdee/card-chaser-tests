@@ -153,6 +153,7 @@ function mapSettled(T) {
     map.from = null; spot = "map"; mapSeen();
   } else {
     spot = id === "feed" || id === "source" ? id : null;
+    if (T.then) setTimeout(T.then, 0);
     map.from = id === "medal" || id === "trade" ? id : null;
     if (id === "trade") { document.body.classList.add("inbinder"); tbSync(); }
   }
@@ -165,9 +166,15 @@ function toMap() {
   const id = currentRoom(); if (!id || !mapReady()) return;
   tick(8); beginMap(id, "out"); mapSettle(1, 600);
 }
-function openPlace(id, dur = 640) {
+function openPlace(id, dur = 640, then = null) {
   if (spot !== "map" || state.trans || !ROOMS.includes(id)) return;
-  tick(8); beginMap(id, "in"); mapSettle(0, dur);
+  tick(8); beginMap(id, "in").then = then; mapSettle(0, dur);
+}
+// The Chase card's small lens bar: a tap on a lens goes into Chase, and the wall then takes that lens (its own flight).
+function chaseLensAt(x, y) {
+  const R = mapLayout().r.chase, bx = R.x + 12, by = R.y + R.h - 40, bw = R.w - 24;
+  if (y < by - 6 || y > by + 34 || x < bx || x > bx + bw) return null;
+  return ["have", "need", "chase", "trade"][clamp(Math.floor(((x - bx) / bw) * 4), 0, 3)];
 }
 // Something that belongs to the wall was asked for (a search, a filter, the list): the place steps aside at once.
 function goWallNow() {
@@ -322,7 +329,12 @@ function pUp(remaining, end, cancelled = false) {
 }
 function pTap(x, y, was) {
   if (state.trans) return;
-  if (spot === "map") { const id = mapHit(x, y); if (id && (!was || was === id)) openPlace(id); return; }
+  if (spot === "map") {
+    const id = mapHit(x, y); if (!id || (was && was !== id)) return;
+    const lens = id === "chase" ? chaseLensAt(x, y) : null;
+    openPlace(id, 640, lens && lens !== state.lens ? () => { if (!spot && view === "mosaic" && !state.trans) setLens(lens); } : null);
+    return;
+  }
   if (spot === "feed") feedTap(x, y); else if (spot === "source") sourceTap(x, y);
 }
 const pScroll = () => (spot === "feed" ? feedView.scroll : spot === "source" ? srcView.scroll : 0);
