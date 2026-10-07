@@ -19,7 +19,7 @@ export const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 /** A phone-sized page on a debug build, offline (Google Fonts are skipped; the fallback font is fine for tests). */
 export async function phone(browser, file, { dark = false, motion = true, dpr = 1, width = 390, height = 844 } = {}) {
   const p = await browser.newPage();
-  await p.setViewport({ width, height, deviceScaleFactor: dpr, isMobile: width < 700, hasTouch: true });
+  await p.setViewport({ width, height, deviceScaleFactor: dpr, isMobile: Math.min(width, height) < 700, hasTouch: true }); // a phone either way up
   await p.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: motion ? "no-preference" : "reduce" }, { name: "prefers-color-scheme", value: dark ? "dark" : "light" }]);
   await p.setRequestInterception(true);
   p.on("request", (r) => (r.url().startsWith("file:") ? r.continue() : r.abort()));

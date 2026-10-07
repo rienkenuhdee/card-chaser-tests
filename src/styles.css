@@ -1036,9 +1036,10 @@ body.trading #pg-trade { opacity: 0; transition: opacity .3s; }
   .w-text b { font-size: 21px; }
   .w-or { margin: -3px 0; }
   /* The New chase form: at the right, the wall dimming to its match beside it. */
-  .chase-sheet { left: auto; right: calc(var(--sar) + 10px); top: calc(env(safe-area-inset-top, 0px) + 62px); bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); width: var(--side-w); max-height: none;
+  .chase-sheet { left: auto; right: calc(var(--sar) + 10px); top: calc(env(safe-area-inset-top, 0px) + 62px); bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); width: min(480px, 54vw); max-height: none;
     transform: translateX(calc(100% + 30px + var(--sar))); border-radius: 18px; border-bottom: 1px solid var(--line); grid-template-rows: auto minmax(0, 1fr) auto; }
   body.building .chase-sheet.on { transform: none; }
+  .cs-line { font-size: 12.5px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   body.building.focused .chase-sheet, body.building.offering .chase-sheet, body.building.paying .chase-sheet, body.building.trading .chase-sheet { transform: translateX(calc(100% + 30px + var(--sar))); }
 
   /* Import complete: what came in at the left with See your wall; its rows, each a door, at the right. */
@@ -1057,7 +1058,15 @@ body.trading #pg-trade { opacity: 0; transition: opacity .3s; }
   .ls-foot { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); }
   .tcadd { width: min(560px, calc(100% - var(--sal) - var(--sar) - 20px)); max-height: calc(100dvh - 20px); margin: auto; border-radius: 20px; }
   .msheet { max-height: calc(100dvh - 20px); }
-  dialog { max-height: calc(100dvh - 20px); }
+  dialog { max-height: calc(100dvh - 20px); overflow-y: auto; }
+  /* The import's story: lower and wider, the moment beside the date rather than over the wall. */
+  .story { padding: 0 calc(var(--sar) + 16px) calc(env(safe-area-inset-bottom, 0px) + 8px) calc(var(--sal) + 16px); }
+  .st-in { width: min(900px, 100%); }
+  .st-date { font-size: 24px; }
+  .st-moment { left: auto; width: min(400px, 52%); }
+  .st-skip { top: calc(env(safe-area-inset-top, 0px) + 10px); right: calc(var(--sar) + 12px); }
+  .mpop { bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); }
+  body.focused .mpop, body.medaling .mpop { top: auto; bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); left: calc(var(--sal) + 10px + (100vw - var(--sal) - var(--side-w) - 30px) / 2); }
 
   /* The rooms that are pages: under the top row, clear of the notch. */
   .rpage { padding: calc(env(safe-area-inset-top, 0px) + 66px) calc(var(--sar) + 16px) calc(env(safe-area-inset-bottom, 0px) + 28px) calc(var(--sal) + 16px); }

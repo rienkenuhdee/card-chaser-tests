@@ -147,8 +147,8 @@ function tbEnsure(i, G) {
   let cv = had?.cv;
   if (!cv || cv.width !== W || cv.height !== H) { cv = document.createElement("canvas"); cv.width = W; cv.height = H; }
   const x = cv.getContext("2d"); x.clearRect(0, 0, W, H); x.drawImage(canvas, 0, 0, W, H, 0, 0, W, H);
-  bnd.cache.set(slot, { key, cv, used: now });
-  if (bnd.cache.size > 9) { const old = [...bnd.cache].filter((e) => e[0] !== "cover").sort((a, b) => a[1].used - b[1].used)[0]; bnd.cache.delete(old[0]); }
+  bnd.cache.set(slot, { key, cv, used: now }); // kept: a spread mid-turn needs six pages, and the cover
+  if (bnd.cache.size > 8) { const old = [...bnd.cache].filter((e) => e[0] !== "cover").sort((a, b) => a[1].used - b[1].used)[0]; bnd.cache.delete(old[0]); }
 }
 const tbImg = (i, G) => bnd.cache.get(i === -1 ? "cover" : `${G.show ? "s" : "o"}${i}`)?.cv || null;
 

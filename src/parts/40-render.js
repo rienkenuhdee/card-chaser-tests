@@ -174,7 +174,7 @@ function drawTile0(c, sx, sy, w, h, now, mult = 1) {
     return;
   }
   if (w < 26) { // binder at arm's length: shapes and colour (kept cheap: this draws a thousand times a frame)
-    const r = w * 0.09, round = w >= 12;
+    const r = w * 0.09, round = w >= (foilOff ? 18 : 12); // mid-move (a room shrinking to the map) small tiles stay square: rounding a thousand is the costliest part of the frame, and nobody sees corners in motion
     const dealOn = !c.owned && c.deal && isChase(c) && state.lens !== "need" && !state.time; // a deal is a property of a chase
     if (flood < 1) {
       ctx.fillStyle = theme.slot;

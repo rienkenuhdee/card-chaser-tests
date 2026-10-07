@@ -10,7 +10,8 @@
     "test": "node tests/all.mjs",
     "test:gestures": "node tests/gestures.mjs",
     "test:smoke": "node tests/smoke.mjs",
-    "test:perf": "node tests/perf.mjs"
+    "test:perf": "node tests/perf.mjs",
+    "test:landscape": "node tests/landscape.mjs"
   },
   "devDependencies": {
     "puppeteer": "^23.0.0"
