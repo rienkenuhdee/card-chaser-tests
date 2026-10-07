@@ -1,0 +1,48 @@
+/* Round 21 (bold): production's tabs as a bottom bar, each a lens on the same wall. Production's four colours: Feed
+   blue, Chase red, Trade green, Medal yellow, each tab with its stripe and a tinted ink that slides between them. */
+.lens.tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; width: min(520px, calc(100vw - 20px)); padding: 4px; border-radius: 16px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); }
+.lens.tabs > button[data-tab] { --tab: var(--c-blue); height: 50px; min-width: 0; padding: 0 4px 3px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  font: 650 15px var(--font); letter-spacing: -0.005em; line-height: 1.15; }
+.lens.tabs > button[data-tab="chase"] { --tab: var(--c-red); }
+.lens.tabs > button[data-tab="trade"] { --tab: var(--c-green); }
+.lens.tabs > button[data-tab="medal"] { --tab: var(--c-yellow); }
+.lens.tabs > button[data-tab]::before { content: ""; position: absolute; left: 34%; right: 34%; bottom: 4px; height: 3px; border-radius: 2px; background: var(--tab); opacity: .38;
+  transition: left .3s cubic-bezier(.2,.9,.25,1.04), right .3s cubic-bezier(.2,.9,.25,1.04), opacity .2s; }
+.lens.tabs > button[data-tab][aria-pressed="true"]::before { left: 18%; right: 18%; opacity: 1; }
+.lens.tabs .tw { display: block; }
+.lens.tabs .tc { display: block; max-width: 100%; min-height: 13px; font: 500 11px/1.2 var(--font); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lens.tabs .tc:empty { display: none; }
+.lens.tabs .tc.new { color: var(--c-blue); font-weight: 750; }
+.lens.tabs .ink { top: 4px; bottom: 4px; border-radius: 12px; background: color-mix(in srgb, var(--tc, var(--c-red)) 15%, transparent);
+  transition: transform .38s cubic-bezier(.2,.9,.25,1.04), width .38s cubic-bezier(.2,.9,.25,1.04), background-color .3s; }
+.lens.tabs .lbadge { display: none !important; } /* the Feed tab's count line says "3 new" instead */
+.lens.tabs > button.lglow { color: var(--ink); }
+.lens.tabs > button.lglow .tc { color: var(--deal); }
+
+/* Have and Need: a small toggle that rides on top of the Chase tab while Chase is the tab you're on. */
+.lens .hn { position: absolute; z-index: 2; bottom: calc(100% + 8px); left: var(--hx, 50%); display: flex; gap: 2px; padding: 3px; border-radius: 12px;
+  transform: translate(-50%, 10px) scale(.94); opacity: 0; pointer-events: none; transition: transform .32s cubic-bezier(.2,.9,.25,1.04), opacity .2s; }
+body[data-tab="chase"]:not(.timing) .lens .hn { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
+.lens .hn button { height: 32px; min-width: 0; padding: 0 15px; border-radius: 9px; font: 650 13.5px var(--font); color: var(--muted); }
+.lens .hn button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+
+/* The room is the Medal tab's place, so the bar stays up in it (the trade binder keeps its own bar, as before). */
+body.inroom:not(.focused):not(.offering):not(.marking):not(.trading):not(.medaling):not(.paying) .lens { transform: translateX(-50%); opacity: 1; pointer-events: auto; }
+body.inroom .lens.tabs { border-color: rgb(255 255 255 / .08); }
+
+/* Sources, in Settings */
+#prefs .src-note { margin: -4px 0 8px; font-size: 13.5px; color: var(--muted); }
+#prefs .srcs { display: grid; gap: 2px; margin-bottom: 14px; }
+#prefs .src-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 4px 2px; border-bottom: 1px solid var(--line); cursor: pointer; }
+#prefs .src-row span { display: grid; gap: 1px; }
+#prefs .src-row b { font-size: 15px; }
+#prefs .src-row small { font-size: 12.5px; color: var(--muted); }
+#prefs .src-row input { appearance: none; -webkit-appearance: none; flex: none; position: relative; width: 44px; height: 26px; margin: 0; border-radius: 13px; background: var(--slot-line); cursor: pointer; transition: background .2s; }
+#prefs .src-row input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / .3); transition: transform .2s; }
+#prefs .src-row input:checked { background: var(--c-blue); }
+#prefs .src-row input:checked::after { transform: translateX(18px); }
+@media (prefers-reduced-motion: reduce) { #prefs .src-row input, #prefs .src-row input::after, .lens .hn, .lens.tabs .ink, .lens.tabs > button[data-tab]::before { transition: none; } }
+
+/* The list: NEW on a listing */
+.lnew { display: inline-block; padding: 1px 6px; border-radius: 8px; background: var(--c-blue); color: #fff; font-size: 10.5px; letter-spacing: .04em; vertical-align: 2px; }
