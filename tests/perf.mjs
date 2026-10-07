@@ -69,9 +69,24 @@ const u = await q.evaluate(async () => {
   }
   return { mosaic, pinch, map, turn };
 });
+// The binder in production's proportions (round 22 polish): pockets the full height of a row, with card pictures in,
+// held mid-turn on its side and upright.
+const turnWith = () => q.evaluate(async () => {
+  const time = async () => { const ts = []; await new Promise((res) => { const f = (x) => { ts.push(x); __w.kick(); if (ts.length < 16) requestAnimationFrame(f); else res(); }; requestAnimationFrame(f); }); return (ts[15] - ts[0]) / 15; };
+  if (!__w.openBinder || !__w.tbList().length) return null;
+  __w.artInject("all", true); __w.openBinder(); await new Promise((r) => setTimeout(r, 3000));
+  if (!__w.bnd.on) return null;
+  __w.bnd.turn = 0.3; await new Promise((r) => setTimeout(r, 1500)); await time(); const ms = await time(); __w.bnd.turn = 0; __w.closeBinder(true);
+  return { ms, n: __w.art.ready };
+});
+const picsSide = await turnWith();
+await q.setViewport({ width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true }); await new Promise((r) => setTimeout(r, 800));
+const picsUp = await turnWith();
+if (picsSide) console.log(`the binder held mid-turn with card pictures in: on its side ${picsSide.ms.toFixed(1)}ms per frame, upright ${picsUp?.ms.toFixed(1)}ms per frame (${picsUp?.n} pictures in)`);
 console.log(`on its side: mosaic ${u.mosaic.toFixed(1)}ms per frame, held pinch ${u.pinch.toFixed(1)}ms per frame, held pinch up to the map ${u.map.toFixed(1)}ms per frame${u.turn != null ? `, the binder's spread held mid-turn ${u.turn.toFixed(1)}ms per frame` : ""}`);
 const bad = report([["the mosaic draws within 34ms", t.mosaic < 34], ["a held pinch draws within 34ms", t.pinch < 34], ...(t.map != null ? [["a held pinch up to the map draws within 34ms", t.map < 34]] : []),
   ...(t.pics ? [[`a binder of pictures draws within 34ms (${t.pics.n} pictures in)`, t.pics.n > 0 && t.pics.binder < 34], ["a pinch held into a binder of pictures draws within 34ms", t.pics.pinch < 34]] : []),
-  ["on its side, the mosaic draws within 34ms", u.mosaic < 34], ["on its side, a held pinch draws within 34ms", u.pinch < 34], ["on its side, a held pinch up to the map draws within 34ms", u.map < 34], ...(u.turn != null ? [["on its side, a page turn held under the thumb draws within 34ms", u.turn < 34]] : [])]);
+  ["on its side, the mosaic draws within 34ms", u.mosaic < 34], ["on its side, a held pinch draws within 34ms", u.pinch < 34], ["on its side, a held pinch up to the map draws within 34ms", u.map < 34], ...(u.turn != null ? [["on its side, a page turn held under the thumb draws within 34ms", u.turn < 34]] : []),
+  ...(picsSide ? [["the binder of card pictures held mid-turn draws within 34ms, on its side and upright", picsSide.ms < 34 && picsUp && picsUp.ms < 34 && picsUp.n > 0]] : [])]);
 await browser.close();
 process.exit(bad ? 1 : 0);

@@ -57,7 +57,7 @@ function tbGeom(show, only = 0, full = true) {
   const c0 = clamp(Math.min(byW, byH), 36, 260), byRow = byH <= byW && byH <= 260;
   const ch = byRow ? Math.floor((availH - g * 2) / 3) : Math.floor(c0 * TH / TW), cw = byRow ? Math.floor(ch * TW / TH * 2) / 2 : Math.floor(c0);
   const blockW = cw * 3 + g * 2, exH = Math.max(0, availH - (ch * 3 + g * 2));
-  const ay = Math.min(exH / 4, ch * (two ? 0.15 : 0.2)), gy = g + ay; // height to spare (upright, or a tablet): a share between the rows
+  const ay = Math.min(exH / 4, ch * (two ? 0.15 : 0.45)), gy = g + ay; // height to spare (upright, or a tablet): spread between the rows and around them, like a real page
   const ox = Math.round((innerW - blockW) / 2);
   const bx = ring + sl + ox, bxL = edge + sl + ox, by = Math.round(pad + (availH - (ch * 3 + gy * 2)) / 2);
   return { show, flat, spread, sp, cw, ch, lh: 0, g, gx: g, gy, ring, edge, pad, pw, ph, B, bx, bxL, by, x0, y0, arrows: two ? TB_ARROW : 0, dotY: ph - S.bottom - 15, pages: Array.from({ length: spread }, (_, j) => ({ x: x0 + j * (pw + sp), y: y0 })) };

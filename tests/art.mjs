@@ -151,6 +151,24 @@ const cardOf = (u) => { const m = u.match(/pokemontcg\.io\/([^/]+)\/([^/_.]+)/);
   R.push([`no page errors${p.errors.length ? `: ${p.errors[0]}` : ""}`, !p.errors.length]);
   await p.close();
 }
+// ----- 7. the trade binder upright on a phone (dpr 3): pockets this big ask for the large scan and show it, and leafing
+// through more pictures than the cache holds doesn't set the pages asking for them again and again -----
+{
+  const p = await page("serve", { dpr: 3 });
+  await p.evaluate(() => __w.openBinder()); await wait(2600);
+  const big = () => p.reqs.filter((u) => u.includes("_hires") || u.endsWith("/large"));
+  const first = await p.evaluate(() => { const v = __w.bnd.vi, cs = __w.tbList().slice(v * 9, v * 9 + 9); return { on: __w.bnd.on, w: __w.tbPocketRect(cs[0]).w, ids: cs.map((c) => c.id), r: __w.tbPocketRect(cs[4]) }; });
+  const idOf = (u) => cardOf(u) || (u.match(/scrydex\.com\/pokemon\/([^/-]+)-([^/]+)\//) || []).slice(1).map(decodeURIComponent).join("-");
+  const asked = new Set(big().map(idOf)), px = await pixel(p, first.r.x + first.r.w * 0.5, first.r.y + first.r.h * 0.45);
+  R.push([`the trade binder upright at dpr 3 asks for the large scans of its pockets (${Math.round(first.w)}px wide; ${asked.size} asked) and shows them`, first.on && first.ids.every((id) => asked.has(id)) && magenta(px)]);
+  for (let k = 0; k < 4; k++) { await p.evaluate(() => __w.tbTurn(1)); await wait(1400); }
+  for (let k = 0; k < 4; k++) { await p.evaluate(() => __w.tbTurn(-1)); await wait(1400); }
+  const n0 = big().length; await wait(2500); const n1 = big().length, per = new Map(); for (const u of big()) per.set(u, (per.get(u) || 0) + 1);
+  const art = await p.evaluate(() => __w.art);
+  R.push([`leafing through and back settles: no picture asked for more than twice (${big().length} large scans asked, at most ${Math.max(...per.values())} each), none while it rests, the cache under its cap (${(art.bytes / 1048576).toFixed(1)} MB)`, n1 === n0 && Math.max(...per.values()) <= 2 && art.bytes <= art.cap]);
+  R.push([`no page errors${p.errors.length ? `: ${p.errors[0]}` : ""}`, !p.errors.length]);
+  await p.close();
+}
 await browser.close();
 const bad = report(R);
 process.exit(bad ? 1 : 0);
