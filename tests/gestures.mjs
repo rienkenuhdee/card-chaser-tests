@@ -200,7 +200,9 @@ for (const dpr of [1, 2]) {
   await p.click('[data-lens="have"]'); await wait(1600);
   await f.drag(100, 450, 460, 120, 200); await wait(900); R.push(["a sideways flick on the wall the other way goes to the Feed", (await where()).at === "feed"]);
   await f.pageDrag(300, 450, 455, 120, -200); await wait(900); R.push(["a sideways flick on the Feed's page comes back to Chase", (await where()).at === "chase" && (await where()).pages.length === 0]);
-  const b0 = await p.evaluate(() => __w.feedNewCount()); await p.evaluate(() => __w.arrive()); await wait(300);
+  const b0 = await p.evaluate(() => __w.feedNewCount()); await p.evaluate(() => __w.arrive());
+  // The badge follows on the next frame or two; under load that can take longer than a fixed wait, so wait until it agrees.
+  for (let k = 0; k < 30; k++) { await wait(100); if (await p.evaluate(() => document.querySelector("#rooms .rbadge")?.textContent === String(__w.feedNewCount()))) break; }
   // (A copy whose title says it's damaged or heavily played stays out of the Feed and its count, as in production.)
   const b1 = await p.evaluate(() => { const c = __w.cards.filter((x) => x.dealAt).sort((a, b) => b.dealAt - a.dealAt || b.i - a.i)[0], L = __w.listingsOf(c)[0], shown = __w.feedList().some((x) => x.id === L.id); return { n: __w.feedNewCount(), badge: document.querySelector("#rooms .rbadge").textContent, shown, first: __w.feedList()[0]?.id === L.id, damaged: L.cond === "HP" || L.cond === "DMG" }; });
   R.push([`a deal arriving lands on top of the Feed and the rooms button counts it${b1.damaged ? " (a damaged copy: hidden, not counted)" : ""}`, (b1.damaged ? !b1.shown && b1.n === b0 : b1.shown && b1.n === b0 + 1) && b1.badge === String(b1.n)]);
