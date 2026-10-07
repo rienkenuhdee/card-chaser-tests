@@ -11,7 +11,7 @@
 // medal mounted on it, and the rest of its medals hang beneath on ribbons. Locked medals fold behind one line per shelf.
 // Tapping a medal opens its trophy sheet: what it's for and the cards behind it, missing ones first.
 // Inside an open set, the header carries the next medal to earn as one pin at its point on the bar; marking the card
-// that tips a medal mints it there, its luck revealed, and it flies off to the Medal room (the rooms button, top left). Outside a set, or more than
+// that tips a medal mints it there, its luck revealed, and it flies off to Trophies (the rooms button, top left). Outside a set, or more than
 // four at once (an import, Select all), one celebration card says so instead.
 
 // ----- production's words, shapes and colours (public/app.js and public/medal.js) -----
@@ -623,7 +623,7 @@ function pinHit(sx, sy) {
   return Math.abs(sx - (r.x + r.w / 2)) <= Math.max(r.w / 2, 16) && sy >= r.y - 12 && sy <= r.y + r.h + 12 ? r.t : null;
 }
 
-// ----- the mint: the medal pops off the bar, shows its luck, and flies to the Medal room (bold's moment) -----
+// ----- the mint: the medal pops off the bar, shows its luck, and flies to Trophies (bold's moment) -----
 const mintQ = [], mintsOn = [];
 const mdLuck = (t) => (t.rank === "shiny" ? 1000 : t.rank === "crit" ? 500 : 0) + mdTierIdx(t.tier) * 10 + (t.sig ? 3 : 0) + (t.complete ? 5 : 0);
 function queueMints(list, cause) {
@@ -646,7 +646,7 @@ function mintFrom(q, now) {
   return { x: vw / 2, y: vh * 0.5, w: 12 };
 }
 // Where the medal flies once minted: into the button at the top left (the rooms button, or Back in a set, in its place),
-// the way up to the Medal room.
+// the way up to Trophies.
 function doorTarget() {
   const b = upBtn()?.getBoundingClientRect();
   return b ? { x: b.left + b.width / 2, y: b.top + b.height / 2 } : { x: 32, y: -60 };
@@ -820,7 +820,7 @@ function mdCelebrate(fresh, via) {
   mdPop.innerHTML = one
     ? `<span class="mp-medal">${medalSvg(t)}</span><span class="mp-text"><small class="mp-kick">${kicker}</small><b>${mdEsc(t.name)}</b><span>${mdEsc(t.chase)}${mdLucky(t) ? (t.rank === "shiny" ? " · a 1 in 100 roll" : " · a 1 in 10 roll") : ""}</span></span>`
     : `<span class="mp-row">${top.slice(0, 4).map((x) => `<span class="mp-medal">${medalSvg(x)}</span>`).join("")}</span><span class="mp-text"><small class="mp-kick">${kicker}</small><b>${top.length} trophies earned</b><span>${mdEsc(top.slice(0, 2).map((x) => x.name).join(", "))}${top.length > 2 ? ` and ${top.length - 2} more` : ""}</span></span>`;
-  mdPop.setAttribute("aria-label", one ? `${kicker}: ${t.name}, ${t.chase}. Tap to see it.` : `${kicker}: ${top.length} trophies earned. Tap to see them in the trophy room.`);
+  mdPop.setAttribute("aria-label", one ? `${kicker}: ${t.name}, ${t.chase}. Tap to see it.` : `${kicker}: ${top.length} trophies earned. Tap to see them in Trophies.`);
   mdPop.classList.remove("show"); void mdPop.offsetWidth; mdPop.classList.add("show");
   tick(shiny ? 60 : crit ? 30 : 14);
   clearTimeout(mdPopT); mdPopT = setTimeout(() => mdPop.classList.remove("show"), one ? 5200 : 6500);

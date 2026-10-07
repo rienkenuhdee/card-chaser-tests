@@ -1,14 +1,14 @@
 // ---------- navigation: mosaic, set, card ----------
 // The interface moves the camera. Every gesture lands on a composed view: the mosaic, a set framed to the screen, or a card.
 const backBtn = document.getElementById("back");
-// The app is five rooms (round 21): Feed, Chase (this wall), Trade, Medal (the trophy room) and Source, on a map one
+// The app is five rooms (round 21): Feed, Chase (this wall), Trade, Trophies (the trophy room; its id is still "medal") and Source, on a map one
 // level up (90-rooms.js). rooms.at is the room you're in (or came to the map from); rooms.map is true on the map.
 const ROOMS = ["feed", "chase", "trade", "medal", "source"];
-const ROOM_NAME = { feed: "Feed", chase: "Chase", trade: "Trade", medal: "Medal", source: "Source" };
+const ROOM_NAME = { feed: "Feed", chase: "Chase", trade: "Trade", medal: "Trophies", source: "Source" };
 const rooms = { at: "chase", map: false };
 const roomsBtn = document.getElementById("rooms"), roomsNav = document.getElementById("rooms-nav");
 const pgFeed = document.getElementById("pg-feed"), pgTrade = document.getElementById("pg-trade"), pgSource = document.getElementById("pg-source");
-const PAGES = { feed: pgFeed, trade: pgTrade, source: pgSource }; // the rooms that are pages; Chase and Medal are drawn
+const PAGES = { feed: pgFeed, trade: pgTrade, source: pgSource }; // the rooms that are pages; Chase and Trophies are drawn
 const moving = () => state.trans?.kind === "map" || state.trans?.kind === "hop"; // between rooms, or up to the map
 // A room's own level: the rooms button (up to the map) sits where Back sits one level further in.
 const atRoot = () => !rooms.map && view === "mosaic" && !tbl.on && !bnd.on;
@@ -19,11 +19,11 @@ function setChrome() {
   document.body.classList.toggle("maptrans", go);
   document.body.dataset.room = rooms.map ? "map" : rooms.at;
   backBtn.hidden = go || rooms.map || root;
-  backBtn.setAttribute("aria-label", bnd.on && !tbl.on ? "Back to the Trade room" : room.on && view === "set" ? "Back to the trophy room" : "Back to everything");
+  backBtn.setAttribute("aria-label", bnd.on && !tbl.on ? "Back to the Trade room" : room.on && view === "set" ? "Back to Trophies" : "Back to everything");
   roomsBtn.hidden = go || !root; // (the welcome, the import's story and its summary hide it too, by their classes)
   roomsNav.hidden = !rooms.map;
   markBtn.hidden = view !== "set" || marking;
-  document.getElementById("where").textContent = rooms.map ? "Rooms: Feed, Chase, Trade, Medal, Source" : tbl.on ? `Trade with ${tbl.t.name}` : view === "set" && state.g ? state.g.name : bnd.on ? (bnd.show ? "Trade binder, Show mode" : "Trade binder") : room.on ? "Medal, the trophy room" : rooms.at === "chase" ? "" : ROOM_NAME[rooms.at];
+  document.getElementById("where").textContent = rooms.map ? "Rooms: Feed, Chase, Trade, Trophies, Source" : tbl.on ? `Trade with ${tbl.t.name}` : view === "set" && state.g ? state.g.name : bnd.on ? (bnd.show ? "Trade binder, Show mode" : "Trade binder") : room.on ? "Trophies" : rooms.at === "chase" ? "" : ROOM_NAME[rooms.at];
   if (marking && view !== "set") leaveMark();
   syncPages(); syncShelfPad(); updateCount(); syncBadge();
 }

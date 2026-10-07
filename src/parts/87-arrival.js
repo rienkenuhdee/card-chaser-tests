@@ -4,7 +4,7 @@
 // dimmed wall with a plain headline ("541 cards from TCGplayer"), what it's worth, and a few rows, each a door:
 //   - anything the import finished (its plaque, on the shelf): tap opens its album
 //   - the set closest to done ("Fossil, 5 to go"): tap opens it framed on its missing pockets, ringed in gold
-//   - the trophies the import earned, the rarest few drawn small: tap opens the trophy room
+//   - the trophies the import earned, the rarest few drawn small: tap opens Trophies
 //   - the spares ("68 cards with spares, 27 wanted"): tap opens the trade binder
 //   - the Complete Dex, when it's on the wall: tap opens it
 // A row only appears when it has something to say. One primary button, See your wall, and the sheet never comes back.
@@ -92,7 +92,7 @@ function summaryRows(P) {
     rows.push({ id: "md", lead: { kind: "medals", list: md.slice(0, 3) },
       title: `${stPlural(md.length, "trophy", "trophies")} earned`,
       sub: luck || `${md.length > 2 ? `${names.join(", ")} and ${md.length - 2} more` : arAnd(names)}.`,
-      rank: t0 ? t0.rank : "", label: "Open the trophy room", go: arToRoom });
+      rank: t0 ? t0.rank : "", label: "Open Trophies", go: arToRoom });
   }
   // The spares: the trade binder, most wanted first.
   const tb = tbFresh(), wanted = tbMemo.wanted;

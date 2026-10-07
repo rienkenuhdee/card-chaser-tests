@@ -1,5 +1,5 @@
 // ---------- rooms: the app as five places on a map, one level above the wall (round 21) ----------
-// Production has five tabs: Feed, Chase, Trade, Medal, Source. Here there is no tab bar. The app is a map of five room
+// Production has five tabs: Feed, Chase, Trade, Medal, Source (here the Medal tab is called Trophies). Here there is no tab bar. The app is a map of five room
 // cards one zoom level above the wall, each card live with what's inside (91-room-cards.js). Pinch the wall closed (or
 // tap the rooms button at the top left, where Back sits inside a set) and it shrinks into its card while the other four
 // settle in around it; spread on a card, or tap it, and that room grows to fill the screen; pinch any room closed to
@@ -9,7 +9,7 @@
 //   Chase   the wall, with its lenses: Have, Need and Chase
 //   Trade   the trade binder's cover, the trade checker, who to trade with (94-trade-room.js); the binder and the
 //           table are levels inside it
-//   Medal   the trophy room (67-room.js)
+//   Trophies the trophy room (67-room.js; its id is "medal")
 //   Source  where Card Chaser looks, a switch for each (93-source.js)
 // Feed, Trade and Source are pages (real lists: they scroll natively, read aloud and show in the list view); Chase and
 // Medal are drawn on the canvas. A move up to the map, or into a room, is one transition with a position

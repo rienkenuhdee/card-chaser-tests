@@ -67,7 +67,7 @@ function syncBadge() {
   if (n === live.badgeN) return;
   live.badgeN = n;
   badge.textContent = n > 99 ? "99+" : String(n); badge.hidden = !n;
-  roomsBtn.setAttribute("aria-label", `Rooms: Feed, Chase, Trade, Medal, Source${n ? `. ${n} new in the Feed` : ""}`);
+  roomsBtn.setAttribute("aria-label", `Rooms: Feed, Chase, Trade, Trophies, Source${n ? `. ${n} new in the Feed` : ""}`);
 }
 function glowChase() {
   syncBadge();

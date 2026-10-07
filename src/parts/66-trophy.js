@@ -1,7 +1,7 @@
 // ---------- trophies: finished things leave the wall ----------
 // When the last card of a set or a chase lands, the panel is minted: its tiles gather into a gold plaque that flies up
 // onto a shelf along the top of the mosaic, and the rest of the wall flows into the space. A trophy stays on that
-// shelf for a day; then it moves to the trophy room, the Medal room (round 21), with the rest. Tapping a plaque opens its
+// shelf for a day; then it moves to the Trophies room (round 21; "the trophy room" in older notes), with the rest. Tapping a plaque opens its
 // sealed album (the cards packed tight, the header reading when it was finished and what it's worth) with Back to
 // the wall, which puts the panel back among the others; a finished group kept on the wall offers Put on the shelf.
 // Before the finish, the progress bar on every panel and binder carries gold ticks for the missing cards you're
@@ -249,7 +249,7 @@ function putAway(g) {
   leaveBinderThen(g, () => {
     f.moved = true; persistDone(); drawList();
     if (view === "mosaic" && !state.trans && !reduced) shelfMorph(); else { layoutAll(); kick(); }
-    toast(`${trophyName(g)} is in the trophy room.`);
+    toast(`${trophyName(g)} is in Trophies.`);
   });
 }
 const finishedText = (gs) => (gs.length === 1 ? `${trophyName(gs[0])} finished. It's on the shelf, worth ${money(worthOf(gs[0].base))}.` : `${gs.map(trophyName).join(" and ")} finished. They're on the shelf.`);
