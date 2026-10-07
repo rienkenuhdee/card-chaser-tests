@@ -436,7 +436,6 @@ body.inroom .caption { display: none; }
 .sl-acts .pill-btn[hidden] { display: none; }
 
 /* The trade binder (round 17): its bar, and Show mode's bar and prices switch. */
-#tb-safe { position: fixed; top: env(safe-area-inset-top, 0px); bottom: env(safe-area-inset-bottom, 0px); left: 0; width: 0; pointer-events: none; visibility: hidden; }
 .bbar { position: fixed; z-index: 3; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); transform: translate(-50%, 160%); opacity: 0; pointer-events: none;
   width: min(460px, calc(100vw - 20px)); display: flex; align-items: center; gap: 6px; padding: 5px 5px 5px 14px; border-radius: 14px;
   transition: transform .4s cubic-bezier(.2,.9,.25,1.04), opacity .3s; }
@@ -720,6 +719,7 @@ body:is(.welcoming, .storying, .arriving, .listmode) .top #rooms + #back[hidden]
   padding: calc(env(safe-area-inset-top, 0px) + 74px) 16px calc(env(safe-area-inset-bottom, 0px) + 40px); transform-origin: 0 0; -webkit-user-select: none; user-select: none; }
 .rpage[hidden], body.listmode .rpage { display: none; }
 body.inbinder #pg-trade, body.trading #pg-trade { pointer-events: none; }
+body.inbinder #pt-page { visibility: hidden; } /* the binder is off the page, on the canvas */
 body.trading #pg-trade { opacity: 0; transition: opacity .3s; }
 .rp-wrap { max-width: 640px; margin: 0 auto; }
 .rp-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
@@ -817,9 +817,17 @@ body.trading #pg-trade { opacity: 0; transition: opacity .3s; }
 .tc-text em { font-style: normal; font-weight: 700; font-size: 13.5px; color: var(--gold); }
 .tc-text em.none { color: var(--muted); font-weight: 500; }
 .tc-text .tc-open { margin-top: auto; padding-top: 10px; color: var(--ink); font-weight: 700; }
-.tc-page { flex: none; width: 92px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 5px 5px 5px 9px; border: 1px solid var(--slot-line); border-radius: 6px; background: var(--panel-solid); align-content: start; }
-.tc-page i { aspect-ratio: 63 / 88; border-radius: 1.5px; background: var(--slot); }
-.tc-page i[style] { background: linear-gradient(180deg, color-mix(in srgb, var(--t) 70%, #fff) 0 22%, var(--t) 22% 76%, var(--paper) 76%); }
+/* The Trade room's binder, closed (round 22): green board, a darker spine, the title in gold. Tap it and its cover
+   swings open into the pages (78-trade-binder.js paints the same cover on the canvas). */
+.tc-page { flex: none; width: 96px; aspect-ratio: 66 / 100; display: block; position: relative; padding: 0; border: 0; border-radius: 6px; overflow: hidden; align-self: center;
+  background: linear-gradient(135deg, #2F7A52, #1F5A3B 60%, #174A30); box-shadow: 0 6px 14px rgb(0 0 0 / .22), inset 0 0 0 1px rgb(0 0 0 / .25); }
+.tc-page::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 10px; background: rgb(0 0 0 / .22); box-shadow: 1.5px 0 0 rgb(255 255 255 / .1); }
+.tc-page::after { content: ""; position: absolute; left: 15px; top: 6px; bottom: 6px; border-left: 1px dashed rgb(255 236 190 / .3); }
+.tc-page .tcb-label { position: absolute; left: 22px; right: 10px; top: 30%; height: 26%; display: grid; place-content: center; text-align: center; gap: 2px; border: 1px solid rgb(241 207 114 / .55); border-radius: 4px; }
+.tc-page .tcb-label b { font: 800 11.5px/1.05 var(--font); font-stretch: 80%; color: #F1CF72; }
+.tc-page .tcb-label small { font: 600 9px var(--font); color: rgb(241 207 114 / .8); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tc-page { background: linear-gradient(135deg, #2B6B4A, #1C4F36 60%, #133B28); } }
+:root[data-theme="dark"] .tc-page { background: linear-gradient(135deg, #2B6B4A, #1C4F36 60%, #133B28); }
 .traders { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .trader { width: 100%; display: grid; grid-template-columns: 34px 1fr auto; align-items: center; column-gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px;
   background: var(--panel-fill); color: var(--ink); text-align: left; cursor: pointer; font: inherit; }
@@ -1057,4 +1065,39 @@ body.trading #pg-trade { opacity: 0; transition: opacity .3s; }
   /* The Feed: two listings to a row, each a phone's width. */
   #pg-feed .rp-wrap { max-width: 920px; }
   #pg-feed .feed { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
+  /* The Trade room in two columns: the closed binder and who to trade with at the left, the checker at the right. */
+  #pg-trade .rp-wrap { max-width: 1000px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); column-gap: 22px; align-items: start;
+    grid-template-areas: "head head" "sub sub" "stripe stripe" "cover h2a" "cover tc" "h2b tc" "trs tc" ". tc"; grid-template-rows: repeat(7, auto) 1fr; }
+  #pg-trade .rp-head { grid-area: head; } #pg-trade .rp-sub { grid-area: sub; } #pg-trade .rp-stripe { grid-area: stripe; }
+  #pg-trade .tcover { grid-area: cover; } #pg-trade h2:nth-of-type(1) { grid-area: h2a; } #pg-trade .checker { grid-area: tc; }
+  #pg-trade h2:nth-of-type(2) { grid-area: h2b; } #pg-trade .traders { grid-area: trs; }
+  .arrange-menu.tradehow { bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); max-height: calc(100dvh - 20px); }
+
+  /* The binder open on a phone on its side: the spread takes the height; Back at the top left corner, the title in the
+     margin under it (drawn), Show mode and the page count in the margin at the right. */
+  body.inbinder .top { padding-right: 0; }
+  body.inbinder .strip { width: auto; }
+  body.inbinder .strip > :not(#back) { display: none; }
+  body.inbinder .bbar { left: auto; right: calc(var(--sar) + 12px); top: calc(env(safe-area-inset-top, 0px) + 8px); bottom: auto; width: var(--tb-side, 140px); transform: translateY(-12px);
+    flex-direction: column-reverse; align-items: flex-end; gap: 10px; padding: 0; background: none; border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  body.inbinder:not(.showing):not(.trading) .bbar { transform: none; }
+  body.inbinder .bbar .mtext { text-align: right; gap: 3px; }
+  body.inbinder .bbar b, body.inbinder .bbar span { white-space: normal; }
+  body.inbinder .bbar .mbtn { height: 44px; }
+  /* Show mode: the same spread, dark; what's picked at the bottom left, Done at the bottom right. */
+  .showbar { left: calc(var(--sal) + 14px); right: calc(var(--sar) + 12px); bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); padding: 0; align-items: flex-end; }
+  body.showing .showbar { pointer-events: none; }
+  body.showing .showbar > * { pointer-events: auto; }
+  .showbar .mtext { flex: 0 1 auto; max-width: var(--tb-side, 140px); }
+  .showbar b { font-size: 16px; white-space: normal; }
+  .showbar span { font-size: 12.5px; white-space: normal; }
+  .showbar .mbtn { margin-left: auto; height: 44px; padding: 0 22px; }
+  .showpill { top: calc(env(safe-area-inset-top, 0px) + 12px); right: calc(var(--sar) + 12px); }
+  /* The trade table runs across: Back over their column, the trade bar under the table in the middle. */
+  body.trading .top { padding-right: 0; }
+  body.trading .strip { width: auto; }
+  body.trading .strip > :not(#back) { display: none; }
+  .tradebar { left: var(--tbl-mid-x, 50%); width: var(--tbl-mid-w, min(520px, calc(100vw - 20px))); }
+  .tradebar .mbtn { max-width: none; }
 }
+

@@ -137,6 +137,7 @@ const barH = () => tradebarEl.offsetHeight + 26;
 function tableLayout() {
   const want = barH();
   if (tbl.botH == null || reduced) tbl.botH = want; else if (Math.abs(tbl.botH - want) > 0.5) { tbl.botH += (want - tbl.botH) * 0.2; kick(); } else tbl.botH = want;
+  if (landPhone()) return tableAcross();
   const top = topPad(), bot = vh - tbl.botH, W = Math.min(vw, 980), X = (vw - W) / 2;
   const sh = clamp(Math.round(vh * 0.15), 108, 136), bh = (bot - top - sh) / 2, head = 46, gap = 8;
   let rows = 3, ch = Math.floor((bh - head - 12 - gap * (rows - 1)) / rows);
@@ -145,11 +146,26 @@ function tableLayout() {
   const cw = Math.round(ch * TW / TH);
   return { X, W, top, bot, their: { x: X, y: top, w: W, h: bh }, strip: { x: X, y: top + bh, w: W, h: sh }, your: { x: X, y: top + bh + sh, w: W, h: bh }, rows, cw, ch, gap, head };
 }
+// On a phone on its side (round 22) the table runs across: their spares in a column at the left (under Back), the
+// table in the middle with the trade bar under it, yours in a column at the right. The binders scroll down instead
+// of along, and a card comes out of one sideways, toward the table. rows is then how many cards sit side by side.
+let tblVars = "";
+function tableAcross() {
+  const X0 = SAFE.left + 10, X1 = vw - SAFE.right - 10, W = X1 - X0, gap = 8;
+  const colW = Math.round(clamp(W * 0.28, 190, 290)), midW = W - colW * 2 - gap * 2, head = 46, per = colW >= 228 ? 3 : 2;
+  const top = SAFE.top + 10, bottom = vh - SAFE.bottom - 10, bot = vh - tbl.botH;
+  const cw = Math.floor((colW - 24 - gap * (per - 1)) / per), ch = Math.round(cw * TH / TW);
+  const their = { x: X0, y: topPad(), w: colW, h: bottom - topPad() }, strip = { x: X0 + colW + gap, y: top, w: midW, h: bot - top }, your = { x: X1 - colW, y: top, w: colW, h: bottom - top };
+  const vars = `${Math.round(midW)}|${Math.round(strip.x + midW / 2)}`;
+  if (vars !== tblVars) { tblVars = vars; document.body.style.setProperty("--tbl-mid-w", `${Math.round(midW)}px`); document.body.style.setProperty("--tbl-mid-x", `${Math.round(strip.x + midW / 2)}px`); }
+  return { across: true, X: X0, W, top, bot, their, strip, your, rows: per, cw, ch, gap, head };
+}
 const sideRegion = (side) => (side === "their" ? tbl.L.their : tbl.L.your);
 const sideList = (side) => (side === "their" ? tbl.theirs : tbl.yours);
-const maxScroll = (side) => { const L = tbl.L, n = sideList(side).length, cols = Math.ceil(n / L.rows); return Math.max(0, cols * (L.cw + L.gap) - L.gap - (L.W - 24)); };
+const maxScroll = (side) => { const L = tbl.L, n = sideList(side).length, cols = Math.ceil(n / L.rows); if (L.across) { const R = sideRegion(side); return Math.max(0, cols * (L.ch + L.gap) - L.gap - (R.h - L.head - 12)); } return Math.max(0, cols * (L.cw + L.gap) - L.gap - (L.W - 24)); };
 function slotRect(side, k) {
   const L = tbl.L, R = sideRegion(side), S = side === "their" ? tbl.their : tbl.your;
+  if (L.across) { const col = k % L.rows, row = Math.floor(k / L.rows); return { x: R.x + 12 + col * (L.cw + L.gap), y: R.y + L.head + row * (L.ch + L.gap) - S.sx, w: L.cw, h: L.ch }; }
   const col = Math.floor(k / L.rows), row = k % L.rows;
   return { x: R.x + 12 + col * (L.cw + L.gap) - S.sx, y: R.y + L.head + row * (L.ch + L.gap), w: L.cw, h: L.ch };
 }
@@ -157,17 +173,18 @@ function slotRect(side, k) {
 // gather in one row on the trader's side, in their hands. A handshake crosses them over.
 function tableSlot(side, i, n) {
   const S = tbl.L.strip;
+  const across = tbl.L.across, cap = Math.min(S.h * 0.4, ((S.w / 2 - 34) * TH) / TW); // across: the table is tall, its cards no taller than they'd be on a phone held up
   if (tbl.phase === "waiting" && !tbl.shake) {
-    const h = Math.round((S.h - 62) * 0.84), w = h * TW / TH, N = tbl.get.length + tbl.give.length, j = side === "their" ? i : tbl.get.length + i;
+    const h = across ? cap : Math.round((S.h - 62) * 0.84), w = h * TW / TH, N = tbl.get.length + tbl.give.length, j = side === "their" ? i : tbl.get.length + i;
     const avail = S.w - 2 * PG - 36, step = N > 1 ? Math.min(w + 6, (avail - w) / (N - 1)) : 0, total = w + step * (N - 1);
-    return { x: S.x + S.w / 2 - total / 2 + j * step, y: S.y + 18, w, h };
+    return { x: S.x + S.w / 2 - total / 2 + j * step, y: across ? S.y + (S.h - h) / 2 : S.y + 18, w, h };
   }
-  const h = S.h - 62, w = h * TW / TH, pad = 14, avail = S.w / 2 - pad * 2 - 4;
+  const h = across ? cap : S.h - 62, w = h * TW / TH, pad = 14, avail = S.w / 2 - pad * 2 - 4;
   const step = n > 1 ? Math.min(w + 6, (avail - w) / (n - 1)) : 0;
   const left = S.x + pad + i * step, right = S.x + S.w - pad - w - i * step;
   let x = side === "their" ? left : right;
   if (tbl.shake) { const k = ease(clamp((performance.now() - tbl.shake.t0) / tbl.shake.dur, 0, 1)); const o = side === "their" ? right : left; x += (o - x) * k; }
-  return { x, y: S.y + 30, w, h };
+  return { x, y: across ? S.y + (S.h - h) / 2 : S.y + 30, w, h };
 }
 function targetRect(c) {
   const side = sideOf(c);
@@ -175,17 +192,18 @@ function targetRect(c) {
   return slotRect(side, sideList(side).indexOf(c));
 }
 const curRect = (c) => (tbl.drag?.c === c ? { x: tbl.drag.x, y: tbl.drag.y, w: tbl.drag.w, h: tbl.drag.h } : c.spot === "table" && c.tcur ? { ...c.tcur } : targetRect(c));
-const zoneAt = (y) => { const L = tbl.L; return y < L.strip.y ? "their" : y < L.strip.y + L.strip.h ? "table" : "your"; };
+const zoneAt = (y, x = 0) => { const L = tbl.L; if (L.across) return x < L.strip.x ? "their" : x < L.strip.x + L.strip.w ? "table" : "your"; return y < L.strip.y ? "their" : y < L.strip.y + L.strip.h ? "table" : "your"; };
 function cardAt(x, y) {
   if (tbl.phase !== "open") return null; // the offer is out, or their counter is on the table: nothing moves
   for (const c of [...tbl.get, ...tbl.give]) { const r = c.tcur; if (r && !c.held && x >= r.x - 4 && x <= r.x + r.w + 4 && y >= r.y - 4 && y <= r.y + r.h + 4) return c; }
-  const zone = zoneAt(y); if (zone === "table") return null;
+  const zone = zoneAt(y, x); if (zone === "table") return null;
   const L = tbl.L, R = sideRegion(zone), S = zone === "their" ? tbl.their : tbl.your, list = sideList(zone);
-  const lx = x - R.x - 12 + S.sx, ly = y - R.y - L.head;
+  if (L.across && y < R.y + L.head - 4) return null;
+  const lx = x - R.x - 12 + (L.across ? 0 : S.sx), ly = y - R.y - L.head + (L.across ? S.sx : 0);
   if (lx < 0 || ly < 0) return null;
   const col = Math.floor(lx / (L.cw + L.gap)), row = Math.floor(ly / (L.ch + L.gap));
-  if (row >= L.rows || lx - col * (L.cw + L.gap) > L.cw || ly - row * (L.ch + L.gap) > L.ch) return null;
-  const c = list[col * L.rows + row];
+  if ((L.across ? col : row) >= L.rows || lx - col * (L.cw + L.gap) > L.cw || ly - row * (L.ch + L.gap) > L.ch) return null;
+  const c = list[L.across ? row * L.rows + col : col * L.rows + row];
   return c && c.spot !== "table" && !c.held ? c : null;
 }
 // Starting a trade: in person (the table) or online (coming soon). A thread already open skips the question.
@@ -350,7 +368,7 @@ function drawBinder(side, now, alpha, value) {
   ctx.fillText(fitText(side === "their" ? `${t.where}. ${n} spares, ${litN ? `${litN} you chase` : "none you chase"}` : `${n} spares, ${litN ? `${litN} ${t.name} wants` : `none ${t.name}'s after`}`, R.w - 24), tx, R.y + 36);
   // the cards, column by column, only the columns on screen
   ctx.save(); ctx.beginPath(); ctx.rect(R.x, R.y + L.head - 4, R.w, R.h - L.head + 4); ctx.clip();
-  const c0 = Math.max(0, Math.floor((S.sx - 12) / (L.cw + L.gap))), c1 = Math.ceil((S.sx + R.w) / (L.cw + L.gap));
+  const step = L.across ? L.ch + L.gap : L.cw + L.gap, c0 = Math.max(0, Math.floor((S.sx - 12) / step)), c1 = Math.ceil((S.sx + (L.across ? R.h : R.w)) / step);
   for (let k = c0 * L.rows; k < Math.min(n, (c1 + 1) * L.rows); k++) {
     const c = list[k], r = slotRect(side, k);
     if (c.spot === "table" || c.held) { drawPocket(c, r, alpha * 0.7, c.spot === "table" && tbl.phase === "waiting" ? `With ${t.name}` : c.handed ? (side === "their" ? `${t.name}'s now` : "Yours now") : "On the table"); ctx.globalAlpha = alpha; continue; }
@@ -456,7 +474,7 @@ function tDown(pts) {
   tbl.their.v = 0; tbl.your.v = 0;
   if (pts.length >= 2) return tPinchStart(pts);
   if (tbl.pend || tbl.pinch) return;
-  const p = pts[0], now = performance.now(), zone = zoneAt(p.y);
+  const p = pts[0], now = performance.now(), zone = zoneAt(p.y, p.x);
   const S = zone === "their" ? tbl.their : zone === "your" ? tbl.your : null;
   const locked = tbl.shake || tbl.phase !== "open";
   tbl.pend = { x: p.x, y: p.y, t: now, zone, c: locked ? null : cardAt(p.x, p.y), sx0: S ? S.sx : 0, axis: null, samples: [{ x: p.x, y: p.y, t: now }] };
@@ -480,20 +498,22 @@ function tMove(pts) {
   if (!d.axis) {
     if (Math.hypot(dx, dy) < 8) return;
     // In a binder a sideways drag scrolls it; pulling a card out toward the table carries it. On the table any drag carries.
-    d.axis = d.c && (d.zone === "table" || Math.abs(dy) > Math.abs(dx) * 0.9) ? "drag" : "scroll";
+    const out = tbl.L.across ? Math.abs(dx) > Math.abs(dy) * 0.9 : Math.abs(dy) > Math.abs(dx) * 0.9; // toward the table: sideways when it runs across
+    d.axis = d.c && (d.zone === "table" || out) ? "drag" : "scroll";
     if (d.axis === "drag") { pickUp(d.c, p); tbl.drag.x = p.x - tbl.drag.ox; tbl.drag.y = p.y - tbl.drag.oy; return; }
   }
-  if (d.axis === "scroll" && d.zone !== "table") { const S = d.zone === "their" ? tbl.their : tbl.your; S.sx = clamp(d.sx0 - dx, 0, maxScroll(d.zone)); kick(); }
+  if (d.axis === "scroll" && d.zone !== "table") { const S = d.zone === "their" ? tbl.their : tbl.your; S.sx = clamp(d.sx0 - (tbl.L.across ? dy : dx), 0, maxScroll(d.zone)); kick(); }
 }
 function dropHome() { const d = tbl.drag; if (!d) return; tbl.drag = null; place(d.c, d.from === "table", { x: d.x, y: d.y, w: d.w, h: d.h }); }
-function drop(end, vy) {
+function drop(end, vy, vx = 0) {
   const d = tbl.drag; if (!d) return; tbl.drag = null;
-  const c = d.c, side = sideOf(c), S = tbl.L.strip, fy = end ? end.y : d.y + d.oy;
-  const toward = side === "their" ? vy : -vy; // speed toward the table
+  const c = d.c, side = sideOf(c), S = tbl.L.strip, across = tbl.L.across;
+  const f = across ? (end ? end.x : d.x + d.ox) : end ? end.y : d.y + d.oy, v = across ? vx : vy, s0 = across ? S.x : S.y, s1 = across ? S.x + S.w : S.y + S.h; // along the way to the table
+  const toward = side === "their" ? v : -v; // speed toward the table
   let toTable;
-  if (d.from === "table") toTable = Math.abs(vy) < 0.5 ? fy >= S.y - 24 && fy <= S.y + S.h + 24 : toward > 0;
-  else if (Math.abs(vy) >= 0.5) toTable = toward > 0;
-  else toTable = side === "their" ? fy > S.y - 24 : fy < S.y + S.h + 24;
+  if (d.from === "table") toTable = Math.abs(v) < 0.5 ? f >= s0 - 24 && f <= s1 + 24 : toward > 0;
+  else if (Math.abs(v) >= 0.5) toTable = toward > 0;
+  else toTable = side === "their" ? f > s0 - 24 : f < s1 + 24;
   place(c, toTable, { x: d.x, y: d.y, w: d.w, h: d.h });
   tick(toTable ? 8 : 4);
 }
@@ -502,10 +522,11 @@ function tUp(end, cancelled) {
   const d = tbl.pend; if (!d) return; tbl.pend = null;
   const now = performance.now(), s0 = d.samples.find((s) => now - s.t < 90) || d.samples[0], last = d.samples[d.samples.length - 1];
   const vx = s0 && s0 !== last ? (last.x - s0.x) / Math.max(1, last.t - s0.t) : 0, vy = s0 && s0 !== last ? (last.y - s0.y) / Math.max(1, last.t - s0.t) : 0;
-  if (tbl.drag) { if (cancelled) dropHome(); else drop(end, reduced ? 0 : vy); return; }
+  if (tbl.drag) { if (cancelled) dropHome(); else drop(end, reduced ? 0 : vy, reduced ? 0 : vx); return; }
   if (cancelled) return;
   if (!d.axis) { if (d.c) { place(d.c, d.c.spot !== "table", curRect(d.c)); tick(d.c.spot === "table" ? 8 : 4); } return; } // a tap moves it across
-  if (d.axis === "scroll" && d.zone !== "table" && !reduced && Math.abs(vx) > 0.2) { const S = d.zone === "their" ? tbl.their : tbl.your; S.v = vx; kick(); }
+  const va = tbl.L.across ? vy : vx;
+  if (d.axis === "scroll" && d.zone !== "table" && !reduced && Math.abs(va) > 0.2) { const S = d.zone === "their" ? tbl.their : tbl.your; S.v = va; kick(); }
 }
 // Pinching in closes the table under your fingers; a quick pinch closes whatever the distance.
 function tPinchStart(pts) {
@@ -546,7 +567,7 @@ document.addEventListener("wheel", (e) => {
   e.stopImmediatePropagation(); e.preventDefault();
   if (tbl.closing || !tbl.L) return;
   if (e.ctrlKey || e.metaKey) { if (e.deltaY > 2) closeTable(); return; }
-  const zone = zoneAt(e.clientY); if (zone === "table") return;
+  const zone = zoneAt(e.clientY, e.clientX); if (zone === "table") return;
   const S = zone === "their" ? tbl.their : tbl.your;
   S.sx = clamp(S.sx + (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY), 0, maxScroll(zone)); kick();
 }, { capture: true, passive: false });

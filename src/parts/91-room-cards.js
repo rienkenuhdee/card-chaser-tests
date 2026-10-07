@@ -76,7 +76,7 @@ const PAINT = {
     const list = tbList(), cl = countLine("trade");
     cardTitle("trade", w, cl.t, { col: cl.col });
     // the binder's first page, small: what grows into the binder when you open it from the room
-    const G = tbGeom(false), gh = clamp(h - CARD_HEAD - 44, 44, 150), gw = gh * G.pw / G.ph, gx = Math.round((w - gw) / 2), gy = CARD_HEAD + 4, k = gw / G.pw;
+    const G = tbGeom(false, 1), gh = clamp(h - CARD_HEAD - 44, 44, 150), gw = gh * G.pw / G.ph, gx = Math.round((w - gw) / 2), gy = CARD_HEAD + 4, k = gw / G.pw;
     rr(gx, gy, gw, gh, 5); ctx.fillStyle = theme.slot; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = theme["slot-line"]; ctx.stroke();
     ctx.fillStyle = theme.gold; rr(gx + 3, gy + 8, 2.5, gh - 16, 1.2); ctx.fill(); // the spine
     for (let i = 0; i < 9; i++) {

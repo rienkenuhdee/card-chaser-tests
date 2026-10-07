@@ -185,7 +185,11 @@ function layoutAll() {
   const keep = mScroll;
   if (lifted) { newPanel = null; liftedLayout(); } else mosaicLayout();
   if (room.on) { if (room.fan && !inCase(room.fan)) room.fan = null; mScroll = keep; roomLayout(); } // the Medal room opens empty too: it says how a trophy comes
-  if (bnd.on) { bnd.L = tbGeom(bnd.show); bnd.vi = clamp(bnd.vi, 0, tbViews() - 1); } // the binder fits the new screen
+  if (bnd.on) { // the binder fits the new screen, open at the same page (one page at a time, or two facing)
+    const was = bnd.L?.spread || 1; bnd.L = tbGeom(bnd.show); tbSides(bnd.L);
+    if (bnd.L.spread !== was) { bnd.vi = Math.floor((bnd.vi * was) / bnd.L.spread); bnd.turn = 0; bnd.tAnim = null; }
+    bnd.vi = clamp(bnd.vi, 0, tbViews() - 1);
+  }
 }
 
 // ---------- camera (inside a set) ----------
