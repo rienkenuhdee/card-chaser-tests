@@ -46,6 +46,7 @@ They share state without imports, which keeps experiments fast and the output a 
 | 20-arrange | Groups: by set, by Pokémon, by value |
 | 30-layout | The mosaic (ordered strip treemap) and each group's binder; the camera |
 | 40-render | Drawing: tiles, card faces, empty pockets, panels, headers, transitions, the frame loop |
+| 41-art | Card pictures: the real scans where a card is close enough to see, lazy, cached under a cap, the drawn face as fallback |
 | 50-navigation | Opening and closing groups, sliding between sets |
 | 51-gestures | Touch and mouse input, pinch scrubbing and snapping, scrolling, taps |
 | 52-focus | The card close-up and marking |

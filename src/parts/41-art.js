@@ -20,14 +20,17 @@ const ART = { map: new Map(), queue: new Set(), inflight: 0, max: 4, bytes: 0, t
 const artHost = (u) => (u.startsWith("data:") || u.startsWith("blob:") ? "local" : u.split("/")[2] || "");
 const artDown = (u) => !ART.oks.has(artHost(u)) && (ART.fails.get(artHost(u)) || 0) >= 6; // six misses and not one hit: blocked or offline
 // A card's picture addresses, best first. Printings and twins show their card's picture (the tag says which print).
+const artUrlMemo = new Map(); // (asked for every card drawn, every frame: built once)
 function artUrls(c, big) {
-  const r = rootOf(c), st = sets[r.si];
-  const inj = ART.inject.get(r.id);
-  if (inj) return big && inj.big ? [inj.big, inj.small] : [inj.small];
-  const n = encodeURIComponent(r.num);
-  if (st.id === "me5" || st.id === "me55") { const b = `https://images.scrydex.com/pokemon/${st.id}-${n}`; return big ? [`${b}/large`, `${b}/small`] : [`${b}/small`]; }
-  const b = `https://images.pokemontcg.io/${st.id}/${n}`;
-  return big ? [`${b}_hires.png`, `${b}.png`] : [`${b}.png`];
+  const r = rootOf(c), key = big ? `${r.id}+` : r.id;
+  let v = artUrlMemo.get(key);
+  if (v) return v;
+  const st = sets[r.si], inj = ART.inject.get(r.id), n = encodeURIComponent(r.num);
+  if (inj) v = big && inj.big ? [inj.big, inj.small] : [inj.small];
+  else if (st.id === "me5" || st.id === "me55") { const b = `https://images.scrydex.com/pokemon/${st.id}-${n}`; v = big ? [`${b}/large`, `${b}/small`] : [`${b}/small`]; }
+  else { const b = `https://images.pokemontcg.io/${st.id}/${n}`; v = big ? [`${b}_hires.png`, `${b}.png`] : [`${b}.png`]; }
+  artUrlMemo.set(key, v);
+  return v;
 }
 // Production's note under a vintage scan: the picture is of a 1st Edition print, whichever print you have.
 const artStamped = (c) => ART_STAMPED.has(sets[rootOf(c).si].id) && c.tag !== "1st Ed";
@@ -212,6 +215,7 @@ function artFake(c, W) {
   return cv.toDataURL("image/png");
 }
 function artInject(ids, big = false) {
+  artUrlMemo.clear();
   if (ids === null) { ART.inject.clear(); for (const e of ART.map.values()) e.bmp?.close?.(); ART.map.clear(); ART.queue.clear(); ART.bytes = 0; kick(); return 0; }
   const list = ids === "all" ? cards : (Array.isArray(ids) ? ids : [ids]).map((id) => cards.find((c) => c.id === id)).filter(Boolean);
   for (const c of list) ART.inject.set(c.id, { small: artFake(c, 245), big: big ? artFake(c, 734) : null });
