@@ -507,6 +507,8 @@ body.medaling .msheet { transform: translate(-50%, 0); pointer-events: auto; vis
 .ms-face { position: absolute; left: 0; right: 0; bottom: 0; display: grid; gap: 1px; padding: 4px 4px 5px; background: var(--paper); color: var(--paper-ink); text-align: left; }
 .ms-face b { font: 700 10px/1.15 var(--font); font-stretch: 80%; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .ms-face small { font: 600 9px/1 var(--font); opacity: .7; }
+.ms-card.own::before { content: ""; position: absolute; left: 8%; right: 8%; top: 6%; bottom: 50%; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .2); /* the drawn face's art window */
+  background: linear-gradient(rgb(255 255 255 / .09) 46%, rgb(255 255 255 / 0) 46%), color-mix(in srgb, var(--tc) 70%, #000); }
 .ms-card.pic { border: 0; background: none; }
 .ms-card.pic .ms-face { display: none; }
 .ms-card:not(.own) > img.art { filter: grayscale(1); }
