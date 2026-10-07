@@ -370,10 +370,12 @@ function drawMedal(c2, t, cx, top, w, mode = "", crop = 124, S = w) {
 }
 
 // ----- the room's shelves: one per set or chase (laid out by roomLayout, 67-room) -----
+// Round 22: each shelf is a panel like the wall's (hairline, small radius), its medals hanging from a thread of the
+// shelf's colour. The plaque, when there is one, heads the panel and the medals hang from it.
 const MD_FILTERS = [["all", "All"], ["earned", "Earned"], ["locked", "To earn"], ["crit", "Critical"], ["shiny", "Shiny"]];
-const MD_MW = 50, MD_SW = 64, MD_NW = 38, MD_PW = 42, MD_NH = 62, MD_RIB = 9;
-const MD_ROW = SHELF_H + MD_RIB + Math.round(MD_MW * 1.24) + 52; // a row of medals hanging from a rail, their labels under them
-const MD_SROW = Math.round(MD_SW * 1.24) + 70; // the showcase: medals standing on a lit shelf
+const MD_MW = 50, MD_SW = 58, MD_NW = 34, MD_PW = 42, MD_NH = 58;
+const MD_ROW = 124; // a row of medals on their threads, their labels under them
+const MD_SROW = Math.round(MD_SW * 1.24) + 66; // the showcase: medals standing on a hairline
 let mdFilter = "all", mdFoldAll = false;
 const mdOpen = new Set(); // shelves whose locked medals are unfolded
 const mdBlocks = new Map(); // stable tap targets, so the press shows on the thing under the finger
@@ -399,118 +401,128 @@ function mdShelves(fin = caseList()) {
 }
 const mdStatus = (t) => (t.earned ? (t.at ? mdDate(t.at) : "Earned") : t.goal > 1 ? `${t.goal - t.have} to go` : "Locked");
 const mdDate = (at) => { const d = new Date(at), y = d.getFullYear() !== new Date().getFullYear(); return d.toLocaleDateString("en-US", y ? { month: "short", day: "numeric", year: "numeric" } : { month: "short", day: "numeric" }); };
-// Lays out one shelf from y: the plaque at its head (or a heading), its medals in rows on ribbons, then the fold line.
-function mdShelfLayout(s, R, y, items, hits, plaques, rails) {
+// Lays out one shelf at x, w wide, from y: its panel, the plaque at its head (or a heading), its medals in rows, then
+// the fold line. Returns where the next shelf in its column starts.
+function mdShelfLayout(s, X, W, y, items, hits, plaques) {
   const plq = s.plaque && (mdFilter === "all" || mdFilter === "earned") ? s.plaque : null;
   const ts = s.all.filter((t) => mdShow(t) && !(plq && t === s.ride));
   const locked = ts.filter((t) => !t.earned), open = mdFilter === "locked" || mdOpen.has(s.sec);
   const shown = mdFilter === "all" && !open ? ts.filter((t) => t.earned) : ts, folded = mdFilter === "all" && !open ? locked.length : 0;
   if (!plq && !shown.length && !folded && !(mdFilter === "all" && locked.length)) return y;
-  const total = s.all.length;
-  let railY;
+  const box = { type: "box", x: X, y, w: W, h: 0 }; items.push(box);
+  let railY, top = y;
   if (plq) {
-    y += 10;
     const fan = plq === room.fan ? stackOf(plq).length * SUB_H : 0, g = plq;
-    g.m = { x: R.x, y, w: R.w, h: ROW_H }; g.plq = plaqueInfo(g); packRoomPlaque(g);
-    g.fanR = stackOf(g).length ? { x: g.m.x + g.m.w - PG - 12 - 150, y: g.m.y + 8, w: 150, h: 34 } : null;
+    g.m = { x: X, y, w: W, h: ROW_H }; g.plq = plaqueInfo(g); packRoomPlaque(g);
+    const p = roomPlate(g.m);
+    g.fanR = stackOf(g).length ? { x: p.x + p.w - 170, y: p.y + 2, w: 168, h: 30 } : null;
     g.fanBtn ||= { fan: g, lead: [], cards: [] };
-    if (g === room.fan) fanRows(g).forEach((r, k) => { r.m = { x: g.m.x, y: y + ROW_H + k * SUB_H, w: R.w, h: SUB_H }; });
+    if (g === room.fan) fanRows(g).forEach((r, k) => { r.m = { x: X, y: y + ROW_H + k * SUB_H, w: W, h: SUB_H }; });
     g.ride = s.ride;
-    if (s.ride) { const p = roomPlate(g.m); hits.push({ x: p.x + 4, y: p.y + 2, w: MD_PW + 14, h: p.h - 24, blk: mdBlock(`ride|${s.ride.id}`, { mdt: s.ride }) }); }
+    if (s.ride) hits.push({ x: p.x + 4, y: p.y + 2, w: MD_PW + 14, h: p.h - 24, blk: mdBlock(`ride|${s.ride.id}`, { mdt: s.ride }) });
     plaques.push(g);
-    railY = y + ROW_H + fan - SHELF_H - 4;
-    y += ROW_H + fan;
+    railY = y + ROW_H + fan - 8; // the first row's threads hang from the plate
+    top = y + ROW_H + fan;
   } else {
-    y += 12;
-    items.push({ type: "head", x: R.x, y, w: R.w, h: 30, text: s.name, right: `${s.earnedN} of ${total}`, dot: s.color });
-    y += 30; railY = y;
+    items.push({ type: "head", x: X, y: y + 4, w: W, h: 32, text: s.name, right: `${s.earnedN} of ${s.all.length}`, dot: s.color, inset: 12 });
+    railY = y + 40; top = railY;
   }
-  const cols = R.w >= 700 ? 8 : R.w >= 520 ? 6 : 4, cw = R.w / cols;
-  if (!shown.length && plq) { rails.push({ y: railY, h: SHELF_H }); y = Math.max(y, railY + SHELF_H + 4); }
+  const cols = clamp(Math.floor((W - 8) / 84), 4, 8), cw = (W - 8) / cols;
+  let cy = top;
   for (let i = 0; i < shown.length; i += cols) {
-    const row = shown.slice(i, i + cols), ry = i ? y : railY;
-    const it = { type: "row", x: R.x, y: ry, w: R.w, h: MD_ROW, cells: row.map((t, j) => ({ t, cx: (j + 0.5) * cw, cw })) };
-    it.key = `h|${Math.round(R.w)}|${row.map((t) => `${t.id}:${t.earned ? t.rank || "n" : t.have}`).join(",")}`;
+    const row = shown.slice(i, i + cols), ry = i ? cy : railY, rail = Boolean(i || !plq);
+    const it = { type: "row", x: X, y: ry, w: W, h: MD_ROW, rail, cells: row.map((t, j) => ({ t, cx: 4 + (j + 0.5) * cw, cw })) };
+    it.key = `h|${Math.round(W)}|${rail ? 1 : 0}|${row.map((t) => `${t.id}:${t.earned ? t.rank || "n" : t.have}`).join(",")}`;
     items.push(it);
-    row.forEach((t, j) => hits.push({ x: R.x + j * cw + 2, y: ry + SHELF_H, w: cw - 4, h: MD_ROW - SHELF_H - 4, blk: mdBlock(`m|${t.id}`, { mdt: t }) }));
-    y = ry + MD_ROW;
+    row.forEach((t, j) => hits.push({ x: X + 4 + j * cw + 2, y: ry + 8, w: cw - 4, h: MD_ROW - 12, blk: mdBlock(`m|${t.id}`, { mdt: t }) }));
+    cy = ry + MD_ROW;
   }
   if (folded || (open && locked.length && mdFilter === "all")) {
-    y += shown.length || plq ? 2 : 0;
-    const it = { type: "more", x: R.x, y, w: R.w, h: 40, text: folded ? `${folded} ${shown.length || plq ? "more " : ""}to earn` : `Hide the ${locked.length} to earn`, open: !folded, blk: mdBlock(`fold|${s.sec}`, { mdsec: s.sec }) };
-    items.push(it); hits.push(it); y += 44;
+    const it = { type: "more", x: X, y: cy, w: W, h: 42, sep: shown.length > 0 || Boolean(plq), text: folded ? `${folded} ${shown.length || plq ? "more " : ""}to earn` : `Hide the ${locked.length} to earn`, open: !folded, blk: mdBlock(`fold|${s.sec}`, { mdsec: s.sec }) };
+    items.push(it); hits.push(it); cy += 42;
   }
-  return y;
+  box.h = cy + 4 - y;
+  return cy + 4 + ROOM_GAP;
 }
-// The room from the top: the summary, Showcase, Next up, the filters, then the shelves. Returns where it ends.
+const MD_HOW = "Each set and chase earns trophies as it fills. A crown marks a signature trophy, one only that set or chase offers. Hidden ones show once you earn them. Luck is rolled once, when a trophy is earned: about 1 in 10 come up Critical, 1 in 100 Shiny.";
+// The room from the top: the summary, Showcase, Next up, the filters, then the shelves (in two columns when wide).
+// Returns where it ends.
 function mdRoomLayout(R, y0, items, hits, plaques, rails) {
-  const L = medalList(), gcols = R.w >= 700 ? 8 : R.w >= 520 ? 6 : 4;
+  const L = medalList();
   let y = y0;
-  const head = (text, right, gap = 8) => { y += gap; items.push({ type: "head", x: R.x, y, w: R.w, h: 30, text, right }); y += 30; };
-  if (L.earned.length) { // the Showcase: the rarest you've earned, standing on a lit shelf
-    const sh = L.earned.filter((t) => t.rank === "shiny").length, cr = L.earned.filter((t) => t.rank === "crit").length;
-    head("Showcase", `${sh ? `${sh} shiny · ` : ""}${cr} critical`, 4);
-    const n = gcols >= 6 ? 6 : 4, cw = R.w / n, row = L.earned.slice(0, n);
+  const head = (text, gap = 12) => { y += gap; items.push({ type: "head", x: R.x, y, w: R.w, h: 30, text }); y += 32; };
+  if (L.earned.length) { // the Showcase: the rarest you've earned
+    head("Showcase", 8);
+    const n = R.w >= 600 ? clamp(Math.floor(R.w / 104), 6, 8) : 4, cw = R.w / n, row = L.earned.slice(0, n);
     items.push({ type: "row", stand: true, x: R.x, y, w: R.w, h: MD_SROW, cells: row.map((t, i) => ({ t, cx: (i + 0.5) * cw, cw })), key: `s|${Math.round(R.w)}|${row.map((t) => `${t.id}:${t.rank}`).join(",")}` });
     row.forEach((t, i) => hits.push({ x: R.x + i * cw + 2, y, w: cw - 4, h: MD_SROW - 4, blk: mdBlock(`sc|${t.id}`, { mdt: t }) }));
     y += MD_SROW;
   }
-  // Next up: the closest to being earned (hidden ones never show here).
+  // Next up: the closest to being earned (hidden ones never show here), two across when wide.
   const next = L.list.filter((t) => !t.earned && t.goal > 1).map((t) => ({ t, left: t.goal - t.have, frac: t.have / t.goal })).filter((x) => x.left > 0).sort((a, b) => b.frac - a.frac || a.left - b.left).slice(0, 4);
   if (next.length) {
-    head("Next up", "");
-    for (const x of next) { const it = { type: "nu", ...x, x: R.x, y, w: R.w, h: MD_NH, blk: mdBlock(`nu|${x.t.id}`, { mdt: x.t }) }; items.push(it); hits.push(it); y += MD_NH + 8; }
+    head("Next up");
+    const per = Math.ceil(next.length / R.cols); // one panel per column, its rows split by hairlines
+    for (let c = 0; c < R.cols; c++) {
+      const part = next.slice(c * per, c * per + per); if (!part.length) continue;
+      const x = R.x + c * (R.cw + ROOM_GAP);
+      items.push({ type: "box", x, y, w: R.cw, h: part.length * MD_NH });
+      part.forEach((n, k) => { const it = { type: "nu", ...n, sep: k > 0, x, y: y + k * MD_NH, w: R.cw, h: MD_NH, blk: mdBlock(`nu|${n.t.id}`, { mdt: n.t }) }; items.push(it); hits.push(it); });
+    }
+    y += per * MD_NH;
   }
-  y += 10;
+  y += 20;
   let cx = R.x;
   for (const [v, label] of MD_FILTERS) {
-    font(600, 13.5); const w = textW(label) + 28;
+    font(600, 13.5); const w = textW(label) + 26;
     if (cx + w > R.x + R.w) { cx = R.x; y += 40; }
     const it = { type: "chip", label, on: mdFilter === v, x: cx, y, w, h: 32, blk: mdBlock(`tf|${v}`, { mdf: v }) }; items.push(it); hits.push(it);
     cx += w + 8;
   }
-  y += 36;
+  y += 32 + 14;
+  // the shelves, each into whichever column is shorter
+  const colY = new Array(R.cols).fill(y);
+  const place = (s) => { let c = 0; for (let k = 1; k < R.cols; k++) if (colY[k] < colY[c] - 1) c = k; colY[c] = mdShelfLayout(s, R.x + c * (R.cw + ROOM_GAP), R.cw, colY[c], items, hits, plaques); };
   const { started, notYet } = mdShelves();
-  for (const s of started) y = mdShelfLayout(s, R, y, items, hits, plaques, rails);
+  for (const s of started) place(s);
+  y = Math.max(...colY);
   const later = notYet.filter((s) => s.all.some(mdShow));
   if (later.length) {
-    y += 14; const it = { type: "fold", x: R.x, y, w: R.w, h: 48, n: later.length, open: mdFoldAll, blk: mdBlock("foldall", { mdfold: true }) }; items.push(it); hits.push(it); y += 52;
-    if (mdFoldAll) for (const s of later) y = mdShelfLayout(s, R, y, items, hits, plaques, rails);
+    const it = { type: "fold", x: R.x, y, w: R.w, h: 46, n: later.length, open: mdFoldAll, blk: mdBlock("foldall", { mdfold: true }) }; items.push(it); hits.push(it); y += 46 + ROOM_GAP;
+    if (mdFoldAll) { colY.fill(y); for (const s of later) place(s); y = Math.max(...colY); }
   }
+  const note = (title, text) => { font(500, 12.5); const n = mdWrap(text, R.w - 8).length, h = 30 + n * 17; items.push({ type: "note", x: R.x, y, w: R.w, h, title, text }); y += h + 8; };
   if (!plaques.length && !items.some((it) => (it.type === "row" && !it.stand) || it.type === "more" || it.type === "fold")) {
-    y += 8; items.push({ type: "note", x: R.x, y, w: R.w, h: 64, title: mdFilter === "shiny" ? "No shiny trophies yet" : mdFilter === "crit" ? "No critical trophies yet" : "Nothing here yet", text: mdFilter === "shiny" || mdFilter === "crit" ? "Luck is decided when a trophy is earned. Keep collecting." : "Mark a few cards and your first trophies appear." }); y += 70;
+    note(mdFilter === "shiny" ? "No shiny trophies yet" : mdFilter === "crit" ? "No critical trophies yet" : "Nothing here yet", mdFilter === "shiny" || mdFilter === "crit" ? "Luck is rolled when a trophy is earned. Keep collecting." : "Mark a few cards and your first trophies appear.");
   }
-  y += 22;
-  items.push({ type: "note", x: R.x, y, w: R.w, h: 136, title: "How trophies work", text: "Each set and chase earns its own trophies as you fill it, named for the kind of chase. A gold crown marks a signature trophy, something one set or chase uniquely offers. Hidden ones don't show until you earn them, then wear a purple question mark. Luck is rolled once, when a trophy is earned: about 1 in 10 come up Critical, with a gold starburst, and about 1 in 100 Shiny, with a rainbow rim. It stays with the trophy for good." });
-  return y + 136;
+  y += 10;
+  note("How trophies work", MD_HOW);
+  return y;
 }
 // A row of medals, drawn once and kept (a few dozen at most; the oldest go first).
 const mdRows = new Map();
 let mdRowUse = 0;
 function mdRowImage(it) {
-  const key = `${it.key}|${dpr}|${look()}|${theme["m-surface"]}|${mdVer}`;
+  const key = `${it.key}|${dpr}|${look()}|${theme["m-surface"]}|${theme["slot-line"]}|${mdVer}`;
   let e = mdRows.get(key);
   if (e) { e.use = ++mdRowUse; return e.cv; }
   if (mdRows.size >= 48) { let old = null; for (const [k, v] of mdRows) if (!old || v.use < old[1].use) old = [k, v]; mdRows.delete(old[0]); }
   const holder = {};
   const cv = cachedImage(holder, key, it.w, it.h, (x) => {
-    if (it.stand) { // the showcase: standing on a lit shelf, the label under the shelf's edge
-      const mw = Math.min(MD_SW, it.cells[0].cw - 16), mh = mw * 1.24, sy = 6 + mh - 5;
-      const lit = x.createLinearGradient(0, 0, 0, sy); lit.addColorStop(0, "rgb(255 220 150 / 0)"); lit.addColorStop(1, "rgb(255 220 150 / .09)"); x.fillStyle = lit; x.fillRect(-6, 0, it.w + 12, sy);
-      x.fillStyle = theme["room-wood"]; x.fillRect(-6, sy, it.w + 12, 8); x.fillStyle = theme["room-wood-hi"]; x.fillRect(-6, sy, it.w + 12, 1.5); x.fillStyle = "rgb(0 0 0 / .35)"; x.fillRect(-6, sy + 8, it.w + 12, 5);
-      for (const c of it.cells) { drawMedal(x, c.t, c.cx, 6, mw); mdLabel(x, c.t, c.cx, sy + 30, c.cw - 8, true); }
+    if (it.stand) { // the showcase: standing on a hairline, the label under it
+      const mw = Math.min(MD_SW, it.cells[0].cw - 16), mh = mw * 1.24, base = 4 + mh - 4;
+      x.fillStyle = theme["slot-line"]; x.fillRect(0, base, it.w, 1);
+      for (const c of it.cells) { drawMedal(x, c.t, c.cx, 4, mw); mdLabel(x, c.t, c.cx, base + 20, c.cw - 8, true); }
       return;
     }
-    // hanging: a rail along the top, a ribbon down to each medal
-    x.fillStyle = theme["room-wood"]; x.fillRect(-6, 0, it.w + 12, SHELF_H); x.fillStyle = theme["room-wood-hi"]; x.fillRect(-6, 0, it.w + 12, 1.5); x.fillStyle = "rgb(0 0 0 / .35)"; x.fillRect(-6, SHELF_H, it.w + 12, 5);
+    // hanging: a hairline along the top (or the plate above), a thread of the shelf's colour down to each medal
+    if (it.rail) { x.fillStyle = theme["slot-line"]; x.fillRect(12, 0, it.w - 24, 1); }
     for (const c of it.cells) {
-      const t = c.t, col = t.earned ? theme[`c-${t.color}`] || theme["c-blue"] : "#5A4E44";
-      x.globalAlpha = t.earned ? 1 : 0.7;
-      x.fillStyle = mix(col, "#000000", 0.3); x.fillRect(c.cx - 3, SHELF_H - 1, 6, MD_RIB + 6);
-      x.fillStyle = col; x.fillRect(c.cx - 3, SHELF_H - 1, 2, MD_RIB + 6);
-      x.globalAlpha = 1;
-      drawMedal(x, t, c.cx, SHELF_H + MD_RIB, MD_MW, t.earned ? "" : "locked");
-      mdLabel(x, t, c.cx, SHELF_H + MD_RIB + MD_MW * 1.24 + 14, c.cw - 6, false);
+      const t = c.t;
+      x.fillStyle = t.earned ? theme[`c-${t.color}`] || theme["c-blue"] : theme["slot-line"];
+      x.fillRect(c.cx - 1, it.rail ? 1 : 0, 2, 15);
+      drawMedal(x, t, c.cx, 8, MD_MW, t.earned ? "" : "locked");
+      mdLabel(x, t, c.cx, 8 + MD_MW * 1.24 + 14, c.cw - 6, false);
     }
   });
   mdRows.set(key, { cv, use: ++mdRowUse });
@@ -519,10 +531,10 @@ function mdRowImage(it) {
 // A medal's name (two lines at most), then its date, its luck tag, or how many to go.
 function mdLabel(x, t, cx, y, w, big) {
   x.textAlign = "center"; x.textBaseline = "alphabetic";
-  fontOn(x, t.earned ? 700 : 500, big ? 13 : 12, true); x.fillStyle = t.earned ? theme["room-ink"] : theme["room-muted"];
-  for (const ln of wrapOn(x, t.name, w, 2)) { x.fillText(ln, cx, y); y += 13.5; }
+  fontOn(x, t.earned ? 700 : 500, big ? 13 : 12.5, true); x.fillStyle = t.earned ? theme["room-ink"] : theme["room-muted"];
+  for (const ln of wrapOn(x, t.name, w, 2)) { x.fillText(ln, cx, y); y += 14; }
   if (mdLucky(t)) { const p = mdPill(t.rank); x.drawImage(p.cv, cx - p.w / 2, y - 10, p.w, p.h); }
-  else { fontOn(x, 500, 11); x.fillStyle = theme["room-muted"]; x.fillText(mdStatus(t), cx, y + 1); }
+  else { fontOn(x, 500, 11.5); x.fillStyle = theme["room-muted"]; x.fillText(mdStatus(t), cx, y + 1); }
   x.textAlign = "left";
 }
 function wrapOn(x, text, w, max) {
@@ -535,51 +547,59 @@ function wrapOn(x, text, w, max) {
 const mdPills = new Map();
 function mdPill(rank) { // production's Critical and Shiny tags, drawn once
   const key = `${rank}|${dpr}`; let p = mdPills.get(key); if (p) return p;
-  const w = rank === "shiny" ? 46 : 58, h = 16, cv = document.createElement("canvas"); cv.width = Math.ceil(w * dpr); cv.height = Math.ceil(h * dpr);
+  const w = rank === "shiny" ? 44 : 54, h = 15, cv = document.createElement("canvas"); cv.width = Math.ceil(w * dpr); cv.height = Math.ceil(h * dpr);
   const x = cv.getContext("2d"); x.scale(dpr, dpr);
-  rrOn(x, 0.5, 0.5, w - 1, h - 1, 8);
+  rrOn(x, 0.5, 0.5, w - 1, h - 1, 4);
   if (rank === "shiny") { const gr = x.createLinearGradient(0, 0, w, 0); ["#FFD6D6", "#FFF3B0", "#D3F5DC", "#D2E4FF", "#EBD6FF"].forEach((c, i) => gr.addColorStop(i / 4, c)); x.fillStyle = gr; x.strokeStyle = "#8A6BE0"; }
   else { x.fillStyle = "#FFF1B8"; x.strokeStyle = "#C99A00"; }
   x.fill(); x.lineWidth = 1; x.stroke();
-  x.fillStyle = rank === "shiny" ? "#2A1F4D" : "#4A3500"; fontOn(x, 800, 9.5); x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(MD_RANK[rank].toUpperCase(), w / 2, h / 2 + 0.5);
+  x.fillStyle = rank === "shiny" ? "#2A1F4D" : "#4A3500"; fontOn(x, 800, 9); x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(MD_RANK[rank].toUpperCase(), w / 2, h / 2 + 0.5);
   p = { cv, w, h }; mdPills.set(key, p); return p;
 }
-// The live pieces of the room (headings, Next up, the filters, the fold lines, the notes): a few per screen, text through font().
+// The live pieces of the room (panels, headings, Next up, the filters, the fold lines, the notes): a few per screen,
+// text through font().
 function mdDrawItem(it, y, pressed) {
-  ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
-  if (it.type === "head") {
-    let x = it.x + 4;
-    if (it.dot) { ctx.beginPath(); ctx.arc(x + 4, y + 18, 4, 0, Math.PI * 2); ctx.fillStyle = theme[`c-${it.dot}`] || theme["c-blue"]; ctx.fill(); x += 14; }
-    font(600, 12.5); const rw = it.right ? textW(it.right) + 12 : 0;
-    ctx.textAlign = "right"; ctx.fillStyle = theme["room-muted"]; if (it.right) ctx.fillText(it.right, it.x + it.w - 4, y + 22);
-    ctx.textAlign = "left"; ctx.fillStyle = theme["room-ink"]; font(800, 16, true); ctx.fillText(fitText(it.text, it.w - rw - (x - it.x) - 4), x, y + 22);
+  ctx.textBaseline = "alphabetic"; ctx.textAlign = "left"; ctx.lineWidth = 1;
+  const card = (r = 12) => { rr(it.x + 0.5, y + 0.5, it.w - 1, it.h - 1, r); ctx.fillStyle = pressed ? theme.slot : theme["panel-solid"]; ctx.fill(); ctx.strokeStyle = theme["slot-line"]; ctx.stroke(); };
+  if (it.type === "box") card();
+  else if (it.type === "head") {
+    let x = it.x + (it.inset || 0);
+    if (it.dot) { ctx.beginPath(); ctx.arc(x + 4, y + it.h / 2 + 1, 4, 0, Math.PI * 2); ctx.fillStyle = theme[`c-${it.dot}`] || theme["c-blue"]; ctx.fill(); x += 14; }
+    font(600, 12.5); const rw = it.right ? textW(it.right) + 12 : 0, by = y + it.h / 2 + 6;
+    ctx.textAlign = "right"; ctx.fillStyle = theme["room-muted"]; if (it.right) ctx.fillText(it.right, it.x + it.w - (it.inset || 0), by);
+    ctx.textAlign = "left"; ctx.fillStyle = theme["room-ink"]; font(800, it.inset ? 16 : 18, true); ctx.fillText(fitText(it.text, it.w - rw - (x - it.x) - (it.inset || 0)), x, by);
   } else if (it.type === "nu") {
     const t = it.t;
-    rr(it.x, y, it.w, it.h, 10); ctx.fillStyle = pressed ? "rgb(255 236 210 / .12)" : "rgb(255 236 210 / .05)"; ctx.fill();
-    ctx.lineWidth = 1; ctx.strokeStyle = "rgb(255 236 210 / .14)"; ctx.stroke();
-    drawMedal(ctx, t, it.x + 10 + MD_NW / 2, y + (it.h - MD_NW * 1.24) / 2, MD_NW, "locked");
-    const tx = it.x + 60, tw = it.w - 60 - 72;
+    if (pressed) { rr(it.x + 1, y + 1, it.w - 2, it.h - 2, 11); ctx.fillStyle = theme.slot; ctx.fill(); }
+    if (it.sep) { ctx.fillStyle = theme["slot-line"]; ctx.fillRect(it.x + 58, y, it.w - 58, 1); }
+    drawMedal(ctx, t, it.x + 12 + MD_NW / 2, y + (it.h - MD_NW * 1.24) / 2 + 1, MD_NW, "locked");
+    const tx = it.x + 58, tw = it.w - 58 - 64;
     font(700, 14.5, true); ctx.fillStyle = theme["room-ink"]; ctx.fillText(fitText(t.name, tw), tx, y + 22);
     font(500, 12); ctx.fillStyle = theme["room-muted"]; ctx.fillText(fitText(t.chase, tw), tx, y + 38);
-    ctx.fillStyle = "rgb(255 255 255 / .12)"; ctx.fillRect(tx, y + 46, tw, 4);
-    ctx.fillStyle = theme[`c-${t.color}`] || theme["c-blue"]; ctx.fillRect(tx, y + 46, tw * it.frac, 4);
-    ctx.textAlign = "center"; ctx.fillStyle = theme["room-ink"]; font(800, 20); ctx.fillText(String(it.left), it.x + it.w - 36, y + 31);
-    font(500, 11); ctx.fillStyle = theme["room-muted"]; ctx.fillText("to go", it.x + it.w - 36, y + 46);
+    ctx.fillStyle = theme["slot-line"]; ctx.fillRect(tx, y + 45, tw, 2);
+    ctx.fillStyle = theme[`c-${t.color}`] || theme["c-blue"]; ctx.fillRect(tx, y + 45, tw * it.frac, 2);
+    ctx.textAlign = "right"; ctx.fillStyle = theme["room-ink"]; font(800, 18); ctx.fillText(String(it.left), it.x + it.w - 14, y + 27);
+    font(500, 11.5); ctx.fillStyle = theme["room-muted"]; ctx.fillText("to go", it.x + it.w - 14, y + 42);
   } else if (it.type === "chip") {
-    rr(it.x + 0.5, y + 0.5, it.w - 1, it.h - 1, 16);
+    rr(it.x + 0.5, y + 0.5, it.w - 1, it.h - 1, 9);
     if (it.on) { ctx.fillStyle = theme["room-ink"]; ctx.fill(); }
-    else { ctx.fillStyle = pressed ? "rgb(255 236 210 / .14)" : "rgb(255 236 210 / .04)"; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = "rgb(255 236 210 / .26)"; ctx.stroke(); }
+    else { if (pressed) { ctx.fillStyle = theme.slot; ctx.fill(); } ctx.strokeStyle = theme["slot-line"]; ctx.stroke(); }
     ctx.fillStyle = it.on ? theme["room-bg"] : theme["room-ink"]; font(600, 13.5); ctx.textAlign = "center"; ctx.fillText(it.label, it.x + it.w / 2, y + 21);
-  } else if (it.type === "more" || it.type === "fold") { // a shelf's locked medals, or the chases not started yet
-    rr(it.x, y + 2, it.w, it.h - 4, 10); ctx.fillStyle = pressed ? "rgb(255 236 210 / .12)" : "rgb(255 236 210 / .05)"; ctx.fill();
-    ctx.lineWidth = 1; ctx.strokeStyle = "rgb(255 236 210 / .14)"; ctx.stroke();
+  } else if (it.type === "more") { // a shelf's locked medals, at the foot of its panel
+    if (pressed) { rr(it.x + 1, y + 1, it.w - 2, it.h - 2, 11); ctx.fillStyle = theme.slot; ctx.fill(); }
+    if (it.sep) { ctx.fillStyle = theme["slot-line"]; ctx.fillRect(it.x + 12, y, it.w - 24, 1); }
     const my = y + it.h / 2 + 5;
-    if (it.type === "more") { font(600, 13.5); ctx.fillStyle = theme["room-ink"]; ctx.fillText(it.text, it.x + 14, my); ctx.textAlign = "right"; ctx.fillStyle = theme["room-muted"]; ctx.fillText(it.open ? "‹" : "›", it.x + it.w - 14, my); }
-    else { font(700, 14.5, true); ctx.fillStyle = theme["room-ink"]; ctx.fillText("Not started yet", it.x + 14, my); ctx.textAlign = "right"; ctx.fillStyle = theme["room-muted"]; font(600, 12.5); ctx.fillText(`${it.n} ${it.n === 1 ? "chase" : "chases"} ${it.open ? "▴" : "▾"}`, it.x + it.w - 14, my); }
+    font(600, 13.5); ctx.fillStyle = theme["room-muted"]; ctx.fillText(it.text, it.x + 14, my);
+    ctx.textAlign = "right"; ctx.fillText(it.open ? "‹" : "›", it.x + it.w - 14, my);
+  } else if (it.type === "fold") { // the chases not started yet
+    card();
+    const my = y + it.h / 2 + 5;
+    font(700, 15, true); ctx.fillStyle = theme["room-ink"]; ctx.fillText("Not started yet", it.x + 14, my);
+    ctx.textAlign = "right"; ctx.fillStyle = theme["room-muted"]; font(600, 12.5); ctx.fillText(`${it.n} ${it.n === 1 ? "chase" : "chases"} ${it.open ? "▴" : "▾"}`, it.x + it.w - 14, my);
   } else if (it.type === "note") {
     font(700, 13); ctx.fillStyle = theme["room-ink"]; ctx.fillText(it.title, it.x + 4, y + 16);
     font(500, 12.5); ctx.fillStyle = theme["room-muted"];
-    let ty = y + 34; for (const ln of mdWrap(it.text, it.w - 8)) { ctx.fillText(ln, it.x + 4, ty); ty += 16; }
+    let ty = y + 34; for (const ln of mdWrap(it.text, it.w - 8)) { ctx.fillText(ln, it.x + 4, ty); ty += 17; }
   }
   ctx.textAlign = "left";
 }
@@ -752,20 +772,22 @@ function openMedal(id) {
   mdOpenId = id; tick(5); cancelPress();
   const lucky = mdLucky(t), cs = mdCardsOf(t), MAX = 24, have = cs.filter((c) => c.owned).length, groupsU = t.units && t.units.some((u) => Array.isArray(u));
   const openable = t.open && mode === "set" && mdGroupOf(t.open);
+  const tags = [t.sig ? "signature" : "", t.hidden ? "hidden" : ""].filter(Boolean).join(", ");
   mdSheet.innerHTML = `<div class="ms-scroll">
       <div class="ms-medal${t.earned ? "" : " locked"}">${medalSvg(t, { locked: !t.earned, cls: "big" })}</div>
-      ${lucky ? `<p class="rank-tag ${t.rank} big">${t.rank === "shiny" ? "Shiny · 1 in 100" : "Critical · 1 in 10"}</p>` : ""}
+      <div class="ms-text">
       <h2 id="ms-name">${mdEsc(t.name)}</h2>
-      <p class="ms-chase">${mdEsc(t.chase)}${t.sig ? " · signature" : ""}${t.hidden ? " · hidden" : ""}</p>
+      <p class="ms-chase">${mdEsc(t.chase)}${tags ? ` · ${tags}` : ""}</p>
       <p class="ms-desc">${mdEsc(t.desc || "")}</p>
-      ${cs.length ? `<p class="ms-count">${groupsU ? `${have} of ${cs.length} groups` : `${have} of ${cs.length} cards`} · tap a card to go to it</p>
-      <div class="ms-cards">${cs.slice(0, MAX).map((c) => { const st = sets[c.si]; return `<button type="button" class="ms-card${c.owned ? " own" : ""}" data-ci="${c.i}" style="--tc:${typeColor(c)}" aria-label="${mdEsc(`${c.name}, ${st.name} ${c.num}, ${c.owned ? "owned" : "missing"}`)}"><span class="ms-face"><b>${mdEsc(c.name)}</b><small>${mdEsc(st.code)} ${mdEsc(c.num)}</small></span>${c.owned ? `<i class="ms-check" aria-hidden="true">✓</i>` : ""}</button>`; }).join("")}</div>
-      ${cs.length > MAX ? `<p class="ms-more">and ${cs.length - MAX} more${openable ? " in the binder" : ""}.</p>` : ""}` : ""}
-      <p class="ms-when">${t.earned ? `Earned${t.at ? ` ${new Date(t.at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}` : ""}.${t.rank === "normal" ? " Its luck roll came up plain." : ""}` : t.goal > 1 ? `${t.goal - t.have} more to go.` : "Not earned yet."}</p>
+      <p class="ms-when">${lucky ? `<span class="rank-tag ${t.rank}">${t.rank === "shiny" ? "Shiny · 1 in 100" : "Critical · 1 in 10"}</span> ` : ""}${t.earned ? `Earned${t.at ? ` ${mdDate(t.at)}` : ""}` : t.goal > 1 ? `${t.goal - t.have} to go` : "Not earned yet"}</p>
+      </div>
+      ${cs.length ? `<p class="ms-count">${have} of ${cs.length}${groupsU ? "" : " cards"}</p>
+      <div class="ms-cards">${cs.slice(0, MAX).map((c) => { const st = sets[c.si]; return `<button type="button" class="ms-card${c.owned ? " own" : ""}" data-ci="${c.i}" style="--tc:${typeColor(c)}" aria-label="${mdEsc(`${c.name}, ${st.name} ${c.num}, ${c.owned ? "owned" : "missing"}. Go to it`)}"><span class="ms-face"><b>${mdEsc(c.name)}</b><small>${mdEsc(st.code)} ${mdEsc(c.num)}</small></span>${c.owned ? `<i class="ms-check" aria-hidden="true">✓</i>` : ""}</button>`; }).join("")}</div>
+      ${cs.length > MAX ? `<p class="ms-more">and ${cs.length - MAX} more${openable ? " in the binder" : ""}</p>` : ""}` : ""}
     </div>
     <div class="ms-foot">${openable ? `<button type="button" class="mbtn" data-ms-open>Open the binder</button>` : ""}<button type="button" class="mbtn primary" data-ms-close>Close</button></div>`;
   mdSheet.inert = false; document.body.classList.add("medaling");
-  requestAnimationFrame(() => mdSheet.querySelector("[data-ms-close]")?.focus({ preventScroll: true }));
+  requestAnimationFrame(() => mdSheet.querySelector("[data-ms-close]")?.focus({ preventScroll: true, focusVisible: false })); // focus for the keyboard, without a ring for a tap
 }
 function closeMedal() {
   if (mdSheet.inert) return;

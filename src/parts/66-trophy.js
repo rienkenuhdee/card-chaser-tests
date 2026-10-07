@@ -163,7 +163,8 @@ function packPlaque(g) {
   const p = plateOf(g.m), n = g.base.length, ew = p.w - 20, cw = Math.min(ew / n, ENGR_H * TW / TH), ex = p.x + 10, ey = p.y + p.h - 18;
   g.base.forEach((c, i) => { c.m = { x: ex + i * cw, y: ey, w: cw, h: ENGR_H }; });
 }
-const plaqueInfo = (g) => { const f = finishOf(g), worth = worthOf(g.base); return { title: trophyName(g), line: `Finished ${dayOf(f?.at || Date.now())} · ${short(worth)}`, worth }; };
+const finDay = (at) => (new Date(at).toDateString() === new Date().toDateString() ? "today" : dayOf(at)); // "Finished today" on its first day
+const plaqueInfo = (g) => { const f = finishOf(g), worth = worthOf(g.base), when = `Finished ${finDay(f?.at || Date.now())}`; return { title: trophyName(g), line: `${when} · ${short(worth)}`, when, worth }; };
 // The strip of colour, drawn once per plaque size and kept.
 function engravingOf(g, w, h) {
   const key = `${g.base.length}|${Math.round(w)}|${Math.round(h)}|${dpr}`;
@@ -258,7 +259,7 @@ const finishedText = (gs) => (gs.length === 1 ? `${trophyName(gs[0])} finished. 
 function trophyListHTML(show, rows) {
   const fin = groups.filter((g) => g.done).sort(byFinish), L = mode === "set" ? medalList() : null;
   if (!fin.length && !L?.earned.length) return "";
-  const plaque = (g) => { const f = finishOf(g), s = seriesOf(g); return `<p class="lsub lfin-line"><span>${esc(trophyName(g))} finished ${dayOf(f.at)}, worth ${money(worthOf(g.base))}. ${deltaText(s.delta)}.${onShelf(g) ? " On the shelf today." : " In the trophy room."}</span><button type="button" class="pill-btn" data-shelf="${esc(doneKey(g))}">Back to the wall</button></p>`; };
+  const plaque = (g) => { const f = finishOf(g), s = seriesOf(g); return `<p class="lsub lfin-line"><span>Finished ${finDay(f.at)}, worth ${money(worthOf(g.base))}, ${deltaText(s.delta).toLowerCase()}.${onShelf(g) ? " On the shelf at the top of the wall today." : ""}</span><button type="button" class="pill-btn" data-shelf="${esc(doneKey(g))}">Back to the wall</button></p>`; };
   const shelf = (sh) => {
     const won = sh.all.filter((t) => t.earned), locked = sh.all.filter((t) => !t.earned), g = sh.plaque, items = g ? g.cards.filter(show) : [];
     return `<h3 class="lfin">${esc(sh.name)} <span class="lm-of">${won.length} of ${sh.all.length}</span></h3>${g ? plaque(g) : ""}${won.length ? `<ul class="lmed">${won.map((t) => mdListRow(t)).join("")}</ul>` : ""}${locked.length ? `<details class="lmed-more"><summary>${locked.length} more to earn</summary><ul class="lmed">${locked.map((t) => mdListRow(t)).join("")}</ul></details>` : ""}${items.length ? rows(items) : ""}`;
@@ -266,7 +267,7 @@ function trophyListHTML(show, rows) {
   if (!L) return `<section class="lshelf" data-sec="medal"><h2>Trophies</h2>${fin.map((g) => `<h3 class="lfin">${esc(trophyName(g))}</h3>${plaque(g)}${g.cards.filter(show).length ? rows(g.cards.filter(show)) : ""}`).join("")}</section>`;
   const { started, notYet } = mdShelves(fin);
   const next = L.list.filter((t) => !t.earned && t.goal > 1 && t.have < t.goal).sort((a, b) => b.have / b.goal - a.have / a.goal || (a.goal - a.have) - (b.goal - b.have)).slice(0, 4);
-  return `<section class="lshelf lmedals" data-sec="medal"><h2>Trophies</h2><p class="lsub">${L.earned.length} of ${L.list.length} earned.${L.hiddenLeft ? ` ${L.hiddenLeft} hidden left to find.` : ""}${fin.length ? ` ${fin.length} finished and sealed.` : ""} Tap a trophy to see the cards behind it.</p>
+  return `<section class="lshelf lmedals" data-sec="medal"><h2>Trophies</h2><p class="lsub">${L.earned.length} of ${L.list.length} earned${L.hiddenLeft ? `, ${L.hiddenLeft} hidden still to find` : ""}.</p>
     ${L.earned.length ? `<h3 class="lfin">Showcase</h3><ul class="lmed">${L.earned.slice(0, 6).map((t) => mdListRow(t, true)).join("")}</ul>` : ""}
     ${next.length ? `<h3 class="lfin">Next up</h3><ul class="lmed">${next.map((t) => mdListRow(t, true)).join("")}</ul>` : ""}
     ${started.map(shelf).join("")}

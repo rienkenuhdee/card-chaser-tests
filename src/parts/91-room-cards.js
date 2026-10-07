@@ -24,7 +24,7 @@ function bake(id, key, w, h, paint) {
 const plainInk = () => (theme.dark ? "#10131A" : "#FFFFFF");
 function cardFrame(id, w, h, fill = theme["panel-solid"]) {
   rr(0.5, 0.5, w - 1, h - 1, 14); ctx.fillStyle = fill; ctx.fill();
-  ctx.lineWidth = 1; ctx.strokeStyle = id === "medal" ? "rgb(255 220 170 / .16)" : theme["slot-line"]; ctx.stroke();
+  ctx.lineWidth = 1; ctx.strokeStyle = theme["slot-line"]; ctx.stroke();
   ctx.save(); rr(0.5, 0.5, w - 1, h - 1, 14); ctx.clip(); ctx.fillStyle = theme[ROOM_COL[id]]; ctx.fillRect(0, 0, w, 4); ctx.restore(); curFont = ""; // the room's colour along its top, as production's tabs have it
 }
 // The room's name, and its count line under it.
@@ -89,26 +89,22 @@ const PAINT = {
     ctx.textAlign = "left"; ctx.fillStyle = open ? theme[ROOM_COL.trade] : theme.muted; font(open ? 700 : 500, 12.5);
     ctx.fillText(fitText(open ? `${plural1(open, "trade")} waiting` : list.length ? "Binder, checker, table" : "The trade checker is here", w - 28), 14, h - 14);
   },
-  medal(w, h) {
-    cardFrame("medal", w, h, theme["room-bg"]);
+  medal(w, h) { // Trophies: the rarest you've earned standing on a hairline, then what's next
+    cardFrame("medal", w, h);
     const L = medalList(), E = L.earned;
-    cardTitle("medal", w, countLine("medal").t, { ink: theme["room-ink"], muted: theme["room-muted"] });
-    // a shelf with the rarest you've earned standing on it (or the next one, greyed)
-    const mw = clamp((w - 28) / 3.3, 28, 44), n = Math.max(1, Math.min(E.length, Math.floor((w - 20) / (mw + 6)))), top = CARD_HEAD + 2, sy = top + mw * 1.24 + 2;
-    ctx.fillStyle = theme["room-wood"]; ctx.fillRect(10, sy, w - 20, 7); ctx.fillStyle = theme["room-wood-hi"]; ctx.fillRect(10, sy, w - 20, 1.2);
+    cardTitle("medal", w, countLine("medal").t);
+    const mw = clamp((w - 28) / 3.3, 28, 42), n = Math.max(1, Math.min(E.length, Math.floor((w - 20) / (mw + 6)))), top = CARD_HEAD, sy = top + mw * 1.24 - 3;
     const next = L.list.filter((t) => !t.earned && t.goal > 1).map((t) => ({ t, left: t.goal - t.have, frac: t.have / t.goal })).filter((x) => x.left > 0).sort((a, b) => b.frac - a.frac || a.left - b.left)[0];
     if (E.length) { const span = n * mw + (n - 1) * 6, x0 = (w - span) / 2 + mw / 2; for (let i = 0; i < n; i++) drawMedal(ctx, E[i], x0 + i * (mw + 6), top, mw); }
     else if (next) drawMedal(ctx, next.t, w / 2, top, mw, "locked");
+    ctx.fillStyle = theme["slot-line"]; ctx.fillRect(14, sy, w - 28, 1);
     ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-    let y = sy + 27;
+    let y = sy + 22;
     if (y > h - 8) return;
-    ctx.fillStyle = theme["room-ink"]; font(700, 13.5, true);
-    ctx.fillText(fitText(E.length ? E[0].name : "No trophies yet", w - 28), 14, y);
-    y += 17; if (y > h - 6) return;
-    ctx.fillStyle = theme["room-muted"]; font(500, 12);
-    ctx.fillText(fitText(E.length ? (E[0].rank ? `${MD_RANK[E[0].rank]}, your rarest` : "Your rarest") : "Fill a set to earn one", w - 28), 14, y);
-    if (next && y + 36 < h) {
-      y += 22; ctx.fillStyle = theme["room-plaque"]; font(700, 12.5, true);
+    ctx.fillStyle = theme.ink; font(700, 13.5, true);
+    ctx.fillText(fitText(E.length ? `${E[0].name}${MD_RANK[E[0].rank] ? `, ${MD_RANK[E[0].rank]}` : ""}` : "Fill a set to earn one", w - 28), 14, y);
+    if (next && y + 34 < h) {
+      y += 18; ctx.fillStyle = theme.muted; font(500, 12.5);
       wrapLines(`Next: ${next.t.name}, ${next.left} to go`, w - 28, 2).forEach((l, i) => { if (y + i * 16 < h - 6) ctx.fillText(l, 14, y + i * 16); });
     }
   },

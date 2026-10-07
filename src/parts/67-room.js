@@ -1,19 +1,20 @@
-// ---------- the trophy room (round 16), the Medal room (round 21) ----------
-// After its day on the shelf a trophy leaves the wall for the trophy room. Since round 21 the room is the Medal room on
-// the map (90-rooms.js): its only way in, so the door that used to end the wall is gone. Dark wood shelves with the
-// plaques lit, newest at the top, rows you scroll; a pinch (or the rooms button) goes up to the map, a sideways flick
-// to the next room. Tap a plaque and it comes forward as its sealed album opens behind it; Back from the album returns
-// to the room. The new idea: every plaque carries its worth over the last year as a thin line (made up: each card's price
-// walked back month by month with a seeded drift, summed, cached per plaque), and the room's header sums the whole
-// case with the same line, so the room reads as what finishing has been worth. A set's master and grand set
-// trophies stack behind the set's plaque; tap the stack and they fan out beneath it.
+// ---------- Trophies: the trophy room (round 16), a room on the map since round 21, in the app's own look (round 22) ----------
+// After its day on the shelf a trophy leaves the wall for Trophies, the room on the map (90-rooms.js; its id is still
+// "medal"), its only way in. A pinch (or the rooms button) goes up to the map, a sideways flick to the next room. Tap a
+// plaque and it comes forward as its sealed album opens behind it; Back from the album returns to the room. Every
+// plaque carries its worth over the last year as a thin line (made up: each card's price walked back month by month
+// with a seeded drift, summed, cached per plaque), and the room's header sums the whole case with the same line. A
+// set's master and grand set trophies stack behind the set's plaque; tap the stack and they fan out beneath it.
 // Round 19 moved production's medals in (68-medals.js): the header sums them, then the Showcase, Next up and the
 // filters, then one shelf per set or chase, a finished one's plaque at the head of its shelf with its medals beneath.
+// Round 22 took off the costume (dark wood, lit plates, shadows): the room is the wall's page with hairline panels,
+// Archivo, and the plaques and medals as the only rich colour, in light and dark. Wide screens (landscape, a tablet)
+// put the shelves in two columns, clear of the notch.
 // The room borrows the wall's scroll: while it is up, mScroll and mMax are the room's, and the wall's scroll is kept
 // to come back to. The plaques are laid out in mosaic coordinates, so a tap, a spread, the open transition, the
 // press and the search rings all work on them unchanged.
 
-const ROW_H = 118, SUB_H = 66, SHELF_H = 12, MONTHS = 12;
+const ROW_H = 112, SUB_H = 58, SHELF_H = 12, MONTHS = 12; // a plaque's block (its plate is 92), a fanned view's row
 const room = { on: false, q: 0, anim: null, closing: false, wallScroll: 0, fan: null, L: null, sum: null, plaques: [] };
 const inCase = (g) => Boolean(g.done && !onShelf(g));
 const caseList = () => groups.filter(inCase).sort(byFinish);
@@ -73,18 +74,25 @@ function subInfo(g, s) {
 function fanRows(g) { g.subs ||= {}; return stackOf(g).map((s) => (g.subs[s] ||= { pick: { g, scope: s }, lead: [], cards: [] })); }
 
 // ----- layout -----
-// The trophies past their day are in the Medal room. On the wall they keep a place of no size at its end, so a trophy
+// The trophies past their day are in Trophies. On the wall they keep a place of no size at its end, so a trophy
 // leaving the shelf shrinks away there (and a search ring has somewhere to be).
 function caseLayout(R, y) {
   for (const g of caseList()) { g.plq = plaqueInfo(g); if (!room.on) { const m = { x: R.x + R.w / 2, y, w: 0, h: 0 }; g.m = m; packStrip(g, m); } }
   return 0;
 }
 function packStrip(g, m) { const n = g.base.length, cw = m.w / n; g.base.forEach((c, i) => { c.m = { x: m.x + i * cw, y: m.y, w: cw, h: m.h }; }); }
+// The notch (and the home bar's corners) in landscape: read from CSS (env(), through --tr-inset-l/r) when the room is laid out.
+const roomSafe = document.createElement("div"); roomSafe.id = "room-safe"; roomSafe.setAttribute("aria-hidden", "true"); document.body.append(roomSafe);
+function roomInsets() { const s = getComputedStyle(roomSafe); return { l: parseFloat(s.paddingLeft) || 0, r: parseFloat(s.paddingRight) || 0 }; }
 // The room: the header, then production's Medal tab (68-medals.js): the Showcase, Next up, the filters and a shelf per
-// set or chase, a finished one's plaque at the head of its shelf. One column, as wide as a phone and no wider than 760.
-const roomPlate = (m) => ({ x: m.x + PG, y: m.y + 8, w: m.w - PG * 2, h: m.h - 8 - SHELF_H - 4 });
+// set or chase, a finished one's plaque at the head of its shelf. Clear of the notch, at most 1,120 wide; from 600 wide
+// (a phone on its side, a tablet) the shelves sit in two columns.
+const ROOM_GAP = 12;
+const roomPlate = (m) => ({ x: m.x + 10, y: m.y + 10, w: m.w - 20, h: m.h - 20 }); // a plaque inside its shelf's panel
 function roomLayout() {
-  const W = Math.min(vw, 760), R = { x: (vw - W) / 2 + 8, w: W - 16 }, y0 = topPad(), headH = caseList().length ? 140 : 62;
+  const I = roomInsets(), x0 = I.l + 12, x1 = vw - I.r - 12, W = Math.max(200, Math.min(x1 - x0, 1120));
+  const R = { x: Math.round(x0 + (x1 - x0 - W) / 2), w: W }, y0 = topPad(), headH = caseList().length ? 100 : 60;
+  R.cols = W >= 600 ? 2 : 1; R.cw = (W - ROOM_GAP * (R.cols - 1)) / R.cols;
   const items = [{ type: "header", x: R.x, y: y0, w: R.w, h: headH }], hits = [], plaques = [], rows = [];
   const y = mdRoomLayout(R, y0 + headH, items, hits, plaques, rows);
   room.plaques = plaques;
@@ -92,8 +100,10 @@ function roomLayout() {
   mMax = Math.max(0, y + botPad() + 10 - vh);
   mScroll = clamp(mScroll, 0, mMax);
 }
+// The engraving: the cards' colours in a strip along the bottom of the plate (the tiles live there, so opening the
+// plaque grows them into the album).
 function packRoomPlaque(g) {
-  const p = roomPlate(g.m), n = g.base.length, ew = p.w - 24, cw = Math.min(ew / n, ENGR_H * TW / TH), ex = p.x + 12, ey = p.y + p.h - 20;
+  const p = roomPlate(g.m), n = g.base.length, ew = p.w - 24, cw = Math.min(ew / n, ENGR_H * TW / TH), ex = p.x + 12, ey = p.y + p.h - 18;
   g.base.forEach((c, i) => { c.m = { x: ex + i * cw, y: ey, w: cw, h: ENGR_H }; });
 }
 
@@ -157,20 +167,13 @@ function drawRoom(now, alpha = 1, except = null) {
   live.line = null; // a deal landing on the wall flashes there; its line to the lens bar has nowhere to go here
   ctx.globalAlpha = alpha; ctx.fillStyle = theme["room-bg"]; ctx.fillRect(0, 0, vw, vh);
   const R = L.R, pg = state.press?.g;
-  // the header, the Showcase, Next up, the filters, and every shelf's heading and rows of medals (drawn once and kept)
+  // the panels, the header, the Showcase, Next up, the filters, and every shelf's heading and rows of medals (drawn once and kept)
   for (const it of L.items) {
     const y = it.y - mScroll; if (y > vh || y + it.h < 0) continue;
     if (it.type === "header") ctx.drawImage(headerImage(R.w, it.h), R.x - PADR, y - PADR, R.w + PADR * 2, it.h + PADR * 2);
     else if (it.type === "row") ctx.drawImage(mdRowImage(it), it.x - PADR, y - PADR, it.w + PADR * 2, it.h + PADR * 2);
     else mdDrawItem(it, y, pg && it.blk === pg);
     ctx.globalAlpha = alpha;
-  }
-  // the shelf under a plaque with nothing hanging from it, then the plaques
-  for (const row of L.rows) {
-    const y = row.y - mScroll; if (y > vh || y + row.h < 0) continue;
-    ctx.fillStyle = theme["room-wood"]; ctx.fillRect(R.x - 6, y, R.w + 12, row.h);
-    ctx.fillStyle = theme["room-wood-hi"]; ctx.fillRect(R.x - 6, y, R.w + 12, 1.5);
-    ctx.fillStyle = "rgb(0 0 0 / .35)"; ctx.fillRect(R.x - 6, y + row.h, R.w + 12, 6);
   }
   for (const g of room.plaques) {
     if (g === except) continue;
@@ -182,71 +185,70 @@ function drawRoom(now, alpha = 1, except = null) {
   if (pg?.mdt) for (const h of L.hits) if (h.blk === pg && !h.type) { ctx.lineWidth = 1.5; ctx.strokeStyle = theme["room-ink"]; rr(h.x + 2, h.y - mScroll + 2, h.w - 4, h.h - 4, 9); ctx.stroke(); }
   ctx.globalAlpha = 1;
 }
-// ----- plates, rendered once and kept (a shadow and a gradient per plate per frame was the slow part) -----
-const PADR = 26; // room around a cached plate for its shadow and the views stacked behind it
+// ----- plates, rendered once and kept (a plate is a few fills; drawing the room is a few drawImage calls) -----
+const PADR = 26; // room around a cached plate for the views stacked behind it
 function fontOn(x, weight, size, narrow = false) { x.font = `${weight} ${Math.round(size * 2) / 2}px ${FONT}`; if ("fontStretch" in x) x.fontStretch = narrow ? "semi-condensed" : "normal"; }
 function fitOn(x, t, max) { if (x.measureText(t).width <= max) return t; let s = t; while (s.length > 2 && x.measureText(s + "…").width > max) s = s.slice(0, -1); return s + "…"; }
 function rrOn(x, px, py, w, h, r) { x.beginPath(); x.roundRect ? x.roundRect(px, py, w, h, r) : x.rect(px, py, w, h); }
 function cachedImage(holder, key, w, h, draw) {
   if (holder.img?.key === key) return holder.img.cv;
-  const cv = document.createElement("canvas"); cv.width = Math.ceil((w + PADR * 2) * dpr); cv.height = Math.ceil((h + PADR * 2) * dpr);
-  const x = cv.getContext("2d"); x.scale(dpr, dpr); x.translate(PADR, PADR);
+  const cv = holder.img?.cv || document.createElement("canvas"), W = Math.ceil((w + PADR * 2) * dpr), H = Math.ceil((h + PADR * 2) * dpr); // the same canvas, drawn again: a change never makes a new one
+  if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+  const x = cv.getContext("2d"); x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, W, H); x.globalAlpha = 1; x.scale(dpr, dpr); x.translate(PADR, PADR);
   draw(x);
   holder.img = { key, cv }; return cv;
 }
-// A plate, lit from above, with its shadow.
+// A plate: flat gold with a hairline inset, the way the shelf at the top of the wall draws it. No shadow, no light.
 function plateOn(x, px, py, w, h, r, alpha = 1) {
   x.globalAlpha = alpha;
-  x.save(); x.shadowColor = "rgb(0 0 0 / .45)"; x.shadowBlur = 14; x.shadowOffsetY = 5; rrOn(x, px, py, w, h, r); x.fillStyle = theme["room-plaque"]; x.fill(); x.restore();
+  rrOn(x, px, py, w, h, r); x.fillStyle = theme["room-plaque"]; x.fill();
   x.save(); rrOn(x, px, py, w, h, r); x.clip();
-  const lit = x.createLinearGradient(0, py, 0, py + h); lit.addColorStop(0, "rgb(255 250 225 / .34)"); lit.addColorStop(0.5, "rgb(255 255 255 / 0)"); lit.addColorStop(1, "rgb(70 40 0 / .18)");
-  x.fillStyle = lit; x.fillRect(px, py, w, h);
-  x.fillStyle = theme["plaque-hi"]; x.fillRect(px, py, w, 1.5);
-  x.fillStyle = theme["room-plaque-lo"]; x.fillRect(px, py + h - 1.5, w, 1.5);
+  x.fillStyle = theme["plaque-hi"]; x.fillRect(px, py, w, 1);
+  x.fillStyle = theme["room-plaque-lo"]; x.fillRect(px, py + h - 1, w, 1);
   x.restore();
+  x.globalAlpha = alpha;
   x.lineWidth = 1; x.strokeStyle = theme["room-plaque-lo"]; rrOn(x, px + 4.5, py + 4.5, w - 9, h - 9, Math.max(2, r - 3)); x.stroke();
   x.globalAlpha = 1;
 }
-const look = () => `${dpr}|${theme["room-plaque"]}|${theme["room-ink"]}`;
-// The summary: how many trophies, how many hidden are left to find, and with plaques the whole case's worth over the year.
+const look = () => `${dpr}|${theme["room-plaque"]}|${theme["room-ink"]}|${theme.bg}`;
+const upCol = (d) => (d >= 0 ? theme["room-up"] : theme["room-down"]);
+// The summary: Trophies, how many earned (and hidden left), and with plaques what the finished ones are worth now and
+// over the year. Plain: a title, two short lines, one thin line.
 function headerImage(w, h) {
   const L = medalList(), dn = caseList(), s = dn.length ? room.sum || caseSeries() : null;
-  const sum = `${L.earned.length} of ${L.list.length} trophies`, hid = L.hiddenLeft ? `${L.hiddenLeft} hidden left to find` : "";
-  return cachedImage(room, `${Math.round(w)}|${h}|${sum}|${hid}|${s ? s.key : ""}|${look()}`, w, h, (x) => {
-    x.textBaseline = "alphabetic"; x.textAlign = "left"; x.fillStyle = theme["room-ink"]; fontOn(x, 800, 26, true);
-    x.fillText("Trophy room", 10, 30);
-    fontOn(x, 600, 13); x.fillStyle = theme["room-muted"]; x.fillText(sum, 10, 50);
-    if (hid) { const sw = x.measureText(`${sum} · `).width; x.fillText(" · ", 10 + x.measureText(sum).width, 50); x.fillStyle = "#C3A8FF"; x.fillText(hid, 10 + sw, 50); }
+  const sum = `${L.earned.length} of ${L.list.length} earned${L.hiddenLeft ? ` · ${L.hiddenLeft} hidden` : ""}`;
+  return cachedImage(room, `${Math.round(w)}|${h}|${sum}|${s ? s.key : ""}|${look()}`, w, h, (x) => {
+    x.textBaseline = "alphabetic"; x.textAlign = "left"; x.fillStyle = theme["room-ink"]; fontOn(x, 800, 28, true);
+    x.fillText("Trophies", 4, 32);
+    fontOn(x, 600, 13.5); x.fillStyle = theme["room-muted"]; x.fillText(sum, 4, 52);
     if (!s) return;
-    x.textAlign = "right"; x.fillStyle = theme["room-ink"]; fontOn(x, 800, 22); x.fillText(short(s.worth), w - 10, 30);
-    x.textAlign = "left"; x.fillStyle = theme["room-muted"]; fontOn(x, 600, 12.5);
-    x.fillText(`${s.n} finished and sealed`, 10, 72);
-    x.textAlign = "right"; x.fillStyle = s.delta >= 0 ? theme["room-up"] : theme["room-down"]; x.fillText(deltaText(s.delta), w - 10, 72);
-    drawWorthLine(x, s.pts, 10, 82, w - 20, 36, theme["room-plaque"], "rgb(230 192 80 / .12)");
-    x.fillStyle = theme["room-muted"]; fontOn(x, 500, 10.5); x.textAlign = "left"; x.fillText("A year ago", 10, 132); x.textAlign = "right"; x.fillText("Now", w - 10, 132);
+    x.textAlign = "right"; x.fillStyle = theme["room-ink"]; fontOn(x, 800, 22); x.fillText(short(s.worth), w - 4, 32);
+    fontOn(x, 600, 12.5); x.fillStyle = upCol(s.delta); x.fillText(deltaText(s.delta), w - 4, 52);
+    drawWorthLine(x, s.pts, 4, 62, w - 8, 28, theme.gold, theme.dark ? "rgb(232 190 85 / .12)" : "rgb(185 138 30 / .12)");
   });
 }
 function plaqueImage(g, w, h) {
   const stack = stackOf(g), s = seriesOf(g), info = g.plq || (g.plq = plaqueInfo(g)), fan = room.fan === g, ride = g.ride || null;
-  return cachedImage(g, `${Math.round(w)}|${Math.round(h)}|${stack.length}|${fan ? 1 : 0}|${s.key}|${info.title}|${look()}|${ride ? `${ride.id}${ride.rank}|${theme["m-surface"]}|${mdVer}` : ""}`, w, h, (x) => {
-    for (let i = stack.length; i >= 1; i--) plateOn(x, 7 * i, -6 * i, w - 14 * i, h, 8, 0.75); // the other views behind it
-    plateOn(x, 0, 0, w, h, 8);
-    if (ride) { x.save(); x.shadowColor = "rgb(60 35 0 / .45)"; x.shadowBlur = 5; x.shadowOffsetY = 2; drawMedal(x, ride, 10 + MD_PW / 2, 6, MD_PW); x.restore(); } // its Binder Complete, mounted on it
-    const px = ride ? 22 + MD_PW : 12, pw = w - px - 12;
-    x.textBaseline = "alphabetic"; x.fillStyle = theme["room-plaque-ink"];
-    x.textAlign = "right"; fontOn(x, 800, 15); const ww = x.measureText(short(s.worth)).width; x.fillText(short(s.worth), px + pw, 23);
-    x.textAlign = "left"; fontOn(x, 800, 15, true); x.fillText(fitOn(x, info.title, pw - ww - 10 - (stack.length ? 92 : 0)), px, 23);
-    x.globalAlpha = 0.78; fontOn(x, 600, 11); x.fillText(`Finished ${dayOf(finishOf(g)?.at || Date.now())}`, px, 38); x.globalAlpha = 1;
-    x.textAlign = "right"; x.fillStyle = s.delta >= 0 ? "#2E5A14" : "#7A2A14"; fontOn(x, 600, 11); x.fillText(deltaText(s.delta), px + pw, 38);
-    if (stack.length) { // the stack's badge
-      const bw = 80, bh = 18, bx = px + pw - ww - 10 - bw, by = 10;
-      rrOn(x, bx, by, bw, bh, 9); x.fillStyle = "rgb(42 30 5 / .18)"; x.fill();
-      x.textAlign = "center"; x.fillStyle = theme["room-plaque-ink"]; fontOn(x, 700, 10.5);
-      x.fillText(`${stack.length} behind ${fan ? "▴" : "▾"}`, bx + bw / 2, by + bh / 2 + 3.5);
+  return cachedImage(g, `${Math.round(w)}|${Math.round(h)}|${stack.length}|${fan ? 1 : 0}|${s.key}|${info.title}|${info.line}|${look()}|${ride ? `${ride.id}${ride.rank}|${theme["m-surface"]}|${mdVer}` : ""}`, w, h, (x) => {
+    for (let i = stack.length; i >= 1; i--) plateOn(x, 6 * i, -5 * i, w - 12 * i, h, 7, 0.55); // the other views behind it
+    plateOn(x, 0, 0, w, h, 7);
+    if (ride) drawMedal(x, ride, 10 + MD_PW / 2, 6, MD_PW); // its Binder Complete, mounted on it
+    const px = ride ? 20 + MD_PW : 12, pw = w - px - 12, ink = theme["room-plaque-ink"];
+    x.textBaseline = "alphabetic"; x.fillStyle = ink;
+    x.textAlign = "right"; fontOn(x, 800, 16); const ww = x.measureText(short(s.worth)).width; x.fillText(short(s.worth), px + pw, 24);
+    const bw = stack.length ? 74 : 0;
+    x.textAlign = "left"; fontOn(x, 800, 16, true); x.fillText(fitOn(x, info.title, pw - ww - 10 - (bw ? bw + 8 : 0)), px, 24);
+    x.globalAlpha = 0.75; fontOn(x, 600, 11.5); x.fillText(info.when, px, 39); x.globalAlpha = 1;
+    x.textAlign = "right"; x.globalAlpha = 0.75; fontOn(x, 700, 11.5); x.fillText(deltaText(s.delta), px + pw, 39); x.globalAlpha = 1;
+    if (bw) { // the stack's badge: the other views behind it, tap to fan them out
+      const bx = px + pw - ww - 10 - bw, by = 10;
+      rrOn(x, bx + 0.5, by + 0.5, bw - 1, 19, 6); x.lineWidth = 1; x.strokeStyle = ink; x.globalAlpha = 0.4; x.stroke(); x.globalAlpha = 1;
+      x.textAlign = "center"; x.fillStyle = ink; fontOn(x, 700, 11);
+      x.fillText(`${stack.length} more ${fan ? "▴" : "▾"}`, bx + bw / 2, by + 13.5);
     }
-    drawWorthLine(x, s.pts, px, 46, pw, h - 46 - 24, "rgb(42 30 5 / .9)", "rgb(42 30 5 / .1)"); // the line beneath: worth over the year
-    const ey = h - 20, ex = 12, ew = w - 24, sw = Math.min(ew, g.base.length * ENGR_H * TW / TH); // the engraving runs under the medal too
-    x.fillStyle = "rgb(0 0 0 / .22)"; x.fillRect(ex - 1, ey - 1, sw + 2, ENGR_H + 2);
+    drawWorthLine(x, s.pts, px, 46, pw, h - 46 - 24, "rgb(36 24 2 / .85)", "rgb(36 24 2 / .08)"); // worth over the year
+    const ey = h - 18, ex = 12, ew = w - 24, sw = Math.min(ew, g.base.length * ENGR_H * TW / TH); // the engraving runs under the medal too
+    x.fillStyle = "rgb(0 0 0 / .18)"; x.fillRect(ex - 1, ey - 1, sw + 2, ENGR_H + 2);
     x.drawImage(engravingOf(g, ew, ENGR_H), ex, ey, ew, ENGR_H);
   });
 }
@@ -258,7 +260,7 @@ function rowImage(g, r, w, h) {
     x.textBaseline = "alphabetic"; x.fillStyle = theme["room-plaque-ink"];
     x.textAlign = "right"; fontOn(x, 800, 14); const ww = x.measureText(short(info.worth)).width; x.fillText(short(info.worth), px + pw, 21);
     x.textAlign = "left"; fontOn(x, 800, 14, true); x.fillText(fitOn(x, info.title, pw - ww - 10), px, 21);
-    x.globalAlpha = 0.78; fontOn(x, 600, 11); x.fillText(fitOn(x, `${info.line} · ${info.list.length} cards. Tap to open.`, pw), px, 36); x.globalAlpha = 1;
+    x.globalAlpha = 0.75; fontOn(x, 600, 11.5); x.fillText(fitOn(x, `${info.line} · ${info.list.length} cards`, pw), px, 37); x.globalAlpha = 1;
   });
 }
 function drawRoomPlaque(g, m, now, alpha, labelAlpha) {
@@ -267,13 +269,13 @@ function drawRoomPlaque(g, m, now, alpha, labelAlpha) {
   const p = roomPlate(m), k = p.w / p0.w;
   ctx.globalAlpha = alpha;
   ctx.drawImage(plaqueImage(g, p0.w, p0.h), p.x - PADR * k, p.y - PADR * k, (p0.w + PADR * 2) * k, (p0.h + PADR * 2) * k);
-  if (state.press?.g === g) { ctx.lineWidth = 1.5; ctx.strokeStyle = theme["room-ink"]; rr(p.x, p.y, p.w, p.h, 8); ctx.stroke(); }
-  if (g.fanR && state.press?.g === g.fanBtn) { rr(p.x + p.w - 12 - 150, p.y + 6, 150, 26, 9); ctx.fillStyle = "rgb(42 30 5 / .14)"; ctx.fill(); }
+  if (state.press?.g === g) { ctx.lineWidth = 1.5; ctx.strokeStyle = theme["room-ink"]; rr(p.x, p.y, p.w, p.h, 7); ctx.stroke(); }
+  if (g.fanR && state.press?.g === g.fanBtn) { const f = g.fanR; rr(f.x, f.y - mScroll, f.w, f.h, 7); ctx.fillStyle = "rgb(36 24 2 / .12)"; ctx.fill(); }
   ctx.globalAlpha = 1;
   if (room.fan === g) for (const r of fanRows(g)) drawFanRow(g, r, now, alpha);
 }
 function drawFanRow(g, r, now, alpha) {
-  const m = mr(r.m), p = { x: m.x + PG + 10, y: m.y + 2, w: m.w - PG * 2 - 20, h: m.h - SHELF_H - 8 };
+  const m = mr(r.m), p = { x: m.x + 22, y: m.y + 2, w: m.w - 44, h: m.h - 8 };
   ctx.globalAlpha = alpha; ctx.drawImage(rowImage(g, r, p.w, p.h), p.x - PADR, p.y - PADR, p.w + PADR * 2, p.h + PADR * 2);
   if (state.press?.g === r) { ctx.lineWidth = 1.5; ctx.strokeStyle = theme["room-ink"]; rr(p.x, p.y, p.w, p.h, 7); ctx.stroke(); }
   ctx.globalAlpha = 1;

@@ -404,13 +404,19 @@ body.building .lens, body.building .markbar, body.building .timebar, body.buildi
 #list .lfin { margin: 18px 0 2px; font: 800 17px var(--font); font-stretch: 80%; }
 #list .lfin-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 
-/* The trophy room: the door on the wall, and the room behind it (dark in both schemes, the plaques lit). */
+/* Trophies, the room (rounds 16, 19, 21; polished in 22): the app's own archive, not a room of its own. The room's
+   names stay (the canvas reads them through theme) but follow the scheme: the page, ink and hairlines of the wall,
+   with the plaques and the medals as the only rich colour. */
 :root {
-  --door: #2B1D13; --door-hi: rgb(255 220 170 / .22); --door-ink: #F3E9D8; --door-muted: #C9B59A;
-  --room-bg: #241810; --room-bg2: #140D08; --room-wood: #3B2718; --room-wood-hi: rgb(255 220 170 / .22);
-  --room-ink: #F3E9D8; --room-muted: #B7A58E; --room-plaque: #E6C050; --room-plaque-ink: #2A1E05; --room-plaque-lo: rgb(90 60 0 / .4);
-  --room-up: #8FD9A0; --room-down: #F0A08A;
+  --room-bg: var(--bg); --room-bg2: var(--slot); --room-wood: var(--slot-line); --room-wood-hi: var(--line);
+  --room-ink: var(--ink); --room-muted: var(--muted); --room-plaque: var(--plaque); --room-plaque-ink: var(--plaque-ink); --room-plaque-lo: var(--plaque-lo);
+  --room-up: var(--deal); --room-down: #C0392B;
+  /* the notch: the room and its sheet keep clear of it in landscape (read on the canvas through #room-safe) */
+  --tr-inset-l: env(safe-area-inset-left, 0px); --tr-inset-r: env(safe-area-inset-right, 0px);
 }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --room-down: #E5685B; } }
+:root[data-theme="dark"] { --room-down: #E5685B; }
+#room-safe { position: fixed; top: 0; left: 0; width: 0; height: 0; padding: 0 var(--tr-inset-r) 0 var(--tr-inset-l); visibility: hidden; pointer-events: none; }
 /* While the room is up the lens bar and the time bar step aside, as they do under the trade table. */
 body.inroom .lens, body.inroom .timebar { transform: translate(-50%, 160%); opacity: 0; pointer-events: none; }
 body.inroom .caption { display: none; }
@@ -477,29 +483,33 @@ body.showing .showpill { opacity: 1; pointer-events: auto; }
 @keyframes md-twinkle { 0%, 100% { opacity: .35; transform: scale(.7); } 50% { opacity: 1; transform: scale(1.1); } }
 @keyframes md-hue { to { filter: drop-shadow(0 0 7px rgb(160 120 255 / .7)) hue-rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .medal.rank-shiny, .sparkle { animation: none; } .sparkle { opacity: 1; } }
-.rank-tag { display: inline-block; font: 800 11px/1 var(--font); font-style: normal; letter-spacing: .06em; text-transform: uppercase; padding: 3px 7px; border-radius: 999px; border: 1px solid transparent; vertical-align: 1px; }
+.rank-tag { display: inline-block; font: 800 11px/1 var(--font); font-style: normal; letter-spacing: .06em; text-transform: uppercase; padding: 3px 6px; border-radius: 4px; border: 1px solid transparent; vertical-align: 1px; }
 .rank-tag.crit { background: #FFF1B8; color: #4A3500; border-color: #C99A00; }
 .rank-tag.shiny { background: linear-gradient(90deg, #FFD6D6, #FFF3B0, #D3F5DC, #D2E4FF, #EBD6FF); color: #2A1F4D; border-color: #8A6BE0; }
-.rank-tag.big { font-size: 13px; padding: 6px 12px; margin: 0; }
 
-/* The trophy sheet: from the bottom, over a scrim. */
-.ms-scrim { position: fixed; inset: 0; z-index: 8; background: rgb(8 6 4 / .45); opacity: 0; pointer-events: none; transition: opacity .25s; }
+/* The trophy sheet: from the bottom, over a scrim; a centred card on a tablet; a panel at the side on a phone held
+   sideways, clear of the notch. */
+.ms-scrim { position: fixed; inset: 0; z-index: 8; background: rgb(12 14 20 / .4); opacity: 0; pointer-events: none; transition: opacity .25s; }
 body.medaling .ms-scrim { opacity: 1; pointer-events: auto; }
 .msheet { position: fixed; z-index: 9; left: 50%; bottom: 0; width: min(520px, 100%); max-height: min(86dvh, 760px); transform: translate(-50%, 110%);
-  border-radius: 18px 18px 0 0; border-bottom: 0; display: grid; grid-template-rows: minmax(0, 1fr) auto; background: var(--panel-solid);
+  border-radius: 16px 16px 0 0; border-bottom: 0; display: grid; grid-template-rows: minmax(0, 1fr) auto; background: var(--panel-solid);
   transition: transform .4s cubic-bezier(.2,.9,.25,1.02), visibility 0s .4s; pointer-events: none; visibility: hidden; }
 body.medaling .msheet { transform: translate(-50%, 0); pointer-events: auto; visibility: visible; transition: transform .4s cubic-bezier(.2,.9,.25,1.02); }
-@media (min-width: 720px) { .msheet { bottom: 16px; border-radius: 18px; border-bottom: 1px solid var(--line); } }
-@media (prefers-reduced-motion: reduce) { .msheet { transition: none; } }
-.ms-scroll { overflow-y: auto; touch-action: pan-y; overscroll-behavior: contain; padding: 18px 16px 6px; display: grid; justify-items: center; gap: 6px; text-align: center; }
-.ms-medal .medal { width: 116px; filter: drop-shadow(0 8px 12px rgb(0 0 0 / .3)); }
+@media (min-width: 720px) and (min-height: 521px) { .msheet { bottom: 50%; transform: translate(-50%, calc(50% + 60px)); opacity: 0; border-radius: 16px; border-bottom: 1px solid var(--line); transition: transform .3s, opacity .2s, visibility 0s .3s; }
+  body.medaling .msheet { transform: translate(-50%, 50%); opacity: 1; transition: transform .3s cubic-bezier(.2,.9,.25,1.02), opacity .2s; } }
+@media (prefers-reduced-motion: reduce) { .msheet, body.medaling .msheet { transition: none; } }
+.ms-scroll { overflow-y: auto; touch-action: pan-y; overscroll-behavior: contain; padding: 20px 18px 8px; display: grid; justify-items: center; align-content: start; gap: 6px; text-align: center; }
+.ms-text { display: grid; gap: 4px; justify-items: inherit; }
+.ms-medal .medal { width: 104px; }
 .ms-medal .medal.locked { filter: grayscale(1) opacity(.38); }
-.ms-medal .medal.rank-crit { filter: drop-shadow(0 0 8px rgb(255 203 5 / .8)); }
-.ms-scroll h2 { margin: 4px 0 0; font: 800 24px/1.1 var(--font); font-stretch: 80%; }
-.ms-chase { margin: 0; color: var(--muted); font-size: 14px; }
+.ms-medal .medal.rank-crit { filter: drop-shadow(0 0 6px rgb(255 203 5 / .6)); }
+.ms-scroll h2 { margin: 6px 0 0; font: 800 25px/1.05 var(--font); font-stretch: 78%; letter-spacing: -0.01em; }
+.ms-chase { margin: 0; color: var(--muted); font: 600 13.5px var(--font); }
 .ms-desc { margin: 2px 0 0; font-size: 15px; line-height: 1.35; max-width: 34em; }
-.ms-count { margin: 10px 0 0; justify-self: stretch; text-align: left; color: var(--muted); font-size: 13px; }
-.ms-cards { justify-self: stretch; display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px; padding: 2px 0; }
+.ms-when { margin: 4px 0 0; color: var(--muted); font: 500 13px var(--font); }
+.ms-when .rank-tag { margin-right: 4px; }
+.ms-count { margin: 12px 0 0; justify-self: stretch; text-align: left; color: var(--muted); font: 600 12.5px var(--font); }
+.ms-cards { justify-self: stretch; display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px; padding: 2px 0 8px; }
 .ms-card { position: relative; aspect-ratio: 63 / 88; border-radius: 5px; border: 1px dashed var(--slot-line); padding: 0; overflow: hidden; cursor: pointer; background: var(--slot); }
 .ms-card.own { border: 0; background: var(--tc); }
 .ms-card:not(.own) .ms-face { background: none; color: var(--muted); }
@@ -507,9 +517,21 @@ body.medaling .msheet { transform: translate(-50%, 0); pointer-events: auto; vis
 .ms-face b { font: 700 10px/1.15 var(--font); font-stretch: 80%; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .ms-face small { font: 600 9px/1 var(--font); opacity: .7; }
 .ms-check { position: absolute; top: 4px; right: 4px; width: 18px; height: 18px; border-radius: 50%; background: var(--deal); color: #fff; font: 800 11px/18px var(--font); font-style: normal; text-align: center; }
-.ms-more { margin: 2px 0 0; justify-self: start; color: var(--muted); font-size: 13px; }
-.ms-when { margin: 8px 0 4px; color: var(--muted); font-size: 13px; }
+.ms-more { margin: 0 0 6px; justify-self: start; color: var(--muted); font-size: 13px; }
 .ms-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 10px 14px calc(env(safe-area-inset-bottom, 0px) + 12px); border-top: 1px solid var(--line); }
+/* A phone on its side: the sheet is a panel down the right edge, the medal beside its words. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .msheet { left: auto; right: calc(var(--tr-inset-r) + 8px); top: 8px; bottom: 8px; width: min(540px, calc(100vw - var(--tr-inset-l) - var(--tr-inset-r) - 16px)); max-height: none;
+    border-radius: 16px; border-bottom: 1px solid var(--line); transform: translateX(calc(100% + var(--tr-inset-r) + 24px)); }
+  body.medaling .msheet { transform: none; }
+  .ms-scroll { grid-template-columns: 92px minmax(0, 1fr); column-gap: 16px; justify-items: start; text-align: left; padding: 16px 16px 6px; }
+  .ms-medal { grid-row: 1; align-self: start; }
+  .ms-medal .medal { width: 92px; }
+  .ms-text { grid-column: 2; align-self: center; justify-items: start; }
+  .ms-count, .ms-cards, .ms-more { grid-column: 1 / -1; }
+  .ms-scroll h2 { margin-top: 0; }
+  .ms-foot { padding: 8px 12px 10px; }
+}
 
 /* The celebration: a toast-sized card, low, above the lens bar (or the mark bar), so it never covers the toast or a title. */
 .mpop { position: fixed; z-index: 6; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 76px); width: min(360px, calc(100% - 24px));
