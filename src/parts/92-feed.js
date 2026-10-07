@@ -96,14 +96,15 @@ function listingsOf(c) {
   return out;
 }
 // ----- the Feed's own filters and sort (kept on this device): production's condition and damaged rules -----
-// Condition filters by what a listing's title states (a title that doesn't say still shows, as in production); a
-// damaged or heavily played copy stays hidden unless you ask for it. They count everywhere the Feed is counted (the
-// rooms button, the map), like a source switched off. The sort is only how the page reads.
-const feedView = { sort: "newest", cond: "", damaged: false };
-try { const v = JSON.parse(localStorage.getItem("wall-feed-view") || "null"); if (v) Object.assign(feedView, { sort: ["newest", "best", "price", "pct"].includes(v.sort) ? v.sort : "newest", cond: ["", "NM", "LP", "MP"].includes(v.cond) ? v.cond : "", damaged: Boolean(v.damaged) }); } catch { /* fresh */ }
+// Condition filters by what a listing's title states (a title that doesn't say still shows, as in production). A
+// damaged or heavily played copy stays hidden unless you pick "Damaged too" (production's separate switch; it only
+// matters with any condition, so it's the last choice of the same picker). The filter counts everywhere the Feed is
+// counted (the rooms button, the map), like a source switched off. The sort is only how the page reads.
+const feedView = { sort: "newest", cond: "" }; // cond: "" any but damaged, NM, LP or MP and better, "any" damaged too
+try { const v = JSON.parse(localStorage.getItem("wall-feed-view") || "null"); if (v) Object.assign(feedView, { sort: ["newest", "best", "price", "pct"].includes(v.sort) ? v.sort : "newest", cond: ["", "NM", "LP", "MP", "any"].includes(v.cond) ? v.cond : "" }); } catch { /* fresh */ }
 const COND_RANK = { NM: 0, LP: 1, MP: 2, HP: 3, DMG: 4 };
 const damagedL = (L) => L.cond === "HP" || L.cond === "DMG";
-const feedPass = (L) => (feedView.damaged || !damagedL(L)) && (!feedView.cond || !L.cond || COND_RANK[L.cond] <= COND_RANK[feedView.cond]);
+const feedPass = (L) => feedView.cond === "any" || (feedView.cond ? !L.cond || COND_RANK[L.cond] <= COND_RANK[feedView.cond] : !damagedL(L));
 const FEED_SORTS = { best: (a, b) => scoreOf(b).score - scoreOf(a).score, price: (a, b) => a.price - b.price, pct: (a, b) => pctOf(b) - pctOf(a) };
 const feedSorted = (list) => (FEED_SORTS[feedView.sort] ? [...list].sort((a, b) => FEED_SORTS[feedView.sort](a, b) || b.seen - a.seen) : list);
 // The Feed: every listing from a source that's on and past its filters, newest first. counts: listings per source,
@@ -119,7 +120,7 @@ function feedList(counts = null, hidden = null) {
 }
 let feedMemo = { key: "", v: null };
 function feedData() { // once a frame at most, for the map's cards
-  const key = `${lastFrame}|${srcState.ver}|${copiesKey}|${scan.last}|${wallVer}|${feedView.cond}|${feedView.damaged}`;
+  const key = `${lastFrame}|${srcState.ver}|${copiesKey}|${scan.last}|${wallVer}|${feedView.cond}`;
   if (feedMemo.key === key) return feedMemo.v;
   const counts = {}, list = feedList(counts), chased = cards.filter(isChase).length;
   feedMemo = { key, v: { list, counts, chased, fresh: list.filter(isNewL).length } };
@@ -245,12 +246,12 @@ function renderFeed(slideId = null) {
   if (keep !== null) pgFeed.scrollTop = pgFeed.scrollHeight - keep;
 }
 // The tools row: sort, condition, and damaged copies. A line under it says what the filters hide, with Show all.
-const pfSort = document.getElementById("pf-sort"), pfCond = document.getElementById("pf-cond"), pfDmg = document.getElementById("pf-dmg"), pfHidden = document.getElementById("pf-hidden");
+const pfSort = document.getElementById("pf-sort"), pfCond = document.getElementById("pf-cond"), pfHidden = document.getElementById("pf-hidden");
 function syncFeedTools(hidden) {
-  pfSort.value = feedView.sort; pfCond.value = feedView.cond; pfDmg.setAttribute("aria-pressed", String(feedView.damaged));
+  pfSort.value = feedView.sort; pfCond.value = feedView.cond;
   pfCond.classList.toggle("on", Boolean(feedView.cond));
   pfHidden.hidden = !hidden;
-  if (hidden) pfHidden.innerHTML = `${plural1(hidden, "listing")} hidden by ${feedView.cond ? "the condition you picked" : `being damaged or heavily played`}. <button type="button" class="linklike" data-fd-all>Show ${hidden === 1 ? "it" : "them"}</button>`;
+  if (hidden) pfHidden.innerHTML = `${feedView.cond ? `${plural1(hidden, "listing")} hidden by the condition you picked` : `${plural1(hidden, "damaged listing")} hidden`}. <button type="button" class="linklike" data-fd-all>Show ${hidden === 1 ? "it" : "them"}</button>`;
 }
 function setFeedView(patch) {
   Object.assign(feedView, patch); tick(4);
@@ -259,9 +260,8 @@ function setFeedView(patch) {
 }
 pfSort.onchange = () => setFeedView({ sort: pfSort.value });
 pfCond.onchange = () => setFeedView({ cond: pfCond.value });
-pfDmg.onclick = () => setFeedView({ damaged: !feedView.damaged });
 pgFeed.addEventListener("click", (e) => {
-  if (e.target.closest("[data-fd-all]")) { setFeedView({ cond: "", damaged: true }); return; }
+  if (e.target.closest("[data-fd-all]")) { setFeedView({ cond: "any" }); return; }
   const row = e.target.closest("[data-l]"); if (row) { tick(4); openListing(row.dataset.l); return; }
   const go = e.target.closest("[data-go]"); if (!go) return;
   if (go.dataset.go === "lens") goRoom("chase", { then: () => setLens("chase") }); else goRoom(go.dataset.go);

@@ -92,7 +92,7 @@ let sheetSay = null;
 const say = (t) => { if (filterMenu.hidden) toast(t); else sheetSay = t; };
 function setFilterMenu(open) {
   filterMenu.hidden = !open; filterBtn.setAttribute("aria-expanded", String(open));
-  if (open) { sheetSay = null; markFilters(); filterMenu.querySelector('.fs-row:not([hidden]) [aria-pressed="true"]')?.focus({ preventScroll: true }); }
+  if (open) { sheetSay = null; toastEl.classList.remove("show"); markFilters(); filterMenu.querySelector('.fs-row:not([hidden]) [aria-pressed="true"]')?.focus({ preventScroll: true }); }
   else if (sheetSay) { toast(sheetSay); sheetSay = null; }
 }
 filterBtn.onclick = (e) => { e.stopPropagation(); setFilterMenu(filterMenu.hidden); };
