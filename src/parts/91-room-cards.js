@@ -151,7 +151,7 @@ function feedChip(L, x, y, w, h, now) {
   // low: a chip in a stack (the map on a phone on its side), where NEW is a dot in the corner rather than a tag
   const tx = x + 7 + cw + 8, tw = x + w - 8 - tx, low = h < 80, fresh = isNewL(L);
   let nw = 0;
-  if (fresh && low) { ctx.beginPath(); ctx.arc(x + w - 9, y + 9, 4, 0, Math.PI * 2); ctx.fillStyle = theme["c-blue"]; ctx.fill(); nw = 8; }
+  if (fresh && low && w < 150) { ctx.beginPath(); ctx.arc(x + w - 9, y + 9, 4, 0, Math.PI * 2); ctx.fillStyle = theme["c-blue"]; ctx.fill(); nw = 8; }
   else if (fresh) nw = pill("NEW", x + w - 6, y + 6, theme["c-blue"], "#fff") + 4;
   ctx.textAlign = "left";
   ctx.fillStyle = theme.deal; font(800, 16.5); ctx.fillText(fitText(short(L.price), tw - nw), tx, y + (low ? 21 : 23));

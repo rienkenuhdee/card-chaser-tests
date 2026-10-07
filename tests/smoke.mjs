@@ -11,19 +11,19 @@ const out = path.resolve(path.dirname(new URL(import.meta.url).pathname), "out",
 fs.mkdirSync(out, { recursive: true });
 const browser = await launch();
 const R = [];
-for (const [dark, width, height] of [[false, 390, 844], [true, 390, 844], [false, 1440, 900]]) {
-  const tag = `${width > 700 ? "desktop" : "phone"}-${dark ? "dark" : "light"}`;
+for (const [dark, width, height] of [[false, 390, 844], [true, 390, 844], [false, 844, 390], [true, 844, 390], [false, 1440, 900]]) {
+  const tag = `${width > 1000 ? "desktop" : width > height ? "landscape" : "phone"}-${dark ? "dark" : "light"}`; // landscape: a phone on its side (round 22)
   const p = await phone(browser, file, { dark, motion: false, dpr: 2, width, height });
   for (const mode of ["set", "value"]) {
     if (mode === "value") { await p.click("#filter"); await wait(120); await p.click('[data-filter="bands"]'); await wait(250); }
     for (const lens of ["have", "need", "chase"]) {
       await p.click(`[data-lens="${lens}"]`); await wait(200);
-      if (lens === "have" || width < 700) await p.screenshot({ path: path.join(out, `${tag}-${mode}-${lens}.png`) });
+      if (lens === "have" || width < 1000) await p.screenshot({ path: path.join(out, `${tag}-${mode}-${lens}.png`) });
     }
     await p.click('[data-lens="have"]'); await wait(150);
     for (const f of ["value", "time"]) {
       await p.click("#filter"); await wait(120); await p.click(`[data-filter="${f}"]`); await wait(250);
-      if (width < 700) await p.screenshot({ path: path.join(out, `${tag}-${mode}-${f}.png`) });
+      if (width < 1000) await p.screenshot({ path: path.join(out, `${tag}-${mode}-${f}.png`) });
       await p.click("#filter"); await wait(120); await p.click(`[data-filter="${f}"]`); await wait(150);
     }
   }
@@ -31,7 +31,7 @@ for (const [dark, width, height] of [[false, 390, 844], [true, 390, 844], [false
   const g = await p.evaluate(() => { const m = __w.groups[0].m; return { x: m.x + m.w / 2, y: m.y + m.h / 2 - __w.mScroll }; });
   await p.mouse.click(g.x, g.y); await wait(400);
   await p.screenshot({ path: path.join(out, `${tag}-binder.png`) });
-  await p.mouse.click(width / 2 - 40, 330); await wait(500);
+  await p.mouse.click(width / 2 - 40, Math.min(330, height - 80)); await wait(500);
   await p.screenshot({ path: path.join(out, `${tag}-card.png`) });
   // The rooms (round 21), on an imported wall chasing what it's missing: the map, each room, a listing's sheet.
   await p.evaluate(() => {
