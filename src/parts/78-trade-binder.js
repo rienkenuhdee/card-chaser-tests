@@ -56,7 +56,7 @@ const tbCan = (d) => bnd.vi + d >= 0 && bnd.vi + d < tbViews();
 // ----- painting a page (once, into the corner of the wall's canvas, then copied offscreen and kept) -----
 function tbKey(i, G) {
   const items = tbList().slice(i * 9, i * 9 + 9);
-  return `${copiesKey}|${G.show}|${G.pw}|${G.ph}|${G.cw}|${G.spread}|${dpr}|${theme.bg}|${theme["panel-solid"]}|${theme.gold}|${bnd.prices}|${i}|${items.map((c) => `${c.id}.${sparesOf(c)}.${c.away ? 1 : 0}.${G.show && bnd.picks.has(c.id) ? 1 : 0}`).join(",")}`;
+  return `${copiesKey}|${G.show}|${G.pw}|${G.ph}|${G.cw}|${G.spread}|${dpr}|${theme.bg}|${theme["panel-solid"]}|${theme.gold}|${bnd.prices}|${i}|${items.map((c) => `${c.id}.${sparesOf(c)}.${c.away ? 1 : 0}.${artMark(c, Math.min(G.cw, 108))}.${G.show && bnd.picks.has(c.id) ? 1 : 0}`).join(",")}`;
 }
 function tbPaint(i, G) {
   const items = tbList().slice(i * 9, i * 9 + 9), show = G.show;
@@ -79,7 +79,7 @@ function tbPaint(i, G) {
     } else { // the card, drawn at a size whose face carries no price (the price is under it, or hidden)
       const W0 = Math.min(r.w, 108), s = r.w / W0;
       ctx.setTransform(dpr * s, 0, 0, dpr * s, dpr * r.x, dpr * r.y);
-      foilOff = true; cardFace(c, 0, 0, W0, W0 * TH / TW, 0, false); foilOff = false;
+      foilOff = ART.still = true; cardFace(c, 0, 0, W0, W0 * TH / TW, 0, false); foilOff = ART.still = false; // a settled picture, or the face (the key above repaints it)
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1;
       if (!show && sparesOf(c) >= 2) { // more than one spare in the pocket (in words: on the wall "×3" is how many you have)
         font(800, 11); const t = `${sparesOf(c)} spares`, tw = textW(t) + 12;

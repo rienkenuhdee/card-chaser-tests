@@ -237,7 +237,7 @@ function stShow(m) {
 // The moment's picture: the medal, or the card as a small chip in its colours.
 function stPicFor(m) {
   if (m.t) { stPic.innerHTML = medalSvg(m.t); stPic.className = "st-pic medal"; return; }
-  if (m.c) { stPic.innerHTML = `<i class="st-card" style="--tc:${typeColor(m.c)}"><em>${mdEsc(sets[m.c.si].code)} ${mdEsc(m.c.num)}</em></i>`; stPic.className = "st-pic"; return; }
+  if (m.c) { stPic.innerHTML = `<i class="st-card${artIn(m.c, 28) ? " pic" : ""}" style="--tc:${typeColor(m.c)}">${artImg(m.c, 28)}<em>${mdEsc(sets[m.c.si].code)} ${mdEsc(m.c.num)}</em></i>`; stPic.className = "st-pic"; return; }
   if (m.g) { stPic.innerHTML = `<i class="st-plaque" style="--tc:${m.g.ink}"></i>`; stPic.className = "st-pic"; return; }
   stPic.innerHTML = `<i class="st-card st-stack" style="--tc:var(--ink)"></i>`; stPic.className = "st-pic";
 }

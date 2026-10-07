@@ -206,45 +206,82 @@ function emptyPocket(c, sx, sy, w, h, value) {
   font(500, w * 0.064); ctx.fillText(fitText(`${sets[c.si].code} ${c.num}/${sets[c.si].printed}${c.tag ? ` ${c.tag}` : ""}`, w - pad * 2), sx + pad, sy + h - pad);
 }
 
-// A card you own: a full-bleed colour chip with a printed label strip, like a specimen in a catalogue.
+// A card you own, close up: its picture once it's in (41-art.js), and the drawn face until then, or instead.
 function cardFace(c, sx, sy, w, h, now, value) {
+  const pic = w >= ART_MIN ? artFor(c, w) : null, k = pic ? artFade(pic, now) : 0;
+  if (k < 1) drawnFace(c, sx, sy, w, h, now, value);
+  else if (w > 90) faceShadow(sx, sy, w, h);
+  if (pic) artDraw(c, pic, sx, sy, w, h, now, value, k);
+  if (state.focus === c) artNote(c, pic);
+}
+function faceShadow(sx, sy, w, h) { ctx.save(); ctx.shadowColor = "rgb(0 0 0 / .32)"; ctx.shadowBlur = w * 0.09; ctx.shadowOffsetY = w * 0.035; rr(sx, sy, w, h, w * 0.045); ctx.fillStyle = "#000"; ctx.fill(); ctx.restore(); }
+const darkCache = new Map();
+const darker = (h) => { let v = darkCache.get(h); if (!v) { v = shade(h, -0.3); darkCache.set(h, v); } return v; };
+// The drawn face: a colour chip with a printed label strip, like a specimen in a catalogue. A card has an art window
+// framed in its type's colour (a holo's window catches the light); a full art (ultra rares and up) is art to its edges;
+// a trainer's window sits over its text, and an energy wears its symbol. All flat fills but the full art's sweep.
+function drawnFace(c, sx, sy, w, h, now, value) {
   const st = sets[c.si];
   const col = value ? heat(c.price) : typeColor(c);
-  const r = w * 0.045;
-  if (w > 90) { ctx.save(); ctx.shadowColor = "rgb(0 0 0 / .32)"; ctx.shadowBlur = w * 0.09; ctx.shadowOffsetY = w * 0.035; rr(sx, sy, w, h, r); ctx.fillStyle = "#000"; ctx.fill(); ctx.restore(); }
+  const r = w * 0.045, full = c.tier >= 4, lh = h * 0.24, ly = sy + h - lh;
+  if (w > 90) faceShadow(sx, sy, w, h);
   ctx.save(); rr(sx, sy, w, h, r); ctx.clip();
-  const g = ctx.createLinearGradient(sx, sy, sx + w, sy + h);
-  g.addColorStop(0, shade(col, 0.2)); g.addColorStop(0.55, col); g.addColorStop(1, shade(col, -0.28));
-  ctx.fillStyle = g; ctx.fillRect(sx, sy, w, h);
-  // Fine engraving: a few diagonal hairlines, quieter than a pattern.
-  if (w > 60) { ctx.fillStyle = engraving(); ctx.fillRect(sx, sy, w, h); }
-  // Foil: holos and up catch the light as the wall moves under your finger.
+  // The art: a window inside the card's frame, or the whole card for a full art.
+  const m = w * 0.075, energy = c.type === "e" && !full, trainer = c.type === "t" && !full;
+  const ax = full ? sx : sx + m, ay = full ? sy : sy + m, aw = full ? w : w - m * 2, ah = full ? ly - sy : (ly - sy - m * 1.6) * (trainer ? 0.62 : 1);
+  if (full) {
+    const g = ctx.createLinearGradient(sx, sy, sx + w, sy + h);
+    g.addColorStop(0, shade(col, 0.22)); g.addColorStop(0.55, col); g.addColorStop(1, shade(col, -0.3));
+    ctx.fillStyle = g; ctx.fillRect(sx, sy, w, h);
+  } else {
+    ctx.fillStyle = col; ctx.fillRect(sx, sy, w, h);
+    if (energy) { // no window: the energy's symbol, a ring in the middle of the card
+      const R = Math.min(w, ly - sy) * 0.3;
+      ctx.beginPath(); ctx.arc(sx + w / 2, sy + (ly - sy) / 2, R, 0, Math.PI * 2); ctx.fillStyle = darker(col); ctx.fill();
+      ctx.lineWidth = Math.max(1, R * 0.16); ctx.strokeStyle = "rgb(255 255 255 / .55)"; ctx.stroke();
+    } else {
+      ctx.fillStyle = darker(col); ctx.fillRect(ax, ay, aw, ah);
+      ctx.fillStyle = "rgb(255 255 255 / .09)"; ctx.fillRect(ax, ay, aw, ah * 0.46); // light from above, so it reads as a picture
+      if (trainer && w > 34) { ctx.fillStyle = "rgb(255 255 255 / .28)"; for (let i = 0; i < 3; i++) ctx.fillRect(ax, ay + ah + m * (0.9 + i * 0.75), aw * (i === 2 ? 0.55 : 1), Math.max(1, w * 0.018)); } // its text
+    }
+  }
+  // Fine engraving over the art: a few diagonal hairlines, quieter than a pattern.
+  if (w > 60 && !energy) { ctx.fillStyle = engraving(); ctx.fillRect(ax, ay, aw, ah); }
+  // A holo's window carries a sheen at rest; holos and up catch the light as the wall comes to rest under your finger.
   // (Skipped while things are moving: nobody sees foil mid-gesture, and it's the costliest thing on a card.)
+  if (c.tier === 3 && !energy && w > 34) {
+    ctx.fillStyle = "rgb(255 255 255 / .13)"; ctx.beginPath();
+    ctx.moveTo(ax + aw * 0.18, ay); ctx.lineTo(ax + aw * 0.5, ay); ctx.lineTo(ax + aw * 0.12, ay + ah); ctx.lineTo(ax - aw * 0.2, ay + ah); ctx.closePath(); ctx.fill();
+  }
   if (c.tier >= 3 && !reduced && !foilOff && !state.trans && !fly && !inertia && !(tbl.on && tableMoving())) {
     frameFoil = true;
     const phase = ((now * 0.00005 + (sx + cam.x * cam.s * 0.25) * 0.0011) % 1 + 1) % 1;
-    const fx = sx - w + phase * w * 3;
-    const fg = ctx.createLinearGradient(fx, sy, fx + w * 0.9, sy + h);
+    const fx = ax - aw + phase * aw * 3;
+    const fg = ctx.createLinearGradient(fx, ay, fx + aw * 0.9, ay + ah);
     fg.addColorStop(0, "rgb(255 255 255 / 0)"); fg.addColorStop(0.38, "rgb(150 220 255 / .28)"); fg.addColorStop(0.5, "rgb(255 226 160 / .42)"); fg.addColorStop(0.62, "rgb(160 245 205 / .28)"); fg.addColorStop(1, "rgb(255 255 255 / 0)");
-    ctx.globalCompositeOperation = "screen"; ctx.fillStyle = fg; ctx.fillRect(sx, sy, w, h); ctx.globalCompositeOperation = "source-over";
+    ctx.globalCompositeOperation = "screen"; ctx.fillStyle = fg; ctx.fillRect(ax, ay, aw, ah); ctx.globalCompositeOperation = "source-over";
   }
+  if (!full && !energy && w > 34) { ctx.lineWidth = 1; ctx.strokeStyle = "rgb(0 0 0 / .22)"; ctx.strokeRect(ax + 0.5, ay + 0.5, aw - 1, ah - 1); } // the window's edge
   // The label strip
-  const lh = h * 0.24, ly = sy + h - lh;
   ctx.fillStyle = theme.paper; ctx.fillRect(sx, ly, w, lh);
   ctx.fillStyle = "rgb(0 0 0 / .14)"; ctx.fillRect(sx, ly, w, Math.max(1, w * 0.006));
   ctx.restore();
-  // Secret and special rares wear a thin gold rule.
-  if (c.tier >= 5) { rr(sx + w * 0.03, sy + w * 0.03, w * 0.94, h - lh - w * 0.04, r * 0.7); ctx.lineWidth = Math.max(1, w * 0.012); ctx.strokeStyle = "rgb(240 200 110 / .85)"; ctx.stroke(); }
+  // A full art wears a hairline inside its edge; secret and special rares wear it in gold.
+  if (full) { rr(sx + w * 0.03, sy + w * 0.03, w * 0.94, h - lh - w * 0.045, r * 0.7); ctx.lineWidth = Math.max(1, w * 0.012); ctx.strokeStyle = c.tier >= 5 ? "rgb(240 200 110 / .9)" : "rgb(255 255 255 / .45)"; ctx.stroke(); }
   if (w < 40) return;
   const pad = w * 0.075;
   ctx.textBaseline = "alphabetic"; ctx.textAlign = "left"; ctx.fillStyle = theme["paper-ink"];
   font(800, w * 0.092, true); ctx.fillText(fitText(c.name, w * 0.84), sx + pad, ly + lh * 0.46);
   font(500, w * 0.064); ctx.globalAlpha *= 0.7;
-  ctx.fillText(fitText(`${st.code} ${c.num}/${st.printed}${c.tag ? ` ${c.tag}` : ""}`, w * 0.6), sx + pad, ly + lh * 0.82);
-  ctx.textAlign = "right"; ctx.fillText(GLYPH[c.tier], sx + w - pad, ly + lh * 0.82);
+  ctx.fillText(fitText(`${st.code} ${c.num}/${st.printed}${c.tag ? ` ${c.tag}` : ""}`, w * 0.62), sx + pad, ly + lh * 0.82);
   ctx.globalAlpha /= 0.7;
+  // The rarity mark, printed where the card prints it: gold from holo up.
+  ctx.textAlign = "right"; ctx.fillStyle = c.tier >= 3 ? theme.gold : theme["paper-ink"]; if (c.tier < 3) ctx.globalAlpha *= 0.7;
+  ctx.fillText(RARITY_MARK[c.tier], sx + w - pad, ly + lh * 0.82);
+  if (c.tier < 3) ctx.globalAlpha /= 0.7;
   if (value || w > 110) { ctx.textAlign = "right"; ctx.fillStyle = "rgb(255 255 255 / .92)"; font(700, w * 0.078); ctx.fillText(short(c.price), sx + w - pad, sy + pad + w * 0.07); }
 }
+const RARITY_MARK = ["●", "◆", "★", "★", "★★", "★★", "★★★"]; // a holo's star is the gold one
 
 // A set's title inside the set view, drawn with whichever camera is in use (they differ mid-transition).
 function drawHeader(st, now, C = cam, ox = 0, alpha = 1) {
@@ -333,6 +370,7 @@ function drawPanel(g, now, alpha = 1, labelAlpha = 1) {
 function drawWall(now, alpha = 1, except = null) {
   const pick = picking() && wel.picks.size > 0;
   let settling = false;
+  ART.far = true; // far out: no card asks for its picture here (the Chase lens's tiles are the exception)
   for (const g of groups) {
     const t = pick && g.set && !wel.picks.has(g.set.id) ? 0.42 : 1;
     g.pe ??= 1;
@@ -345,6 +383,7 @@ function drawWall(now, alpha = 1, except = null) {
     if (inCase(g)) continue; // its tiles are in the Medal room
     for (const c of g.cards) { const y = c.m.y - mScroll; if (y > vh || y + c.m.h < 0) continue; drawTile(c, c.m.x, y, c.m.w, c.m.h, now, a); } // off-screen tiles skipped (the Dex is tall)
   }
+  ART.far = false;
   if (!except && !state.trans) drawNewPanel(now, alpha);
   if (settling) kick();
 }
