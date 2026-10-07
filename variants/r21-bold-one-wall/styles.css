@@ -23,7 +23,7 @@
 /* Have and Need: a small toggle that rides on top of the Chase tab while Chase is the tab you're on. */
 .lens .hn { position: absolute; z-index: 2; bottom: calc(100% + 8px); left: var(--hx, 50%); display: flex; gap: 2px; padding: 3px; border-radius: 12px;
   transform: translate(-50%, 10px) scale(.94); opacity: 0; pointer-events: none; transition: transform .32s cubic-bezier(.2,.9,.25,1.04), opacity .2s; }
-body[data-tab="chase"]:not(.timing) .lens .hn { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
+body[data-on-tab="chase"]:not(.timing) .lens .hn { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
 .lens .hn button { height: 32px; min-width: 0; padding: 0 15px; border-radius: 9px; font: 650 13.5px var(--font); color: var(--muted); }
 .lens .hn button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
 
@@ -46,3 +46,6 @@ body.inroom .lens.tabs { border-color: rgb(255 255 255 / .08); }
 
 /* The list: NEW on a listing */
 .lnew { display: inline-block; padding: 1px 6px; border-radius: 8px; background: var(--c-blue); color: #fff; font-size: 10.5px; letter-spacing: .04em; vertical-align: 2px; }
+
+/* The list: Medal scrolls to the trophies, clear of the search strip */
+#list .lshelf { scroll-margin-top: calc(env(safe-area-inset-top, 0px) + 74px); }

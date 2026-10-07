@@ -10,7 +10,7 @@
 // a room (or tap it) and it grows to fill the screen, the way a set grows into its binder; pinch any room closed to
 // come back. Every step is one transition with a position, held under the fingers and snapped by speed, then position.
 // The grid button at the top left of the wall (where Back sits inside a set) goes up to the map too.
-// How it's built: the map, the Feed and the Source are levels drawn over the wall (`place`), which stays exactly as it
+// How it's built: the map, the Feed and the Source are levels drawn over the wall (`spot`), which stays exactly as it
 // was underneath (view "mosaic", its scroll, its lens). Chase is the wall. Medal is the trophy room and Trade the trade
 // binder, opened without their own animation and remembered as `map.from`, so Back and a pinch from them go up to the
 // map, while the same room opened from the wall (the door, the cover) still goes back to the wall. During a move
@@ -20,7 +20,7 @@
 const ROOMS = ["feed", "chase", "trade", "medal", "source"];
 const ROOM_NAME = { feed: "Feed", chase: "Chase", trade: "Trade", medal: "Medal", source: "Source" };
 const ROOM_COL = { feed: "c-blue", chase: "c-red", trade: "c-green", medal: "c-yellow", source: "c-blue" }; // production's tab colours
-let place = null; // "map", "feed" or "source": a level drawn over the wall
+let spot = null; // "map", "feed" or "source": a level drawn over the wall
 const map = { from: null, L: null, wall: null, press: null, kb: -1, pulse: null, feedIn: null, found: [], scan: { last: 0, next: 0 }, layoutN: 0, wallVer: 0, tip: null };
 let mapSeenOnce = false;
 try { mapSeenOnce = localStorage.getItem("wall-map-seen") === "1"; } catch { /* fresh */ }
@@ -29,8 +29,8 @@ const mapSeen = () => { if (mapSeenOnce) return; mapSeenOnce = true; try { local
 const mapReady = () => !wel.on && !story && !ar.on && !tbl.on && !marking && !state.focus && !pop.c && !paying() && !document.body.classList.contains("listmode");
 // Where you are, as a room: null on the map, inside a set, or anywhere a pinch already means something else.
 function currentRoom() {
-  if (place === "feed" || place === "source") return place;
-  if (place) return null;
+  if (spot === "feed" || spot === "source") return spot;
+  if (spot) return null;
   if (bnd.on) return map.from === "trade" && !bnd.show ? "trade" : null;
   if (room.on) return map.from === "medal" && view === "mosaic" ? "medal" : null;
   return view === "mosaic" && !tbl.on ? "chase" : null;
@@ -46,7 +46,7 @@ function mapLayout() {
   const W = Math.min(vw - 20, 1180), x0 = Math.round((vw - W) / 2), gap = 10, top = topPad() - 2, bottom = vh - 34, avail = bottom - top;
   const fH = Math.round(clamp(avail * 0.2, 118, 176)), sH = Math.round(clamp(avail * 0.18, 116, 150));
   const my = top + fH + gap, mh = avail - fH - sH - gap * 2;
-  const B = wallBand(), asp = B.w / B.h, HEAD = 42, FOOT = 30;
+  const B = wallBand(), asp = B.w / B.h, HEAD = 42, FOOT = 50;
   let thH = mh - HEAD - FOOT, thW = thH * asp;
   const cMax = W * (vw < 700 ? 0.56 : 0.64);
   if (thW + 16 > cMax) { thW = cMax - 16; thH = thW / asp; }
@@ -104,7 +104,7 @@ function wallSnap(now, force = false) {
   if (room.on || bnd.on || tbl.on || view !== "mosaic") return map.wall; // the wall isn't what's drawn: the last picture stands
   const key = wallKey();
   if (!force && map.wall?.key === key) return map.wall;
-  paintRoom("chase", now);
+  paintRoom("chase", now + 4000); // as it settles: no flash or ripple caught half way in the picture
   map.wall = { key, ...grabScreen(wallBand(), map.wall) };
   return map.wall;
 }
@@ -129,7 +129,7 @@ function binderUp() { // the trade binder, likewise (an empty one too: its page 
 function beginMap(id, dir) {
   const now = performance.now();
   hideTip(); cancelPress(); hideDealBar(); hideWho();
-  if (dir === "in") { if (id === "medal") roomUp(); else if (id === "trade") binderUp(); }
+  if (dir === "in") { if (id === "medal") roomUp(); else if (id === "trade") binderUp(); else if (id === "feed") feedView.scroll = 0; }
   else { inertia = false; fly = null; pInertia = 0; if (id === "trade") document.body.classList.remove("inbinder"); }
   const snap = roomSnap(id, now);
   state.trans = { kind: "map", room: id, dir, q: dir === "in" ? 1 : 0, snap, done: mapSettled };
@@ -150,9 +150,9 @@ function mapSettled(T) {
     if (id === "medal" && room.on) { room.closing = false; endRoom(); }
     if (id === "trade" && bnd.on) tbEnd();
     if (id === "feed") feedSeen();
-    map.from = null; place = "map"; mapSeen();
+    map.from = null; spot = "map"; mapSeen();
   } else {
-    place = id === "feed" || id === "source" ? id : null;
+    spot = id === "feed" || id === "source" ? id : null;
     map.from = id === "medal" || id === "trade" ? id : null;
     if (id === "trade") { document.body.classList.add("inbinder"); tbSync(); }
   }
@@ -166,15 +166,15 @@ function toMap() {
   tick(8); beginMap(id, "out"); mapSettle(1, 600);
 }
 function openPlace(id, dur = 640) {
-  if (place !== "map" || state.trans || !ROOMS.includes(id)) return;
+  if (spot !== "map" || state.trans || !ROOMS.includes(id)) return;
   tick(8); beginMap(id, "in"); mapSettle(0, dur);
 }
 // Something that belongs to the wall was asked for (a search, a filter, the list): the place steps aside at once.
 function goWallNow() {
   if (state.trans?.kind === "map" && state.trans.anim) finishTransition();
-  if (!place) return;
-  if (place === "feed") feedSeen();
-  place = null; pg = null; setChrome(); kick();
+  if (!spot) return;
+  if (spot === "feed") feedSeen();
+  spot = null; pg = null; setChrome(); kick();
 }
 // Speed first, position second: a quick move wins whatever the distance; a slow one goes to the nearer end.
 function snapQ(qs, q, mid) {
@@ -196,6 +196,7 @@ function stepMapTrans(now, T) {
   return true;
 }
 function drawMapTrans(now, T) {
+  prepCards(); // a card whose picture is out of date is painted again first, before anything else is drawn
   const L = mapLayout(), id = T.room, A = L.r[id];
   const e = reduced ? (T.q < 0.5 ? 0 : 1) : ease(clamp(T.q, 0, 1));
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1;
@@ -207,41 +208,40 @@ function drawMapTrans(now, T) {
       const r = L.r[k];
       drawCard(k, { x: r.x + (r.x + r.w / 2 - ax) * push, y: r.y + (r.y + r.h / 2 - ay) * push, w: r.w, h: r.h }, now, e);
     }
-    drawMapHint(e);
+    drawMapHint(clamp((e - 0.7) / 0.3, 0, 1));
   }
   const R = lerpRect({ x: 0, y: 0, w: vw, h: vh }, A, e), fa = clamp((e - 0.45) / 0.45, 0, 1), snap = T.snap;
   if (id === "chase") { // the wall itself becomes the card's picture; the card's frame and words come up around it
-    if (fa > 0) { ctx.globalAlpha = fa; rr(R.x, R.y, R.w, R.h, 14 * e); ctx.fillStyle = theme.panelFill; ctx.fill(); ctx.globalAlpha = 1; }
+    if (fa > 0) { ctx.globalAlpha = fa; rr(R.x + 0.5, R.y + 0.5, R.w - 1, R.h - 1, 14 * e); ctx.fillStyle = theme["panel-solid"]; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = theme["slot-line"]; ctx.stroke(); ctx.globalAlpha = 1; }
     if (snap) {
       const D = lerpRect(snap.S, L.thumb, e);
       ctx.save(); rr(D.x, D.y, D.w, D.h, 6 * e); ctx.clip(); ctx.drawImage(snapFor(snap, D.w), D.x, D.y, D.w, D.h); ctx.restore();
     }
     if (fa > 0) chaseChrome(R, now, fa);
   } else { // a room shrinks into its card and its card's face comes up through it
-    if (fa > 0) {
-      const k = R.w / A.w;
-      ctx.save(); rr(R.x, R.y, R.w, R.h, 14 * e); ctx.clip();
-      ctx.setTransform(dpr * k, 0, 0, dpr * k, dpr * R.x, dpr * R.y);
-      drawCard(id, { x: 0, y: 0, w: A.w, h: A.h }, now, 1);
-      ctx.restore(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    }
-    if (snap && fa < 1) {
+    const fb = clamp((e - 0.55) / 0.4, 0, 1);
+    ctx.save(); rr(R.x, R.y, R.w, R.h, 14 * e); ctx.clip();
+    ctx.fillStyle = id === "medal" ? theme["room-bg"] : theme.bg; ctx.fillRect(R.x, R.y, R.w, R.h); // its ground: nothing behind shows through
+    if (fb > 0) { const k = R.w / A.w; ctx.setTransform(dpr * k, 0, 0, dpr * k, dpr * R.x, dpr * R.y); drawCard(id, { x: 0, y: 0, w: A.w, h: A.h }, now, 1); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
+    if (snap && fb < 1) {
       const k1 = A.w / vw, D = lerpRect({ x: 0, y: 0, w: vw, h: vh }, { x: A.x, y: A.y - (topPad() - 8) * k1, w: A.w, h: vh * k1 }, e);
-      ctx.save(); rr(R.x, R.y, R.w, R.h, 14 * e); ctx.clip();
-      ctx.globalAlpha = 1 - fa; ctx.drawImage(snapFor(snap, D.w), D.x, D.y, D.w, D.h);
-      ctx.restore(); ctx.globalAlpha = 1;
+      ctx.globalAlpha = 1 - fb; ctx.drawImage(snapFor(snap, D.w), D.x, D.y, D.w, D.h);
     }
+    ctx.restore(); curFont = ""; ctx.globalAlpha = 1;
   }
   ctx.globalAlpha = 1;
 }
 function drawMapHint(a) {
+  if (a <= 0.01) return;
   ctx.globalAlpha = a; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic"; ctx.fillStyle = theme.muted; font(500, 12.5);
-  ctx.fillText(fitText(vw < 520 ? "Tap a room to go in. Pinch closed to come back." : "Tap a room, or spread two fingers on it, to go in. Pinch any room closed to come back here.", vw - 24), vw / 2, mapLayout().hintY);
+  ctx.fillText(fitText(vw < 520 ? "Tap a room to go in. Pinch any room closed to come back." : "Tap a room, or spread two fingers on it, to go in. Pinch any room closed to come back here.", vw - 24), vw / 2, mapLayout().hintY);
   ctx.textAlign = "left"; ctx.globalAlpha = 1;
 }
 // The map at rest: five cards, each showing what's going on inside.
 function drawMap(now) {
+  prepCards();
   const L = mapLayout();
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1;
   ctx.fillStyle = theme.bg; ctx.fillRect(0, 0, vw, vh);
   let more = false;
   for (const id of ROOMS) if (drawCard(id, L.r[id], now, 1)) more = true;
@@ -264,13 +264,13 @@ function pDown(pts) {
   const p = pts[0], now = performance.now();
   pInertia = 0;
   pg = { kind: "one", x: p.x, y: p.y, t: now, moved: false, s: [{ y: p.y, t: now }], y0: pScroll() };
-  if (place === "map") { map.press = mapHit(p.x, p.y); map.kb = -1; kick(); }
+  if (spot === "map") { map.press = mapHit(p.x, p.y); map.kb = -1; kick(); }
   else pPress(p.x, p.y);
 }
 function pTwo(pts) {
   map.press = null; pPressOff();
   const [a, b] = pts, m = mid(a, b);
-  pg = { kind: "two", d0: Math.max(1, dist(a, b)), qs: [], id: place === "map" ? mapHit(m.x, m.y, true) : place, go: false };
+  pg = { kind: "two", d0: Math.max(1, dist(a, b)), qs: [], id: spot === "map" ? mapHit(m.x, m.y, true) : spot, go: false };
   kick();
 }
 function pMove(pts) {
@@ -283,11 +283,11 @@ function pMove(pts) {
   g.s.push({ y: p.y, t: now }); if (g.s.length > 8) g.s.shift();
   if (!g.moved && Math.hypot(p.x - g.x, dy) < 8) return;
   if (!g.moved) { g.moved = true; map.press = null; pPressOff(); }
-  if (place === "feed" || place === "source") { pSetScroll(g.y0 - dy); kick(); }
+  if (spot === "feed" || spot === "source") { pSetScroll(g.y0 - dy); kick(); }
 }
 function pPinch(a, b) {
   const g = pg, r = dist(a, b) / g.d0, now = evT || performance.now();
-  if (place === "map") { // spreading on a room grows it to fill the screen
+  if (spot === "map") { // spreading on a room grows it to fill the screen
     if (!g.id || (state.trans && state.trans.kind !== "map")) return;
     const q = 1 - clamp((r - 1) / 1.1, 0, 1);
     if (!g.go) { if (q < 0.99 && !state.trans) { g.go = true; tick(4); beginMap(g.id, "in"); } else return; }
@@ -295,7 +295,7 @@ function pPinch(a, b) {
     return;
   }
   // in the Feed or the Source, closing fingers shrink it back into its card
-  if (!g.go) { if (r < 0.96 && !state.trans && mapReady()) { g.go = true; beginMap(place, "out"); } else return; }
+  if (!g.go) { if (r < 0.96 && !state.trans && mapReady()) { g.go = true; beginMap(spot, "out"); } else return; }
   const T = state.trans; if (T?.kind === "map" && !T.anim) { T.q = clamp((1 - r) / 0.5, 0, 1); g.qs.push({ q: T.q, t: now }); kick(); }
 }
 function pUp(remaining, end, cancelled = false) {
@@ -314,7 +314,7 @@ function pUp(remaining, end, cancelled = false) {
   if (cancelled) { kick(); return; }
   const p = end || { x: g.x, y: g.s[g.s.length - 1].y };
   if (!g.moved) { pTap(p.x, p.y, was); kick(); return; }
-  if (place === "feed" || place === "source") {
+  if (spot === "feed" || spot === "source") {
     const now = performance.now(), s0 = g.s.find((s) => now - s.t < 90) || g.s[0];
     if (s0 && !reduced) { const v = (p.y - s0.y) / Math.max(1, now - s0.t); if (Math.abs(v) > 0.2) pInertia = v; }
   }
@@ -322,20 +322,20 @@ function pUp(remaining, end, cancelled = false) {
 }
 function pTap(x, y, was) {
   if (state.trans) return;
-  if (place === "map") { const id = mapHit(x, y); if (id && (!was || was === id)) openPlace(id); return; }
-  if (place === "feed") feedTap(x, y); else if (place === "source") sourceTap(x, y);
+  if (spot === "map") { const id = mapHit(x, y); if (id && (!was || was === id)) openPlace(id); return; }
+  if (spot === "feed") feedTap(x, y); else if (spot === "source") sourceTap(x, y);
 }
-const pScroll = () => (place === "feed" ? feedView.scroll : place === "source" ? srcView.scroll : 0);
-function pSetScroll(v) { const P = place === "feed" ? feedView : place === "source" ? srcView : null; if (P) P.scroll = clamp(v, 0, P.max); }
+const pScroll = () => (spot === "feed" ? feedView.scroll : spot === "source" ? srcView.scroll : 0);
+function pSetScroll(v) { const P = spot === "feed" ? feedView : spot === "source" ? srcView : null; if (P) P.scroll = clamp(v, 0, P.max); }
 function stepPlaceInertia(dt) {
   if (!pInertia || state.trans) return false;
-  const P = place === "feed" ? feedView : srcView;
+  const P = spot === "feed" ? feedView : srcView;
   P.scroll = clamp(P.scroll - pInertia * dt, 0, P.max);
   pInertia *= Math.pow(0.95, dt / 16);
   if (Math.abs(pInertia) < 0.02 || P.scroll <= 0 || P.scroll >= P.max) pInertia = 0;
   return true;
 }
-const ownsPlace = () => Boolean(place) && !pop.c && !tbl.on && !paying();
+const ownsPlace = () => Boolean(spot) && !pop.c && !tbl.on && !paying();
 for (const type of ["touchstart", "touchmove", "touchend", "touchcancel"]) addEventListener(type, (e) => {
   if (e.target !== canvas) return;
   if (type === "touchstart") {
@@ -362,10 +362,10 @@ for (const type of ["pointerup", "pointercancel"]) addEventListener(type, (e) =>
 addEventListener("wheel", (e) => {
   if (e.target !== canvas) return;
   const pinch = e.ctrlKey || e.metaKey;
-  if (place) {
+  if (spot) {
     e.preventDefault(); e.stopImmediatePropagation(); hideTip();
     if (state.trans?.kind === "map") { if (state.trans.anim) finishTransition(); return; }
-    if (place === "map") { if (pinch && e.deltaY < -2) { const id = mapHit(e.clientX, e.clientY, true); if (id) openPlace(id); } return; }
+    if (spot === "map") { if (pinch && e.deltaY < -2) { const id = mapHit(e.clientX, e.clientY, true); if (id) openPlace(id); } return; }
     if (pinch) { if (e.deltaY > 2) toMap(); return; }
     pInertia = 0; pSetScroll(pScroll() + e.deltaY); kick(); return;
   }
@@ -376,7 +376,7 @@ addEventListener("wheel", (e) => {
 addEventListener("keydown", (e) => {
   if (document.activeElement === qIn || document.querySelector("dialog[open]") || paying() || pop.c) return;
   const k = e.key, onCanvas = e.target === canvas || e.target === document.body;
-  if (place === "map" && onCanvas) {
+  if (spot === "map" && onCanvas) {
     const i = map.kb;
     if (k === "ArrowRight" || k === "ArrowDown") map.kb = (i + 1) % ROOMS.length;
     else if (k === "ArrowLeft" || k === "ArrowUp") map.kb = (i <= 0 ? ROOMS.length : i) - 1;
@@ -385,7 +385,7 @@ addEventListener("keydown", (e) => {
     else return;
     e.preventDefault(); e.stopImmediatePropagation(); if (map.kb >= 0) toast(ROOM_NAME[ROOMS[map.kb]]); kick(); return;
   }
-  if ((place === "feed" || place === "source") && onCanvas) {
+  if ((spot === "feed" || spot === "source") && onCanvas) {
     if (k === "Escape" || k === "Backspace") toMap();
     else if (k === "ArrowDown" || k === "PageDown") { pSetScroll(pScroll() + (k === "PageDown" ? vh * 0.8 : 90)); kick(); }
     else if (k === "ArrowUp" || k === "PageUp") { pSetScroll(pScroll() - (k === "PageUp" ? vh * 0.8 : 90)); kick(); }
@@ -540,38 +540,38 @@ roomsNav.innerHTML = ROOMS.map((id) => `<button type="button" data-room="${id}">
 roomsNav.addEventListener("click", (e) => { const b = e.target.closest("[data-room]"); if (b) openPlace(b.dataset.room); });
 document.querySelector(".top").after(roomsNav);
 function setChrome() {
-  const inPlace = place === "feed" || place === "source", moving = state.trans?.kind === "map";
+  const inPlace = spot === "feed" || spot === "source", moving = state.trans?.kind === "map";
   document.body.classList.toggle("inset", view === "set" || tbl.on);
-  document.body.classList.toggle("onmap", place === "map");
+  document.body.classList.toggle("onmap", spot === "map");
   document.body.classList.toggle("inplace", inPlace);
   backBtn.hidden = moving || (!inPlace && view !== "set" && !tbl.on && !room.on && !bnd.on);
   backBtn.setAttribute("aria-label", inPlace || (bnd.on && !tbl.on && map.from === "trade") || (room.on && view !== "set" && map.from === "medal") ? "Back to the rooms" : bnd.on && !tbl.on ? "Back to the Trade lens" : room.on && view !== "set" ? "Back to the wall" : "Back to everything");
-  roomsBtn.hidden = moving || Boolean(place) || view !== "mosaic" || room.on || bnd.on || tbl.on || wel.on || Boolean(story) || ar.on;
-  roomsNav.hidden = place !== "map";
+  roomsBtn.hidden = moving || Boolean(spot) || view !== "mosaic" || room.on || bnd.on || tbl.on || wel.on || Boolean(story) || ar.on;
+  roomsNav.hidden = spot !== "map";
   markBtn.hidden = view !== "set" || marking;
-  document.getElementById("where").textContent = place === "map" ? "Rooms: Feed, Chase, Trade, Medal, Source" : place === "feed" ? "Feed" : place === "source" ? "Source" : tbl.on ? `Trade with ${tbl.t.name}` : view === "set" && state.g ? state.g.name : bnd.on ? (bnd.show ? "Trade binder, Show mode" : "Trade binder") : room.on ? "Trophy room" : "";
+  document.getElementById("where").textContent = spot === "map" ? "Rooms: Feed, Chase, Trade, Medal, Source" : spot === "feed" ? "Feed" : spot === "source" ? "Source" : tbl.on ? `Trade with ${tbl.t.name}` : view === "set" && state.g ? state.g.name : bnd.on ? (bnd.show ? "Trade binder, Show mode" : "Trade binder") : room.on ? "Trophy room" : "";
   if (marking && view !== "set") leaveMark();
-  syncShelfPad(); if (place) document.body.style.setProperty("--shelf-h", "0px");
+  syncShelfPad(); if (spot) document.body.style.setProperty("--shelf-h", "0px");
   updateCount();
 }
 backBtn.onclick = () => {
   if (state.trans?.kind === "map") return;
   if (tbl.on) closeTable();
-  else if (place === "feed" || place === "source") toMap();
+  else if (spot === "feed" || spot === "source") toMap();
   else if (bnd.on) { if (bnd.show) tbHandBack(); else if (map.from === "trade") toMap(); else closeBinder(); }
   else if (view === "set") exitToMosaic();
   else if (room.on) { if (map.from === "medal") toMap(); else closeRoom(); }
 };
 // The count is the wall: from the map it opens Chase; from the Feed or the Source it goes straight there.
 document.getElementById("count").addEventListener("click", (e) => {
-  if (place === "map") { e.preventDefault(); e.stopImmediatePropagation(); openPlace("chase"); }
-  else if (place) { e.preventDefault(); e.stopImmediatePropagation(); goWallNow(); }
+  if (spot === "map") { e.preventDefault(); e.stopImmediatePropagation(); openPlace("chase"); }
+  else if (spot) { e.preventDefault(); e.stopImmediatePropagation(); goWallNow(); }
 }, true);
 // Anything that belongs to the wall steps the place aside first: a search, a filter, the list, choosing your sets.
 qIn.addEventListener("input", () => goWallNow(), true);
 filterMenu.addEventListener("click", () => goWallNow(), true);
 for (const id of ["to-list", "w-sets"]) document.getElementById(id).addEventListener("click", () => goWallNow(), true);
-toastEl.addEventListener("click", (e) => { const b = e.target.closest(".toast-btn"); if (b && b.textContent !== "Undo" && place) goWallNow(); }, true);
+toastEl.addEventListener("click", (e) => { const b = e.target.closest(".toast-btn"); if (b && b.textContent !== "Undo" && spot) goWallNow(); }, true);
 document.getElementById("reset").addEventListener("click", () => { try { for (const k of ["wall-map-seen", "wall-sources-off"]) localStorage.removeItem(k); } catch { /* fine */ } }, true);
 
 // ----- finding the map the first time: a tip under the grid button, once, when the wall is quiet -----
@@ -597,10 +597,10 @@ function tickFeed() {
   map.scan.last = Date.now(); map.scan.next = map.scan.last + 9000;
   arrive();
   setTimeout(tickFeed, 9000);
-  if (place) kick();
+  if (spot) kick();
 }
 function showArrival(c, drop) {
-  const now = performance.now(), g = groups[c.g], away = Boolean(place) || state.trans?.kind === "map";
+  const now = performance.now(), g = groups[c.g], away = Boolean(spot) || state.trans?.kind === "map";
   // In the Chase lens the tile slides to the front of its set (a deal leads); seen from the map, it just takes its place.
   if (lifted && !state.focus) { if (state.trans || live.quick || away) layoutAll(); else liftLayout(true); }
   c.flash = { t0: now, drop }; for (const t of twinsOf(c)) t.flash = { t0: now, drop };
@@ -615,8 +615,13 @@ function showArrival(c, drop) {
     setTimeout(glowChase, 640);
   } else if (lensShown() && !away) glowChase();
   else syncBadge();
-  map.found.unshift({ c, price: c.deal, was: c.dealWas, at: Date.now(), src: "ebay" }); if (map.found.length > 40) map.found.pop();
-  map.pulse = { c, t0: now }; map.feedIn = { id: `${c.id}|${Math.round(c.deal * 100)}`, t0: now };
+  const src = srcOf(c);
+  map.found.unshift({ c, price: c.deal, was: c.dealWas, at: Date.now(), src }); if (map.found.length > 40) map.found.pop();
+  map.feedN++; map.pulse = { c, t0: now };
+  if (srcOn(src)) {
+    map.feedIn = { t0: now };
+    if (srcState.alerts && dealPct(c) >= 40 && !away) toast(`Phone alert: ${c.name} ${short(c.deal)}, ${dealPct(c)}% under market.`);
+  }
   drawList(); kick();
 }
 
@@ -629,12 +634,12 @@ function frame(now) {
     drawMapTrans(now, T0);
     drawPop(now); kick(); return;
   }
-  if (place && !placeGuard()) {
+  if (spot && !placeGuard()) {
     const dt = Math.min(48, now - (lastFrame || now)); lastFrame = now;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1;
     let more = false;
-    if (place === "map") { wallSnap(now); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); more = drawMap(now); }
-    else { if (stepPlaceInertia(dt)) more = true; if ((place === "feed" ? drawFeedRoom(now) : drawSourceRoom(now))) more = true; }
+    if (spot === "map") { wallSnap(now); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); more = drawMap(now); }
+    else { if (stepPlaceInertia(dt)) more = true; if ((spot === "feed" ? drawFeedRoom(now) : drawSourceRoom(now))) more = true; }
     if (drawPop(now)) more = true;
     if (state.press) more = true;
     if (more) kick(); else placeIdle();
@@ -712,16 +717,16 @@ function frame(now) {
 function placeGuard() {
   if (state.trans?.kind === "morph") finishTransition();
   if (view === "mosaic" && !state.trans && !room.on && !bnd.on && !tbl.on) return false;
-  if (place === "feed") feedSeen();
-  place = null; pg = null; pInertia = 0; setChrome();
+  if (spot === "feed") feedSeen();
+  spot = null; pg = null; pInertia = 0; setChrome();
   return true;
 }
 // While a place is up and nothing moves, the Source's clock still ticks: a frame four times a second, not sixty.
 let idleTimer = 0;
 function placeIdle() {
   if (reduced || idleTimer) return;
-  idleTimer = setTimeout(() => { idleTimer = 0; if (place) kick(); }, 250);
+  idleTimer = setTimeout(() => { idleTimer = 0; if (spot) kick(); }, 250);
 }
 
 // Debug builds only: the tests' hook sees the rooms.
-setTimeout(() => { if (window.__w) Object.defineProperties(window.__w, { map: { get: () => map }, place: { get: () => place }, mapLayout: { value: mapLayout }, toMap: { value: toMap }, openPlace: { value: openPlace }, feedData: { value: () => feedData() }, room: { get: () => room }, bnd: { get: () => bnd } }); }, 0);
+setTimeout(() => { if (window.__w) Object.defineProperties(window.__w, { map: { get: () => map }, spot: { get: () => spot }, mapLayout: { value: mapLayout }, toMap: { value: toMap }, openPlace: { value: openPlace }, feedData: { value: () => feedData() }, arrive: { value: arrive }, srcState: { value: srcState }, feedView: { value: feedView }, srcView: { value: srcView } }); }, 0);

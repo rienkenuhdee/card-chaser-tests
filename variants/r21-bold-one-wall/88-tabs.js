@@ -17,6 +17,7 @@
 const TAB_OF = { chase: "feed", have: "chase", need: "chase", trade: "trade" };
 const TAB_COL = { feed: "blue", chase: "red", trade: "green", medal: "yellow" };
 let medalGoing = false; // Medal was tapped: the wall is on its way home before the room opens
+const HN_H = 46; // the Have and Need toggle over the bar on the Chase tab
 const activeTab = () => (room.on || medalGoing ? "medal" : TAB_OF[state.lens] || "chase");
 const roomOk = () => mode === "set" && (roomHas() || medalList().list.length > 0); // the room opens on the catalog alone
 
@@ -63,7 +64,7 @@ function placeInk() {
   const t = activeTab();
   for (const b of tabBtns) b.setAttribute("aria-pressed", String(b.dataset.tab === t));
   for (const b of hnBtns) b.setAttribute("aria-pressed", String(b.dataset.lens === state.lens));
-  document.body.dataset.tab = t;
+  document.body.dataset.onTab = t;
   const b = lensBox.querySelector(`[data-tab="${t}"]`), ch = lensBox.querySelector('[data-tab="chase"]');
   lensInk.style.setProperty("--x", `${b.offsetLeft}px`); lensInk.style.setProperty("--w", `${b.offsetWidth}px`);
   lensInk.style.setProperty("--tc", `var(--c-${TAB_COL[t]})`);
@@ -207,7 +208,15 @@ function liftLayout(force = false) {
     inSet.pm = { x: 0, y: from + topPad() - 8, w: vw, h: vh - topPad() }; // the page shrinks to its place
     view = "mosaic"; state.g = null; fly = null; inertia = false; setChrome();
   }
+  // A listing landing while you're down the feed: the tile you're reading stays where it is (at the top, the new one
+  // slides in and the rest move down, as a feed does).
+  const anchor = same && feedBox && state.lens === "chase" && mScroll > 0 ? feedBox.list.find((c) => c.m && c.m.y >= mScroll + topPad()) : null;
+  const ay = anchor?.m.y;
   layoutAll();
+  if (anchor?.lift && anchor.m) {
+    const d = anchor.m.y - ay;
+    if (d) { mScroll = clamp(mScroll + d, 0, mMax); const k = mScroll - from; for (const c of drawnCards) if (c.pm) c.pm.y += k; for (const g of groups) if (g.pm?.y != null) g.pm.y += k; }
+  }
   if (!same) {
     mScroll = clamp(want ? 0 : wasLifted ? wallScroll : mScroll, 0, mMax);
     const d = mScroll - from;
@@ -235,7 +244,7 @@ function layoutAll() {
   for (const g of groups) { orderGroup(g); g.done = mode === "set" && isPut(g); }
   groups.forEach(binderLayout);
   const keep = mScroll;
-  if (lifted) { newPanel = null; liftedLayout(); } else { feedBox = null; mosaicLayout(); }
+  if (lifted) { newPanel = null; liftedLayout(); } else { feedBox = null; mosaicLayout(); if (!state.time && !picking()) mMax += HN_H; } // the end of the wall clears Have and Need above the bar
   if (room.on) { if (!roomOk()) { endRoom(); return; } if (room.fan && !inCase(room.fan)) room.fan = null; mScroll = keep; strip = null; roomLayout(); }
   if (bnd.on) { bnd.L = tbGeom(bnd.show); bnd.vi = clamp(bnd.vi, 0, tbViews() - 1); } // the binder fits the new screen
 }
@@ -550,4 +559,4 @@ function drawList() {
   }).join("") || `<p class="lsub">Nothing here with this lens.</p>`;
 }
 
-setTimeout(() => { if (window.__w) Object.defineProperties(window.__w, { feedBox: { get: () => feedBox }, isListed: { value: isListed }, activeTab: { value: activeTab }, goMedal: { value: goMedal }, updateTabs: { value: updateTabs } }); }, 0);
+setTimeout(() => { if (window.__w) Object.defineProperties(window.__w, { feedBox: { get: () => feedBox }, isListed: { value: isListed }, activeTab: { value: activeTab }, goMedal: { value: goMedal }, updateTabs: { value: updateTabs }, r21Scroll: { value: (y) => { mScroll = clamp(y, 0, mMax); kick(); } }, r21Arrive: { value: () => arrive() } }); }, 0);
