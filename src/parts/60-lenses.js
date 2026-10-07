@@ -1,5 +1,6 @@
-// ---------- lenses: Have, Need, Chase, Trade ----------
-// A lens recolors the wall rather than taking you somewhere else. Chase deals your chase list out of the wall.
+// ---------- lenses: Have, Need, Chase ----------
+// A lens recolors the wall rather than taking you somewhere else. Chase deals your chase list out of the wall: one tile
+// per card you chase, its best deal leading. (Trade became a room in round 21, and every listing lives in the Feed.)
 const lensBox = document.querySelector(".lens"), lensInk = lensBox.querySelector(".ink");
 function placeInk() {
   const b = lensBox.querySelector('[aria-pressed="true"]');
@@ -13,17 +14,21 @@ function setLens(lens) {
   try { localStorage.setItem("wall-lens", lens); } catch { /* fine */ }
   if (lens === "have") { const n = cards.filter((c) => c.owned).length, s = spareCount(); toast(`${n.toLocaleString()} of ${TOTAL.toLocaleString()} in your collection${s ? `, ${s} spare${s === 1 ? "" : "s"}` : ""}`); }
   if (lens === "need") { const n = cards.filter((c) => !c.owned).length; toast(`${n} cards to go`); }
-  const news = lens === "chase" && live.news.some((c) => c.deal && isChase(c) && !c.owned);
-  if (lens === "chase" && !news) { const n = cards.filter(isChase).length, d = cards.filter((c) => isChase(c) && c.deal).length; toast(n ? `${n} on your chase list${d ? `, ${d} with a live deal` : ""}` : "Nothing on your chase list yet. Open a card and choose Chase it."); }
-  if (lens === "trade") tradeToast();
+  if (lens === "chase") chaseToast();
   if (was === "chase") closePop(true);
-  if (news) showDealBar(); else hideDealBar();
   liftLayout(); drawList(); updateCount(); kick();
 }
 lensBox.querySelectorAll("button").forEach((b) => (b.onclick = () => setLens(b.dataset.lens)));
+// The Chase lens is your want list, one card each with its best deal; the Feed is every listing found. The toast says
+// which is which, and opens the Feed when there's something in it.
+function chaseToast() {
+  const n = cards.filter(isChase).length, d = cards.filter((c) => isChase(c) && c.deal).length, L = feedList().length;
+  if (!n) { toast("Nothing on your chase list yet. Open a card and choose Chase it."); return; }
+  toast(`Your chase list: ${n.toLocaleString()} ${n === 1 ? "card" : "cards"}, each with its best deal${d ? ` (${d} under market)` : ""} or the most you'd pay.${L ? ` Every listing is in the Feed.` : ""}`, L ? () => goRoom("feed") : null, "Feed");
+}
 // force: the chase list changed while it is out (Chase it, Got it, Undo), so the layout flies to its new shape.
 function liftLayout(force = false) {
-  const want = state.lens === "chase" || state.lens === "trade";
+  const want = state.lens === "chase";
   const same = want === lifted && (!want || state.lens === liftKey); // Chase to Trade is a flight too
   if (same && !(force && lifted)) { layoutAll(); return; }
   if (tbl.on || bnd.on) { layoutAll(); kick(); return; } // nothing of the wall shows under the table or the binder: no flight to watch

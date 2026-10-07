@@ -65,7 +65,7 @@ function mosaicLayout() {
   const R0 = { x: 8, y: topPad(), w: vw - 16 }, top = R0.y + shelfLayout(R0); // the shelf first: trophies finished today
   const live = groups.filter((g) => !g.done);
   const newH = mode === "set" && !picking() ? NEW_H : 0;
-  newPanel = null; trophyCase = null; COVER.m = null;
+  newPanel = null;
   const fitH = vh - top - botPad() - newH;
   // The sets you collect share the screen; the others fold to a line beneath (picked in the welcome, or in Settings).
   if (mode === "set" && pickedSets.size && pickedSets.size < sets.length) {
@@ -79,7 +79,7 @@ function mosaicLayout() {
     let y = R.y + R.h;
     for (const g of rest) { g.m = { x: R.x, y, w: R.w, h: W_FOLD }; y += W_FOLD; }
     if (newH) { newPanel = { x: R.x, y, w: R.w, h: newH }; y += newH; }
-    y += caseLayout(R0, y); // the trophy case: everything finished before today
+    y += caseLayout(R0, y); // the trophies past their day: in the Medal room, a place of no size here
     mMax = Math.max(0, y + botPad() - vh);
     mScroll = clamp(mScroll, 0, mMax);
     for (const g of mine) packPanel(g);
@@ -114,10 +114,9 @@ const chaseOrder = (a, b) => (b.deal ? 1 : 0) - (a.deal ? 1 : 0) || (a.deal && b
 let liftKey = null; // which lens the current lift is for
 function orderGroup(g) {
   g.base ||= g.cards;
-  const key = state.lens === "trade" ? isSpare : isChase, ord = state.lens === "trade" ? spareOrder : chaseOrder;
-  const lead = lifted ? g.base.filter(key).sort(ord) : [];
+  const lead = lifted ? g.base.filter(isChase).sort(chaseOrder) : [];
   g.lead = lead;
-  g.cards = lead.length ? [...lead, ...g.base.filter((c) => !key(c))] : g.base;
+  g.cards = lead.length ? [...lead, ...g.base.filter((c) => !isChase(c))] : g.base;
   g.cards.forEach((c, k) => { c.k = k; c.lift = 0; });
   for (const c of lead) c.lift = 1;
 }
@@ -146,8 +145,6 @@ function liftedLayout() {
   const R = { x: 8, y: topPad(), w: vw - 16 };
   let y = R.y + shelfLayout(R);
   const live = groups.filter((g) => !g.done && g.lead.length), folded = groups.filter((g) => !g.done && !g.lead.length);
-  COVER.m = null;
-  if (state.lens === "trade") { y += coverLayout({ x: R.x, y, w: R.w }); y += stripLayout({ x: R.x, y, w: R.w }); } else strip = null; // the trade binder's cover, then the traders
   // On a wide screen two live panels sit side by side; on a phone they stack.
   const across = R.w >= 900 ? 2 : 1, pw = R.w / across;
   for (let i = 0; i < live.length; i += across) {
@@ -161,13 +158,15 @@ function liftedLayout() {
   mScroll = clamp(mScroll, 0, mMax);
   for (const g of groups) { if (g.done) continue; if (g.lead.length) packLifted(g); else packFolded(g); }
 }
+let wallVer = 0; // bumps whenever the wall takes a new shape (the map's picture of it is drawn again)
 function layoutAll() {
-  lifted = state.lens === "chase" || state.lens === "trade"; liftKey = lifted ? state.lens : null;
+  wallVer++;
+  lifted = state.lens === "chase"; liftKey = lifted ? state.lens : null;
   for (const g of groups) { orderGroup(g); g.done = mode === "set" && isPut(g); }
   groups.forEach(binderLayout);
   const keep = mScroll;
   if (lifted) { newPanel = null; liftedLayout(); } else mosaicLayout();
-  if (room.on) { if (!roomHas()) { endRoom(); return; } if (room.fan && !inCase(room.fan)) room.fan = null; mScroll = keep; strip = null; roomLayout(); }
+  if (room.on) { if (room.fan && !inCase(room.fan)) room.fan = null; mScroll = keep; roomLayout(); } // the Medal room opens empty too: it says how a trophy comes
   if (bnd.on) { bnd.L = tbGeom(bnd.show); bnd.vi = clamp(bnd.vi, 0, tbViews() - 1); } // the binder fits the new screen
 }
 

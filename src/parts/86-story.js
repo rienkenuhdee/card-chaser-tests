@@ -4,7 +4,7 @@
 // the day you got it, and the date ticks along the bottom over the collection's growth curve. The moments land as they
 // happened, each holding the clock for a beat: your first card, your biggest day, your first spare, the hundredth
 // Pokémon, a set finishing, your first trophy and the first lucky one. Every other trophy drops in on its date without
-// stopping the clock (its panel says its name in gold, the tally counts up, the door appears with the first one).
+// stopping the clock (its panel says its name in gold, the tally counts up, the Medal room's count follows).
 // The wall follows where cards are landing, gently, and is home at the top before today; then the import's summary
 // comes up (87-arrival.js). About 15 seconds.
 //
@@ -195,12 +195,12 @@ function stBloom(S, c, now) {
   S.cards++;
   if (c.m && groups[c.g]?.cards.includes(c)) { S.acc += c.m.y + c.m.h / 2; S.accN++; }
 }
-// A trophy comes true: back in the store (so the door and its count follow), its name in gold on its panel.
+// A trophy comes true: back in the store (so the Medal room and its count follow), its name in gold on its panel.
 function stLand(S, m, now) {
   const had = medalCount();
   if (S.held[m.t.id]) { mdStore[m.t.id] = S.held[m.t.id]; delete S.held[m.t.id]; }
   mdVer++; S.landed.push(m.t);
-  if (!had && !state.trans) layoutAll(); // the door appears with the first trophy
+  if (!had && !state.trans) layoutAll(); // the first trophy changes the wall's shape (a finished set leaves it)
   const g = m.t.open ? mdGroupOf(m.t.open) : null;
   if (g && !reduced) g.beat = { t0: now, text: m.t.name, col: theme.gold };
   stMed.innerHTML = medalSvg(m.t); stMed.classList.remove("pop"); void stMed.offsetWidth; stMed.classList.add("pop");

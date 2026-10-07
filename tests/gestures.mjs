@@ -43,7 +43,8 @@ for (const dpr of [1, 2]) {
   R.push(["a cancelled touch leaves no ghost finger", (await st()).my !== g0 && (await st()).view === "mosaic"]);
   g = await G(); await t.tap(g.x, g.y); await wait(200); await t.drag(195, 650, 300, 120); await wait(900);
   R.push(["a touch during the opening takes over", (await st()).view === "set" && (await st()).cy > -40]);
-  // The trophy room: a set finished two days ago sits behind the door at the end of the wall.
+  // The trophy room (round 21: the Medal room on the map, its only way in; the door at the end of the wall is gone).
+  // A set finished two days ago sits on its shelves. Pinch the wall closed for the map, tap Medal.
   await p.evaluate(() => {
     const g = __w.groups.filter((x) => x.set).sort((a, b) => a.base.length - b.base.length)[0], at = Date.now() - 2 * 86400e3, owned = {};
     for (const c of g.base) owned[c.id] = { on: true, at };
@@ -52,22 +53,27 @@ for (const dpr of [1, 2]) {
   });
   await p.reload({ waitUntil: "load" }); await wait(900);
   const u = await installTouch(p);
-  const rm = () => p.evaluate(() => ({ on: __w.room.on, q: __w.room.q, view: __w.view, my: Math.round(__w.mScroll) }));
-  const d = await p.evaluate(() => __w.trophyCase); R.push(["a trophy past its day sits behind the door", Boolean(d)]);
+  const rm = () => p.evaluate(() => ({ on: __w.room.on, q: __w.room.q, view: __w.view, my: Math.round(__w.mScroll), at: __w.rooms.at, map: __w.rooms.map }));
+  const roomCard = (id) => p.evaluate((id) => { const r = __w.mapLayout().r[id]; return { x: r.x + r.w / 2, y: r.y + r.h / 2 }; }, id);
+  const d = await p.evaluate(() => __w.caseList().length === 1 && !__w.groupsNow.some((g) => g.done && g.m && g.m.h > 0 && __w.caseList().includes(g)));
+  R.push(["a trophy past its day is in the Medal room, not on the wall", d]);
   if (d) {
-    const toDoor = async () => { for (let k = 0; k < 12; k++) { const r = await p.evaluate(() => ({ y: __w.trophyCase.y - __w.mScroll })); if (r.y > 120 && r.y < 640) return r; await u.drag(200, 650, 250, 120); await wait(250); } return p.evaluate(() => ({ y: __w.trophyCase.y - __w.mScroll })); };
-    let r = await toDoor(); const wallAt = (await rm()).my;
-    await u.tap(195, r.y + 32); await wait(900); R.push(["tapping the door opens the room", (await rm()).on && (await rm()).q === 1]);
+    for (let k = 0; k < 2; k++) { await u.drag(200, 650, 250, 120); await wait(250); } // somewhere down the wall, to come back to
+    const wallAt = (await rm()).my;
+    await u.pinch(195, 450, 220, 120, 90); await wait(900); R.push(["pinching the wall closed goes up to the map", (await rm()).map && !(await rm()).on]);
+    let c = await roomCard("medal"); await u.tap(c.x, c.y); await wait(900); R.push(["tapping the Medal card opens the trophy room", (await rm()).on && (await rm()).q === 1 && (await rm()).at === "medal" && !(await rm()).map]);
     // Something in the room (a rect in room coordinates) dragged into view, then where it is on screen.
     const inView = async (get) => { for (let k = 0; k < 10; k++) { const r = await get(); if (!r) return null; const y = r.y - (await rm()).my; if (y > 110 && y < 640) return { x: r.x, y }; const d = Math.max(-440, Math.min(440, y - 380)); await u.drag(200, d > 0 ? 680 : 220, (d > 0 ? 680 : 220) - d, Math.max(160, Math.abs(d) / 0.15)); await wait(300); } return null; }; // slow enough not to fling
     const pl = await inView(() => p.evaluate(() => { const g = __w.caseList()[0]; return { x: g.m.x + g.m.w / 2, y: g.m.y + 40 }; }));
     if (pl) await u.tap(pl.x, pl.y); await wait(1000); R.push(["a plaque in the room opens its album", (await rm()).view === "set"]);
     await p.click("#back"); await wait(900); R.push(["back from the album returns to the room", (await rm()).on && (await rm()).view === "mosaic"]);
-    await u.pinch(195, 450, 220, 120, 90); await wait(900); R.push(["a quick pinch in the room closes it where the wall was", !(await rm()).on && Math.abs((await rm()).my - wallAt) < 4]);
-    r = await toDoor(); await u.pinch(195, r.y + 32, 40, 120, 160); await wait(900); R.push(["a spread on the door opens the room", (await rm()).on]);
-    await p.click("#back"); await wait(900); R.push(["back closes the room", !(await rm()).on]);
-    // The finished set's shelf: its plaque at the head, Binder Complete mounted on it, its other medals hanging beneath.
-    r = await toDoor(); await u.tap(195, r.y + 32); await wait(900);
+    await u.pinch(195, 450, 220, 120, 90); await wait(900); R.push(["a quick pinch in the room goes up to the map", !(await rm()).on && (await rm()).map]);
+    c = await roomCard("chase"); await u.tap(c.x, c.y); await wait(900); R.push(["and Chase comes back where the wall was", (await rm()).at === "chase" && !(await rm()).map && Math.abs((await rm()).my - wallAt) < 4]);
+    await p.click("#rooms"); await wait(900); R.push(["the rooms button goes up to the map", (await rm()).map]);
+    c = await roomCard("medal"); await u.pinch(c.x, c.y, 40, 120, 160); await wait(900); R.push(["a spread on the Medal card opens the room", (await rm()).on && !(await rm()).map]);
+    await u.drag(300, 500, 510, 120, -190); await wait(900); R.push(["a sideways flick in the room goes to the next room along (Source)", !(await rm()).on && (await rm()).at === "source"]);
+    await u.pageDrag(80, 500, 505, 120, 200); await wait(900); R.push(["and a flick back on its page returns to the room", (await rm()).on && (await rm()).at === "medal"]);
+    // The finished set's shelf (the room is still up): its plaque at the head, Binder Complete mounted on it, its other medals hanging beneath.
     const shelf = await p.evaluate(() => {
       const g = __w.caseList()[0], sec = __w.mdSecOf(g), L = __w.roomL, rows = L.items.filter((it) => it.type === "row" && !it.stand && it.cells.every((c) => c.t.sec === sec));
       return { plaque: __w.room.plaques.includes(g), ride: Boolean(g.ride?.complete && g.ride.sec === sec), first: rows[0] ? rows[0].y - (g.m.y + g.m.h) : null, n: rows.reduce((a, it) => a + it.cells.length, 0), head: L.items.some((it) => it.type === "head" && it.text === g.name) };
@@ -115,7 +121,8 @@ for (const dpr of [1, 2]) {
   const minted = await p.evaluate((id) => ({ got: Boolean(__w.medals[id]), mint: __w.mintQ.length + __w.mintsOn.length }), half);
   R.push(["marking the card that tips a medal records it and mints it on the bar", minted.got && minted.mint > 0]);
   await wait(3500); await p.click("#m-done"); await wait(300);
-  // The trade binder: an imported collection with spare copies, the Trade lens up, the binder's cover at its top.
+  // The trade binder (round 21: in the Trade room, its only home, reached here with a sideways flick from the wall, the
+  // room next to Chase): an imported collection with spare copies, the binder's cover at the top of the room.
   await p.evaluate(() => {
     const at = Date.now() - 30 * 86400e3, owned = {}, copies = {};
     for (const c of __w.cards) if (c.own0) { owned[c.id] = { on: true, at }; if (c.i % 4 === 0) copies[c.id] = { n: c.i % 3 ? 2 : 3, got: at }; }
@@ -126,16 +133,17 @@ for (const dpr of [1, 2]) {
   await p.reload({ waitUntil: "load" }); await wait(900);
   const v = await installTouch(p);
   const bd = () => p.evaluate(() => ({ on: __w.bnd.on, q: __w.bnd.q, vi: __w.bnd.vi, show: __w.bnd.show, n: __w.tbList().length }));
-  const cover = () => p.evaluate(() => { const m = __w.COVER.m; return m ? { x: m.x + m.w / 2, y: m.y + m.h / 2 - __w.mScroll } : null; });
-  await p.click('[data-lens="trade"]'); await wait(1600);
-  let cv = await cover(); R.push(["the Trade lens shows the binder's cover", Boolean(cv) && cv.y > 60 && cv.y < 300 && (await bd()).n > 18]);
-  const openIt = async () => { cv = await cover(); await v.tap(cv.x, cv.y); await wait(900); };
+  const cover = () => p.evaluate(() => { const el = document.getElementById("pt-cover"), r = el.getBoundingClientRect(); return !el.closest(".rpage").hidden && r.height ? { x: r.left + r.width / 2, y: r.top + r.height / 2, text: el.textContent } : null; });
+  await v.drag(300, 450, 460, 120, -200); await wait(900);
+  R.push(["a sideways flick on the wall goes to the next room along, Trade", await p.evaluate(() => __w.rooms.at === "trade" && !document.getElementById("pg-trade").hidden && __w.view === "mosaic")]);
+  let cv = await cover(); R.push(["the Trade room shows the binder's cover", Boolean(cv) && cv.y > 60 && cv.y < 400 && /cards on/.test(cv.text) && (await bd()).n > 18]);
+  const openIt = async () => { await p.click("#pt-cover"); await wait(900); };
   await openIt(); R.push(["tapping the cover opens the binder", (await bd()).on && (await bd()).q === 1]);
   await v.drag(300, 450, 450, 120, -200); await wait(700); R.push(["a sideways flick turns the page", (await bd()).vi === 1]);
   await v.drag(100, 450, 450, 120, 200); await wait(700); R.push(["a flick the other way turns it back", (await bd()).vi === 0]);
-  await p.click("#back"); await wait(900); R.push(["back closes the binder", !(await bd()).on]);
+  await p.click("#back"); await wait(900); R.push(["back closes the binder to the Trade room", !(await bd()).on && (await p.evaluate(() => __w.rooms.at === "trade" && !__w.rooms.map))]);
   await openIt(); await v.pinch(195, 450, 220, 195, 320, 250); await wait(800); R.push(["a slow small pinch stays in the binder", (await bd()).on]);
-  await v.pinch(195, 450, 220, 120, 90); await wait(900); R.push(["a quick pinch closes the binder", !(await bd()).on]);
+  await v.pinch(195, 450, 220, 120, 90); await wait(900); R.push(["a quick pinch closes the binder (to the room, not the map)", !(await bd()).on && (await p.evaluate(() => __w.rooms.at === "trade" && !__w.rooms.map))]);
   // Show mode: the other person taps two pockets; Done, then who it was, and the table opens with them on your side.
   const pickTwo = async () => {
     await p.click("#bb-show"); await wait(700);
@@ -158,6 +166,56 @@ for (const dpr of [1, 2]) {
   await p.evaluate(() => document.querySelector("#toast .toast-btn").click()); await wait(300);
   R.push(["undo gives them back exactly", (await snap(ids)) === before]);
   await p.keyboard.press("Escape"); await wait(900); R.push(["escape closes the binder", !(await bd()).on]);
+  // The rooms (round 21): an imported collection chasing every card it's missing. The map one pinch above the wall,
+  // the Feed's listings (the wall's deals, seeded, several for some cards), a listing's own sheet, the Chase lens's
+  // want list, a flick between rooms, and the trade checker.
+  await p.evaluate(() => {
+    const at = Date.now() - 30 * 86400e3, owned = {}, chase = {}, copies = {};
+    for (const c of __w.cards) { if (c.own0) { owned[c.id] = { on: true, at }; if (c.i % 4 === 0) copies[c.id] = { n: 2, got: at }; } else chase[c.id] = true; }
+    localStorage.clear();
+    localStorage.setItem("wall-owned", JSON.stringify(owned)); localStorage.setItem("wall-chase", JSON.stringify(chase)); localStorage.setItem("wall-copies", JSON.stringify(copies));
+    localStorage.setItem("wall-imported", "TCGplayer"); localStorage.setItem("wall-welcomed", "1"); localStorage.setItem("wall-map-seen", "1");
+  });
+  await p.reload({ waitUntil: "load" }); await wait(900);
+  const f = await installTouch(p);
+  const where = () => p.evaluate(() => ({ at: __w.rooms.at, map: __w.rooms.map, trans: __w.state.trans?.kind || null, view: __w.view, pages: [...document.querySelectorAll(".rpage")].filter((e) => !e.hidden).map((e) => e.id), focus: __w.state.focus?.id || null, pop: Boolean(__w.state.focus) }));
+  const mcard = (id) => p.evaluate((id) => { const r = __w.mapLayout().r[id]; return { x: r.x + r.w / 2, y: r.y + r.h / 2 }; }, id);
+  await f.pinch(195, 450, 220, 195, 320, 250); await wait(800); R.push(["a slow small pinch on the wall stays on the wall", !(await where()).map && (await where()).at === "chase"]);
+  await f.pinch(195, 450, 220, 120, 90); await wait(900); R.push(["a quick pinch on the wall goes up to the map", (await where()).map]);
+  let mc = await mcard("feed"); await f.pinch(mc.x, mc.y, 60, 74, 320, 250); await wait(800); R.push(["a slow small spread on a room stays on the map", (await where()).map]);
+  await f.pinch(mc.x, mc.y, 40, 140, 140); await wait(900); R.push(["a spread on the Feed card enters the Feed", (await where()).at === "feed" && !(await where()).map && (await where()).pages.includes("pg-feed")]);
+  const feed = await p.evaluate(() => { const L = __w.feedList(), rows = [...document.querySelectorAll("#pf-list [data-l]")], per = {}; for (const x of L) per[x.c.id] = (per[x.c.id] || 0) + 1; return { n: L.length, rows: rows.length, seeded: L.filter((x) => x.c.deal0 && !x.c.dealAt).length, multi: Object.values(per).some((k) => k > 1), news: document.querySelectorAll("#pf-list .fd-new").length, sorted: L.every((x, i) => !i || L[i - 1].seen >= x.seen) }; });
+  R.push([`the Feed lists the seeded listings on load (${feed.rows} rows, ${feed.news} new)`, feed.n > 10 && feed.rows === feed.n && feed.seeded > 10 && feed.multi && feed.news > 0 && feed.sorted]);
+  const row = await p.evaluate(() => { const b = document.querySelectorAll("#pf-list [data-l]")[1], r = b.getBoundingClientRect(); return { id: b.dataset.l, x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+  await p.mouse.click(row.x, row.y); await wait(600);
+  const sheet = await p.evaluate(() => ({ open: document.getElementById("lsheet").open, id: __w.lsOpen?.id, text: document.getElementById("lsheet").textContent }));
+  R.push(["tapping a listing opens its listing sheet, not the card", sheet.open && sheet.id === row.id && /How we worked out the market price/.test(sheet.text) && /What moved the score/.test(sheet.text) && /Open on /.test(sheet.text) && !(await where()).pop && (await where()).view === "mosaic" && (await where()).at === "feed"]);
+  await p.click("[data-mine]"); await wait(2400);
+  const mine = await where(), cid = row.id.split("~")[0];
+  R.push(["the listing's line to your card lands on it in its set", mine.at === "chase" && mine.view === "set" && mine.focus === cid && !(await p.evaluate(() => document.getElementById("lsheet").open))]);
+  await p.click("#back"); await wait(900); if ((await where()).view === "set") { await p.click("#back"); await wait(900); }
+  await p.click('[data-lens="chase"]'); await wait(1600);
+  const lens = await p.evaluate(() => { const lead = new Set(__w.groupsNow.flatMap((g) => (g.done ? [] : (g.lead || []).map((c) => c.base || c)))), chased = __w.cards.filter(__w.isChase).length; return { lead: lead.size, chased, toast: document.getElementById("toast").textContent }; });
+  R.push(["the Chase lens still lifts the want list, every card you chase", lens.lead > 0 && lens.lead === lens.chased && /Your chase list/.test(lens.toast) && /Feed/.test(lens.toast)]);
+  await p.click('[data-lens="have"]'); await wait(1600);
+  await f.drag(100, 450, 460, 120, 200); await wait(900); R.push(["a sideways flick on the wall the other way goes to the Feed", (await where()).at === "feed"]);
+  await f.pageDrag(300, 450, 455, 120, -200); await wait(900); R.push(["a sideways flick on the Feed's page comes back to Chase", (await where()).at === "chase" && (await where()).pages.length === 0]);
+  const b0 = await p.evaluate(() => __w.feedNewCount()); await p.evaluate(() => __w.arrive()); await wait(300);
+  const b1 = await p.evaluate(() => ({ n: __w.feedNewCount(), badge: document.querySelector("#rooms .rbadge").textContent, first: __w.feedList()[0] }));
+  R.push(["a deal arriving lands on top of the Feed and the rooms button counts it", b1.n === b0 + 1 && b1.badge === String(b1.n)]);
+  await f.drag(300, 450, 460, 120, -200); await wait(900);
+  // The trade checker: one of your spares for a card you chase, priced to match, is fair; cash on your side makes it uneven.
+  const tc = () => p.evaluate(() => document.querySelector("#tc .verdict b")?.textContent || "");
+  await p.click('#tc [data-add="give"]'); await wait(400); await p.click("#tca-list [data-n]"); await wait(200); await p.click("#tc-add [data-tca-close]"); await wait(300);
+  await p.click('#tc [data-add="get"]'); await wait(400); await p.type("#tca-q", "charizard"); await wait(200); await p.click("#tca-list [data-n]"); await wait(200); await p.click("#tc-add [data-tca-close]"); await wait(300);
+  const give = await p.evaluate(() => __w.tcTotal("give"));
+  await p.click('#tc [data-side="get"] [data-price]'); await wait(200);
+  await p.evaluate((v) => { const i = document.querySelector("#tc [data-price-in]"); i.value = v; }, (give * 1.02).toFixed(2)); await p.keyboard.press("Enter"); await wait(300);
+  const fair = await tc();
+  await p.click('#tc [data-add="give"]'); await wait(400); await p.type("#tca-amt", String(Math.round(give * 3))); await p.click("#tca-cash"); await wait(200); await p.click("#tc-add [data-tca-close]"); await wait(300);
+  const uneven = await tc();
+  R.push([`the trade checker says Fair, then Uneven with cash added (${fair}; ${uneven})`, fair === "Fair trade" && uneven === "Uneven, in their favor"]);
+  await p.click("#tc [data-clear]"); await wait(200);
   // The Complete Dex: added from the New chase sheet, a panel on the wall with one slot for each of the 1,025 Pokémon.
   await p.evaluate(() => {
     const at = Date.now() - 30 * 86400e3, owned = {};

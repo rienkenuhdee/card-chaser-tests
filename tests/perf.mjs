@@ -14,9 +14,16 @@ const t = await p.evaluate(async () => {
   __w.state.trans = { kind: "open", g: __w.groups[1], q: 0.5, cam: { s: 1.3, x: -9, y: -58 }, done: () => {} };
   const pinch = await time();
   __w.state.trans = null;
-  return { mosaic, pinch };
+  // Round 21: the wall held half way up to the map (drawn live into its card, the other rooms coming in around it).
+  let map = null;
+  if (__w.beginMap) {
+    const T = __w.beginMap("chase", "out"); T.q = 0.5;
+    map = await time();
+    T.anim = { from: 0.5, to: 0, t0: performance.now(), dur: 1 }; await new Promise((r) => setTimeout(r, 200));
+  }
+  return { mosaic, pinch, map };
 });
-console.log(`mosaic ${t.mosaic.toFixed(1)}ms per frame, held pinch ${t.pinch.toFixed(1)}ms per frame`);
-const bad = report([["the mosaic draws within 34ms", t.mosaic < 34], ["a held pinch draws within 34ms", t.pinch < 34]]);
+console.log(`mosaic ${t.mosaic.toFixed(1)}ms per frame, held pinch ${t.pinch.toFixed(1)}ms per frame${t.map != null ? `, held pinch up to the map ${t.map.toFixed(1)}ms per frame` : ""}`);
+const bad = report([["the mosaic draws within 34ms", t.mosaic < 34], ["a held pinch draws within 34ms", t.pinch < 34], ...(t.map != null ? [["a held pinch up to the map draws within 34ms", t.map < 34]] : [])]);
 await browser.close();
 process.exit(bad ? 1 : 0);

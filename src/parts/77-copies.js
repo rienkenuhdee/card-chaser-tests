@@ -2,7 +2,7 @@
 // The way every inventory app does it. A card you own has a count (1 unless you say otherwise). The card panel shows
 // a stepper beside In your collection ("You have 2", − and +), and every copy past the first is a spare, up for
 // trade, unless you choose Keep both. The import brings realistic doubles, seeded by card id and weighted toward
-// commons and uncommons, so the Trade lens is full from the first open. A spare finds someone in plain words: the
+// commons and uncommons, so the trade binder is full from the first open. A spare finds someone in plain words: the
 // card panel and the spare tile say who wants it, with Trade with Maya one tap away. A done trade takes one copy, not the card.
 //
 // The base keeps spares as a flag map (`spares`, read by the const isSpare everywhere). Here that map becomes a view
@@ -40,7 +40,7 @@ spares = new Proxy({}, {
 });
 if (fresh) persistCopies();
 const people = (list) => (list.length <= 1 ? list.map((t) => t.name).join("") : `${list.slice(0, -1).map((t) => t.name).join(", ")} and ${list[list.length - 1].name}`);
-// The layout of the Trade lens follows the spares; while a card is up close or Mark is on, it waits for you to finish.
+// The wall follows the spares; while a card is up close or Mark is on, it waits for you to finish.
 let layoutDirty = false;
 function relayoutSoon() {
   if (!lifted) return;
@@ -78,23 +78,14 @@ pMore.onclick = () => { const c = state.focus; if (!c?.owned) return; setN(c, nO
 pLess.onclick = () => { const c = state.focus; if (!c?.owned || nOf(c) <= 1) return; setN(c, nOf(c) - 1); copiesChanged(c); };
 pKeep.onclick = () => { const c = state.focus; if (!c?.owned || nOf(c) <= 1) return; setN(c, nOf(c), !keptOf(c)); copiesChanged(c); };
 pTrade.onclick = () => { const t = TRADERS.find((x) => x.id === pTrade.dataset.t); if (t) tradeWith(t); };
-// Trade with Maya, from the card: out of the set, into the Trade lens, then the table (the way Open does from a toast).
+// Trade with Maya, from the card: to the Trade room (the table's home), then how to trade, then the table.
 function tradeWith(t) {
   if (document.body.classList.contains("listmode") || wel.on || tbl.on) return;
-  closePop(true); if (state.focus) unfocus();
-  let tries = 0, step = 0;
-  const go = () => {
-    if (tbl.on || tries++ > 60) return;
-    if (state.trans || shuffle || fly) { setTimeout(go, 120); return; }
-    if (step === 0) { step = 1; if (view === "set") { exitToMosaic(); setTimeout(go, 120); return; } }
-    if (step === 1) { step = 2; if (state.lens !== "trade") { setLens("trade"); setTimeout(go, 120); return; } }
-    if (view === "mosaic") startTrade(t, strip?.chips.find((x) => x.t === t) || null);
-  };
-  go();
+  goRoom("trade", { then: () => startTrade(t, null) });
 }
 function flashTile(c) { const b = c.base || c, now = performance.now(); for (const x of [b, ...twinsOf(b)]) x.flash = { t0: now, gold: true }; live.until = Math.max(live.until, now + 1200); }
 // The panel's own Chase it stays for cards you don't have; on a card you own the stepper takes its place.
-// Back from the card: the Trade lens takes the shape the counts left it in.
+// Back from the card: the wall takes the shape the counts left it in.
 
 // ----- Mark: hold a card you have to add a copy, and keep the finger down to sweep along the row -----
 const copySession = new Map(); // card -> its copies record when the session first touched it
@@ -112,9 +103,7 @@ function revertCopies(list) {
 // ----- a done trade takes one copy, not the card -----
 const copyTradedText = (get, give, still, t) => `${names(get)} ${get.length === 1 ? "is" : "are"} yours. ${names(give)} went to ${t.name}.${still.length ? ` You still have ${still.length === give.length && give.length > 1 ? "one of each" : names(still)}.` : ""}`;
 
-// ----- the spare tile in the Trade lens: the count on the card, and who wants it -----
-
-// ----- the count on the wall: ×2 on a tile you can read; in a spare tile, the copies stacked behind the card -----
+// ----- the count on the wall: ×2 on a tile you can read -----
 const pillW = new Map();
 function countPill(n, spare, x, y, size) {
   if (n < 2) return;
@@ -128,15 +117,6 @@ function countPill(n, spare, x, y, size) {
   ctx.fillText(txt, x + w / 2, y + h / 2 + 0.5);
   ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; ctx.globalAlpha = a0;
 }
-const stackO = (w) => clamp(w * 0.085, 1, 6); // how far each copy sits behind the one in front
-const edgeCol = new Map();
-function miniStack(c, x, y, w, h, gold) {
-  const k = Math.min(2, nOf(c) - 1); if (k <= 0) return;
-  const o = stackO(w), rad = w * 0.045, key = `${typeColor(c)}|${theme.dark ? 1 : 0}`;
-  let col = edgeCol.get(key); if (!col) { col = shade(typeColor(c), theme.dark ? -0.42 : -0.3); edgeCol.set(key, col); }
-  ctx.lineWidth = 1; ctx.strokeStyle = theme.bg;
-  for (let i = k; i >= 1; i--) { rr(x + o * i, y + o * i, w, h, rad); ctx.fillStyle = gold && i === 1 ? theme.gold : col; ctx.fill(); ctx.stroke(); }
-}
 function copyTile(c, r, a) {
   const b = c.base || c, n = nOf(b); if (n < 2 || r.w < 5) return;
   const spare = !keptOf(b);
@@ -147,7 +127,7 @@ function copyTile(c, r, a) {
   countPill(n, spare, r.x + inset + (marked ? clamp(r.w * 0.11, 5, 12) * 2 + 4 : 0), r.y + inset, size);
 }
 function drawCopies() {
-  if (!(state.lens === "have" || state.lens === "trade") || state.time || state.trans || shuffle || room.on || tbl.on || bnd.on || preview) return;
+  if (state.lens !== "have" || state.time || state.trans || shuffle || room.on || tbl.on || bnd.on || preview) return;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   const dim = 1 - state.dimAll * 0.72;
   if (view === "mosaic") {
@@ -179,14 +159,8 @@ function drawCopies() {
 }
 // Drawn with the other overlays, after the wall (the welcome's set picks go on top).
 
-// ----- the Trade lens: what the spares add up to -----
+// ----- what the spares add up to -----
 const spareCount = () => cards.reduce((a, c) => a + sparesOf(c), 0);
-function tradeToast() {
-  const sp = cards.filter(isSpare), n = sp.reduce((a, c) => a + sparesOf(c), 0), w = sp.filter((c) => wantedBy(c).length).length;
-  if (sp.length) toast(`${n} spare${n === 1 ? "" : "s"} to trade${w ? `, ${w} of them wanted` : ". Nobody wants them yet"}`);
-  else if (cards.some((c) => c.owned)) toast("No spares yet");
-  else toast("No spares yet. Mark the cards you have first.");
-}
 // ----- the list: counts in every row -----
 function lstateOf(c) {
   if (!c.owned) return isChase(c) ? `Chasing, up to ${money(capOf(c))}` : "Need it";

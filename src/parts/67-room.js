@@ -1,10 +1,9 @@
-// ---------- the trophy room (round 16) ----------
-// After its day on the shelf a trophy leaves the wall. The case at the end of the wall is one row, a door:
-// "Trophy room", how many, what they're worth, and every plaque's engraving as a thin strip. Tap it and the screen
-// becomes the room, its own level like the trade table: the wall slides off to the left and the room slides in, dark
-// wood shelves with the plaques lit, newest at the top, rows you scroll; Back (or a pinch) returns to the wall where
-// it was. Tap a plaque and it comes forward as its sealed album opens behind it; Back from the album returns to the
-// room. The new idea: every plaque carries its worth over the last year as a thin line (made up: each card's price
+// ---------- the trophy room (round 16), the Medal room (round 21) ----------
+// After its day on the shelf a trophy leaves the wall for the trophy room. Since round 21 the room is the Medal room on
+// the map (90-rooms.js): its only way in, so the door that used to end the wall is gone. Dark wood shelves with the
+// plaques lit, newest at the top, rows you scroll; a pinch (or the rooms button) goes up to the map, a sideways flick
+// to the next room. Tap a plaque and it comes forward as its sealed album opens behind it; Back from the album returns
+// to the room. The new idea: every plaque carries its worth over the last year as a thin line (made up: each card's price
 // walked back month by month with a seeded drift, summed, cached per plaque), and the room's header sums the whole
 // case with the same line, so the room reads as what finishing has been worth. A set's master and grand set
 // trophies stack behind the set's plaque; tap the stack and they fan out beneath it.
@@ -14,12 +13,10 @@
 // to come back to. The plaques are laid out in mosaic coordinates, so a tap, a spread, the open transition, the
 // press and the search rings all work on them unchanged.
 
-const DOOR_H = 64, ROW_H = 118, SUB_H = 66, SHELF_H = 12, MONTHS = 12;
-const room = { on: false, q: 0, anim: null, closing: false, wallScroll: 0, pinch: null, fan: null, slots: [], L: null, sum: null, plaques: [] };
-const DOOR = { door: true, name: "Trophy room", cards: [], lead: [], m: null };
+const ROW_H = 118, SUB_H = 66, SHELF_H = 12, MONTHS = 12;
+const room = { on: false, q: 0, anim: null, closing: false, wallScroll: 0, fan: null, L: null, sum: null, plaques: [] };
 const inCase = (g) => Boolean(g.done && !onShelf(g));
 const caseList = () => groups.filter(inCase).sort(byFinish);
-const roomHas = () => mode === "set" && (caseList().length > 0 || medalCount() > 0); // a plaque or a medal opens the door
 const inR = (r, x, y) => Boolean(r) && x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
 const lerpRect = (a, b, k) => ({ x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k, w: a.w + (b.w - a.w) * k, h: a.h + (b.h - a.h) * k });
 
@@ -76,17 +73,11 @@ function subInfo(g, s) {
 function fanRows(g) { g.subs ||= {}; return stackOf(g).map((s) => (g.subs[s] ||= { pick: { g, scope: s }, lead: [], cards: [] })); }
 
 // ----- layout -----
-// The door on the wall: one row at the end, the engravings along its bottom. The trophies' tiles live in the strip,
-// so a trophy coming down from the shelf shrinks into it and a search ring still finds a card.
+// The trophies past their day are in the Medal room. On the wall they keep a place of no size at its end, so a trophy
+// leaving the shelf shrinks away there (and a search ring has somewhere to be).
 function caseLayout(R, y) {
-  const dn = caseList(), md = mode === "set" ? medalCount() : 0;
-  room.slots = [];
-  if (!dn.length && !md) { trophyCase = null; DOOR.m = null; return 0; }
-  const H = (dn.length ? DOOR_H : 44) + (md ? 30 : 0); // the medals stand in a row above the engravings
-  trophyCase = { x: R.x, y, w: R.w, h: H, minis: md > 0 }; DOOR.m = trophyCase; if (dn.length) caseSeries();
-  const n = dn.length, gap = 5, x0 = R.x + PG + 12, w = R.w - PG * 2 - 24, sw = (w - gap * (n - 1)) / Math.max(1, n), ey = y + H - PG - 17;
-  dn.forEach((g, i) => { const m = { x: x0 + i * (sw + gap), y: ey, w: sw, h: ENGR_H }; room.slots.push({ g, ...m }); g.plq = plaqueInfo(g); if (!room.on) { g.m = m; packStrip(g, m); } });
-  return H;
+  for (const g of caseList()) { g.plq = plaqueInfo(g); if (!room.on) { const m = { x: R.x + R.w / 2, y, w: 0, h: 0 }; g.m = m; packStrip(g, m); } }
+  return 0;
 }
 function packStrip(g, m) { const n = g.base.length, cw = m.w / n; g.base.forEach((c, i) => { c.m = { x: m.x + i * cw, y: m.y, w: cw, h: m.h }; }); }
 // The room: the header, then production's Medal tab (68-medals.js): the Showcase, Next up, the filters and a shelf per
@@ -107,23 +98,26 @@ function packRoomPlaque(g) {
 }
 
 // ----- opening and closing -----
-function openRoom() {
-  if (room.on || state.trans || tbl.on || bnd.on || view !== "mosaic" || !roomHas()) return;
-  hideCaption(); cancelPress(); closePop(true); tick(8);
-  room.on = true; room.closing = false; room.wallScroll = mScroll; room.fan = null; room.pinch = null; mScroll = 0;
-  layoutAll();
-  document.body.classList.add("inroom"); setChrome();
-  room.q = reduced ? 1 : 0; room.anim = reduced ? null : { from: 0, to: 1, t0: performance.now(), dur: 520 };
-  kick();
+// The Medal room, from wherever you are (a toast, the import's summary, the celebration card).
+function openRoom() { goRoom("medal"); }
+// The room up at once, with no slide of its own: it is about to come in as the Medal room (from its card on the map,
+// or sideways from the next room).
+function roomOn() {
+  if (room.on) return;
+  Object.assign(room, { on: true, closing: false, wallScroll: mScroll, fan: null, anim: null, q: 1 });
+  mScroll = 0; layoutAll();
+  document.body.classList.add("inroom");
 }
+// Out of the room to the wall: the wall slides back in (Escape and the rooms button go up to the map instead).
 function closeRoom(instant = false) {
   if (!room.on || room.closing) return;
-  room.closing = true; room.fan = null; room.pinch = null;
+  room.closing = true; room.fan = null;
   if (instant || reduced) { room.q = 0; room.anim = null; endRoom(); return; }
   room.anim = { from: room.q, to: 0, t0: performance.now(), dur: 160 + 320 * room.q }; tick(6); kick();
 }
 function endRoom() {
-  room.on = false; room.closing = false; room.anim = null; room.q = 0; room.pinch = null; room.fan = null;
+  room.on = false; room.closing = false; room.anim = null; room.q = 0; room.fan = null;
+  if (rooms.at === "medal") rooms.at = "chase"; // leaving the room lands on the wall
   mScroll = room.wallScroll; layoutAll();
   document.body.classList.remove("inroom"); setChrome(); kick();
 }
@@ -147,10 +141,10 @@ function openScope(g, s) {
   setScope(g.set, s); // rearranges and relays the room: g is still a trophy, now keyed on this view
   if (inCase(g)) enterGroup(g); else { layoutAll(); kick(); }
 }
-// Escape or Backspace closes the room.
+// Escape or Backspace goes up to the map.
 document.addEventListener("keydown", (e) => {
-  if (!room.on || view !== "mosaic" || tbl.on || document.activeElement === qIn) return;
-  if (e.key === "Escape" || e.key === "Backspace") { e.preventDefault(); e.stopImmediatePropagation(); closeRoom(); }
+  if (!room.on || view !== "mosaic" || tbl.on || document.activeElement === qIn || document.querySelector("dialog[open]")) return;
+  if (e.key === "Escape" || e.key === "Backspace") { e.preventDefault(); e.stopImmediatePropagation(); toMap(); }
 }, true);
 // The room steps aside for anything that navigates the wall: a lens, a search, the list.
 lensBox.addEventListener("click", () => { if (room.on) closeRoom(true); }, true);
@@ -158,33 +152,6 @@ qIn.addEventListener("input", () => { if (room.on) closeRoom(true); }, true);
 document.getElementById("to-list").addEventListener("click", () => { if (room.on) closeRoom(true); }, true);
 
 // ----- drawing -----
-// The door on the wall.
-function drawDoor(now, alpha) {
-  const t = trophyCase; if (!t || state.trans) return;
-  const m = mr(t); if (m.y > vh || m.y + m.h < 0) return;
-  const x = m.x + PG, y = m.y + PG, w = m.w - PG * 2, h = m.h - PG * 2, plaques = room.slots.length, n = medalCount(), s = plaques ? room.sum || caseSeries() : null;
-  ctx.globalAlpha = alpha;
-  rr(x, y, w, h, 12); ctx.fillStyle = theme.door; ctx.fill();
-  ctx.save(); rr(x, y, w, h, 12); ctx.clip(); ctx.fillStyle = theme["door-hi"]; ctx.fillRect(x, y, w, 1.5); ctx.restore();
-  if (state.press?.g === DOOR) { ctx.lineWidth = 1.5; ctx.strokeStyle = theme.ink; rr(x, y, w, h, 12); ctx.stroke(); }
-  ctx.textBaseline = "alphabetic"; ctx.textAlign = "right"; ctx.fillStyle = theme["door-muted"]; font(600, 13);
-  const stat = `${n} ${n === 1 ? "trophy" : "trophies"}${plaques ? ` · ${plaques} sealed · ${short(s.worth)}` : ""}  ›`;
-  ctx.fillText(stat, x + w - 12, y + 22);
-  const sw = textW(stat);
-  ctx.textAlign = "left"; ctx.fillStyle = theme["door-ink"]; font(800, 15.5, true); ctx.fillText(fitText("Trophy room", w - sw - 32), x + 12, y + 22);
-  if (t.minis) ctx.drawImage(doorMedals(w - 24), x + 12 - PADR, y + 31 - PADR, w - 24 + PADR * 2, 28 + PADR * 2); // the rarest earned, in a row
-  for (const sl of room.slots) { ctx.fillStyle = "rgb(0 0 0 / .35)"; ctx.fillRect(sl.x - 1, sl.y - mScroll - 1, sl.w + 2, sl.h + 2); ctx.drawImage(engravingOf(sl.g, sl.w, sl.h), sl.x, sl.y - mScroll, sl.w, sl.h); }
-  ctx.globalAlpha = 1;
-}
-// The door's row of medals: the rarest earned, small, drawn once and kept.
-const doorRow = {};
-function doorMedals(w) {
-  // During the import's story: the ones landed so far (not the catalog, worked out again with every card).
-  const E = story ? story.landed.slice().sort((a, b) => mdScore(b) - mdScore(a)) : medalList().earned, step = MD_DW + 6, n = Math.min(E.length, Math.floor((w + 6) / step));
-  return cachedImage(doorRow, `${Math.round(w)}|${E.slice(0, n).map((t) => `${t.id}${t.rank}`).join(",")}|${dpr}|${theme["m-surface"]}|${mdVer}`, w, 28, (x) => {
-    for (let i = 0; i < n; i++) drawMedal(x, E[i], MD_DW / 2 + i * step, 1, MD_DW);
-  });
-}
 function drawRoom(now, alpha = 1, except = null) {
   const L = room.L; if (!L) return;
   live.line = null; // a deal landing on the wall flashes there; its line to the lens bar has nowhere to go here

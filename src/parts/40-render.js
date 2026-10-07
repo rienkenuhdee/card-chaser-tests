@@ -64,14 +64,13 @@ function fitText(t, max) {
 const state = { lens: "have", value: false, time: false, q: "", matches: null, focus: null, dimAll: 0, introT0: 0, trans: null, press: null, g: null };
 // Where you are: the mosaic of everything, or inside one group (a set, a region, a price band).
 let view = "mosaic";
-try { const l = localStorage.getItem("wall-lens"); if (["have", "need", "chase", "trade"].includes(l)) state.lens = l; state.value = localStorage.getItem("wall-value") === "1"; } catch { /* default */ }
+try { const l = localStorage.getItem("wall-lens"); if (["have", "need", "chase"].includes(l)) state.lens = l; state.value = localStorage.getItem("wall-value") === "1"; } catch { /* default */ }
 function emphasis(c) {
   if (c.away) return 0; // out on the trade table: its tile is empty
   if (preview) return preview.has(c.base || c) ? (c.owned ? 0.42 : 1) : 0.1; // the New chase form: what it would match
   if (state.matches) return state.matches.has(rootOf(c)) ? 1 : 0.1;
   if (state.lens === "need") return c.owned ? 0.1 : c.ph ? 0.3 : 1; // a Dex pocket your sets can't fill stays quieter
   if (state.lens === "chase") return isChase(c) ? 1 : 0.18;
-  if (state.lens === "trade") return isSpare(c) ? 1 : 0.18;
   return 1;
 }
 
@@ -136,7 +135,7 @@ function drawTile0(c, sx, sy, w, h, now, mult = 1) {
   if (c.ph) { dexPocket(c, sx, sy, w, h, alpha); return; } // a Pokémon with no card in your sets (85-natdex.js)
   // A chased card out in front: while its tile is wider than it is tall it reads as a feed tile (the deal, or the
   // most you'd pay); as it grows into the binder it becomes the card.
-  if (c.lift && w > h * 1.05) { if (c.owned) drawSpareTile(c, sx, sy, w, h, alpha, now); else drawFeedTile(c, sx, sy, w, h, alpha, now); ctx.globalAlpha = 1; return; }
+  if (c.lift && w > h * 1.05) { drawFeedTile(c, sx, sy, w, h, alpha, now); ctx.globalAlpha = 1; return; }
   const value = state.value && !state.matches;
   // Marking animation: the owned face floods in from the middle.
   let flood = c.owned ? 1 : 0;
@@ -289,7 +288,6 @@ function panelStat(g) {
   if (state.matches) { const m = g.cards.filter((c) => state.matches.has(rootOf(c))).length; return m ? `${m} found` : ""; }
   if (state.lens === "need") return `${n - owned} to go`;
   if (state.lens === "chase") { const d = g.cards.filter(isChase).length; return d ? `${d} to find` : "Nothing to chase"; }
-  if (state.lens === "trade") { const d = g.cards.filter(isSpare).length; return d ? `${d} spare${d === 1 ? "" : "s"}` : ""; }
   if (state.value) return short(worthOf(g.cards));
   return `${owned}/${n}`;
 }
@@ -305,7 +303,7 @@ function drawPanel(g, now, alpha = 1, labelAlpha = 1) {
   if (m.y > vh || m.y + m.h < 0) return;
   if (inCase(g)) {
     if (room.on) { drawRoomPlaque(g, m, now, alpha, labelAlpha); return; }
-    if (k < 1 && m.h >= 30) drawPlaque(g, m, now, alpha * (1 - k), 0); // coming down from the shelf: it shrinks through the door
+    if (k < 1 && m.h >= 30) drawPlaque(g, m, now, alpha * (1 - k), 0); // coming down from the shelf: it shrinks away to the Medal room
     return;
   }
   if (g.done || g.minting) { drawPlaque(g, m, now, alpha, labelAlpha); return; }
@@ -344,11 +342,10 @@ function drawWall(now, alpha = 1, except = null) {
     if (room.on && inCase(g)) continue;
     const a = alpha * g.pe;
     drawPanel(g, now, a);
-    if (inCase(g)) continue; // its strip is part of the door, drawn below the tiles
+    if (inCase(g)) continue; // its tiles are in the Medal room
     for (const c of g.cards) { const y = c.m.y - mScroll; if (y > vh || y + c.m.h < 0) continue; drawTile(c, c.m.x, y, c.m.w, c.m.h, now, a); } // off-screen tiles skipped (the Dex is tall)
   }
-  if (!except && !state.trans) { drawNewPanel(now, alpha); drawDoor(now, alpha); }
-  if (!state.trans) for (const g of groups) { if (!inCase(g) || room.on) continue; if (g.m.y - mScroll > vh || g.m.y + g.m.h - mScroll < 0) continue; for (const c of g.cards) drawTile(c, c.m.x, c.m.y - mScroll, c.m.w, c.m.h, now, alpha * g.pe); }
+  if (!except && !state.trans) drawNewPanel(now, alpha);
   if (settling) kick();
 }
 function drawMosaic(now, alpha = 1, except = null) {
@@ -412,6 +409,7 @@ const ease = (p) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
 let frameFoil = false;
 function frame(now) {
   raf = 0; frameFoil = false;
+  if (roomsFrame(now)) return; // the map, a move between rooms or up to the map, or a room that is a page (90-rooms.js)
   if (tbl.on && tbl.q >= 1 && !tbl.anim) { drawTable(now); return; } // the table is its own level: nothing of the wall shows
   const dt = Math.min(48, now - (lastFrame || now)); lastFrame = now;
   let more = stepFly(now);
@@ -475,7 +473,6 @@ function frame(now) {
   if (drawMints(now)) more = true; // a medal minting off a set's bar
   if (drawLive(now)) more = true;
   if (drawPop(now)) more = true;
-  drawTraders(now);
   if (drawFlights(now)) more = true;
   if (tbl.on) drawTable(now);
   if (frameFoil) more = true; // foil keeps shimmering while a foil card is on screen

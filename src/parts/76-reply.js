@@ -6,7 +6,7 @@
 // With the table up on that trader the reply plays on the table itself (75-trade.js): a counter moves the card, an
 // acceptance crosses the cards and hands them over, a decline pushes them home with the line. With the table down the
 // reply arrives the way a deal does: the cards flash gold where they sit, the panel header beats "Maya countered",
-// and a toast carries the line with Open (the Trade lens, then the table from her chip). An acceptance off the table
+// and a toast carries the line with Open (the Trade room, then the table). An acceptance off the table
 // crosses the cards in the wall itself: yours lift out through the top edge and leave your collection, hers fly in
 // from it and land in their pockets with the marking flood, one relayout at the end, and a toast says what changed
 // hands. Accept, Decline and Counter from the thread; Take back while the offer is out.
@@ -193,21 +193,12 @@ function takeBack(rec) {
   }
   tick(4); drawList(); kick();
 }
-// Open from a toast: the Trade lens first if it isn't up (the table opens from the chip once the lens has flown).
+// Open from a toast: the Trade room (the table's home), then the table.
 function showThread(t) {
   if (tbl.on && tbl.t === t) return;
   if (tbl.on) closeTable(true);
   if (document.body.classList.contains("listmode") || wel.on) return;
-  closePop(true); if (state.focus) unfocus();
-  let tries = 0, step = 0; // out of the set, then into the Trade lens, then the table, each once the wall is still
-  const go = () => {
-    if (tbl.on || tries++ > 60) return;
-    if (state.trans || shuffle || fly) { setTimeout(go, 120); return; }
-    if (step === 0) { step = 1; if (view === "set") { exitToMosaic(); setTimeout(go, 120); return; } }
-    if (step === 1) { step = 2; if (state.lens !== "trade") { setLens("trade"); setTimeout(go, 120); return; } }
-    if (view === "mosaic") openTable(t, strip?.chips.find((x) => x.t === t) || null);
-  };
-  go();
+  goRoom("trade", { then: () => openTable(t, null) });
 }
 // The list's buttons.
 listEl.addEventListener("click", (e) => {

@@ -11,7 +11,7 @@
 // medal mounted on it, and the rest of its medals hang beneath on ribbons. Locked medals fold behind one line per shelf.
 // Tapping a medal opens its trophy sheet: what it's for and the cards behind it, missing ones first.
 // Inside an open set, the header carries the next medal to earn as one pin at its point on the bar; marking the card
-// that tips a medal mints it there, its luck revealed, and it flies off toward the door. Outside a set, or more than
+// that tips a medal mints it there, its luck revealed, and it flies off to the Medal room (the rooms button, top left). Outside a set, or more than
 // four at once (an import, Select all), one celebration card says so instead.
 
 // ----- production's words, shapes and colours (public/app.js and public/medal.js) -----
@@ -251,7 +251,7 @@ function checkMedals(quiet) {
   if (!fresh.length) return [];
   mdPersist(); mdVer++;
   const L = medalList(), got = fresh.map((id) => L.byId.get(id)).filter(Boolean);
-  if (room.on || !had) layoutAll(); // the door appears with the first medal
+  if (room.on || !had) layoutAll(); // the first medal changes the Medal room
   if (!quiet) mdAnnounce(got, viaImport);
   drawList(); kick();
   return got;
@@ -371,7 +371,7 @@ function drawMedal(c2, t, cx, top, w, mode = "", crop = 124, S = w) {
 
 // ----- the room's shelves: one per set or chase (laid out by roomLayout, 67-room) -----
 const MD_FILTERS = [["all", "All"], ["earned", "Earned"], ["locked", "To earn"], ["crit", "Critical"], ["shiny", "Shiny"]];
-const MD_MW = 50, MD_SW = 64, MD_NW = 38, MD_DW = 21, MD_PW = 42, MD_NH = 62, MD_RIB = 9;
+const MD_MW = 50, MD_SW = 64, MD_NW = 38, MD_PW = 42, MD_NH = 62, MD_RIB = 9;
 const MD_ROW = SHELF_H + MD_RIB + Math.round(MD_MW * 1.24) + 52; // a row of medals hanging from a rail, their labels under them
 const MD_SROW = Math.round(MD_SW * 1.24) + 70; // the showcase: medals standing on a lit shelf
 let mdFilter = "all", mdFoldAll = false;
@@ -623,7 +623,7 @@ function pinHit(sx, sy) {
   return Math.abs(sx - (r.x + r.w / 2)) <= Math.max(r.w / 2, 16) && sy >= r.y - 12 && sy <= r.y + r.h + 12 ? r.t : null;
 }
 
-// ----- the mint: the medal pops off the bar, shows its luck, and flies toward the door (bold's moment) -----
+// ----- the mint: the medal pops off the bar, shows its luck, and flies to the Medal room (bold's moment) -----
 const mintQ = [], mintsOn = [];
 const mdLuck = (t) => (t.rank === "shiny" ? 1000 : t.rank === "crit" ? 500 : 0) + mdTierIdx(t.tier) * 10 + (t.sig ? 3 : 0) + (t.complete ? 5 : 0);
 function queueMints(list, cause) {
@@ -645,14 +645,11 @@ function mintFrom(q, now) {
   if (r && r.y + r.h > 0 && r.y < vh && r.x + r.w > 0 && r.x < vw) return { x: r.x + r.w / 2, y: clamp(r.y + Math.min(r.h * 0.3, 40), 80, vh - 120), w: clamp(r.w * 0.4, 10, 28) };
   return { x: vw / 2, y: vh * 0.5, w: 12 };
 }
+// Where the medal flies once minted: into the button at the top left (the rooms button, or Back in a set, in its place),
+// the way up to the Medal room.
 function doorTarget() {
-  if (view === "mosaic" && trophyCase && !room.on) {
-    const m = mr(trophyCase), x = m.x + m.w - 70, y = m.y + m.h / 2;
-    if (y > vh - botPad()) return { x: clamp(x, 40, vw - 40), y: vh + 60 };
-    if (y < topPad()) return { x, y: -60 };
-    return { x, y };
-  }
-  return { x: vw / 2, y: vh + 60 }; // inside a set: down and away, toward the end of the wall
+  const b = upBtn()?.getBoundingClientRect();
+  return b ? { x: b.left + b.width / 2, y: b.top + b.height / 2 } : { x: 32, y: -60 };
 }
 function startMint(q, now) {
   const from = mintFrom(q, now), W = 78, rank = MD_RANK[q.t.rank] ? q.t.rank : "";
@@ -786,6 +783,7 @@ function mdGo(g, c = null) {
   if (!g || tbl.on || bnd.on || wel.on) return;
   if (state.trans) finishTransition();
   if (view === "set") { if (state.g === g) { if (c) focus(c); return; } if (state.focus) unfocus(); view = "mosaic"; state.g = null; setChrome(); }
+  if (rooms.map || PAGES[rooms.at]) goWallNow(); // from the map or a page: the wall first
   if (room.on && !inCase(g)) closeRoom(true);
   enterGroup(g, { then: c ? () => focus(c) : null });
 }

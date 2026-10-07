@@ -36,8 +36,6 @@ function hit(sx, sy, nearest = false) {
       for (const g of room.plaques) { const dx = Math.max(g.m.x - sx, 0, sx - g.m.x - g.m.w), dy = Math.max(g.m.y - y, 0, y - g.m.y - g.m.h), d = Math.hypot(dx, dy); if (d < bd) { bd = d; best = g; } }
       return best && bd < 60 ? { block: best } : null;
     }
-    if (COVER.m && inR(COVER.m, sx, y)) return { block: COVER }; // the trade binder, at the top of the Trade lens
-    if (inR(DOOR.m, sx, y)) return { block: DOOR };
     for (const g of groups) if (g.m && !inCase(g) && inR(g.m, sx, y)) return { block: g };
     if (!nearest) return null;
     let best = null, bd = Infinity;
@@ -142,15 +140,12 @@ function pinchMove(a, b) {
   const g = gesture, d = dist(a, b), m = mid(a, b), r = d / g.d0, now = evT || performance.now();
   if (g.snap) return;
   if (view === "mosaic") {
-    if (room.on) {
-      if (room.pinch || (r < 1 && !state.trans)) {
-        if (!room.pinch) { room.pinch = { q0: room.q, qs: [] }; room.anim = null; }
-        room.q = clamp(room.pinch.q0 - (1 - r) / 0.55, 0, 1); room.pinch.qs.push({ q: room.q, t: now }); kick(); return;
-      }
-      if (!g.g?.done) return;
-    } else if (g.g?.door) { if (r > 1.12) { g.snap = true; openRoom(); } return; }
-    else if (g.g?.tbCover) { if (r > 1.12) { g.snap = true; openBinder(); } return; }
-    else if (g.g && (g.g.fan || g.g.pick)) return;
+    // Closing fingers on the wall, or in the trophy room, take the room up to the map (round 21), held under them; a
+    // spread still opens what's under the fingers. The pinch commits to whichever way it first goes.
+    if (!g.mapT && !g.out) { if (r < 0.96 && !state.trans && mapReady()) { g.mapT = true; g.tqs = []; tick(4); beginMap(rooms.at, "out"); } else if (r > 1.01) g.out = true; }
+    if (g.mapT) { const T = state.trans; if (T?.kind === "map" && !T.anim) { T.q = clamp((1 - r) / 0.5, 0, 1); g.tqs.push({ q: T.q, t: now }); kick(); } return; }
+    if (room.on && !g.g?.done) return; // in the room a spread opens a plaque's album and nothing else
+    if (g.g && (g.g.fan || g.g.pick)) return;
     if (!g.g) return;
     const q = clamp((r - 1) / 1.1, 0, 1);
     if (!state.trans && q > 0.01) state.trans = openTrans(g.g, 0, fitCam(g.g));
@@ -178,15 +173,7 @@ function pinchMove(a, b) {
 function releasePinch() {
   const g = gesture, T = state.trans;
   if (g.snap) return;
-  if (room.pinch) {
-    const qs = room.pinch.qs, last = qs[qs.length - 1]; room.pinch = null;
-    let first = qs.find((s) => last && last.t - s.t < 160);
-    if (qs.length >= 2 && (first === last || qs.indexOf(last) - qs.indexOf(first) < 2)) first = qs[Math.max(0, qs.length - 3)];
-    const v = first && last && first !== last ? (last.q - first.q) / Math.max(8, last.t - first.t) : 0;
-    const to = Math.abs(v) > 0.0011 ? (v > 0 ? 1 : 0) : room.q > 0.5 ? 1 : 0;
-    if (to === 0) closeRoom(); else { room.anim = { from: room.q, to: 1, t0: performance.now(), dur: 160 + 300 * (1 - room.q) }; kick(); }
-    return;
-  }
+  if (g.mapT) { if (T?.kind === "map" && !T.anim) mapSettle(snapQ(g.tqs, T.q, 0.4)); return; } // up to the map, or a slow small pinch stays
   if (T?.kind === "open" && !T.anim) {
     const qs = g.qs, last = qs[qs.length - 1];
     let first = qs.find((s) => last && last.t - s.t < 160);
@@ -228,6 +215,7 @@ function onUp(remaining, end, cancelled = false) {
   }
   if (!g.moved) return tap(p.x, p.y);
   if (view === "set" && g.axis === "x") { if (Math.abs(dx) > 50) slideGroup(dx < 0 ? 1 : -1); return; }
+  if (view === "mosaic" && roomFlick(dx, dy, dt)) return; // a sideways flick at a room's own level: the next room along
   const s0 = samples.find((s) => performance.now() - s.t < 90) || samples[0];
   if (s0 && !reduced) {
     const t = Math.max(1, performance.now() - s0.t);
@@ -251,6 +239,7 @@ canvas.addEventListener("wheel", (e) => {
   if (state.trans) finishTransition();
   if (view === "mosaic") {
     if (e.ctrlKey && e.deltaY < -2) { const h = hit(e.clientX, e.clientY, true); if (h?.block) enterGroup(h.block); return; }
+    if (e.ctrlKey && e.deltaY > 2) { toMap(); return; } // a trackpad pinch: up to the map
     mScroll = clamp(mScroll + e.deltaY, 0, mMax); kick(); return;
   }
   fly = null; inertia = false;
@@ -270,14 +259,8 @@ function tap(sx, sy) {
   if (picking() && !state.focus && h?.block) return togglePick(h.block); // which sets do you collect?
   if (state.focus) { if (h?.card === state.focus) return; unfocus(); return; }
   if (view === "mosaic") {
-    const ch = chipAt(sx, sy); if (ch) return startTrade(ch.t, ch); // a trader: how to trade, then the table
     if (h?.block && lifted && !h.block.done) { // a plaque is sealed: a tap opens the album, never a tile in its engraving
       const c = liftedAt(h.block, sx, sy);
-      if (c && state.lens === "trade") { // a spare: the table with whoever wants it
-        const who = wantedBy(c);
-        if (who.length) { const chip = strip?.chips.find((x) => x.t === who[0]); return startTrade(who[0], chip); }
-        tick(3); return toast(`Nobody is chasing ${c.name} yet.`);
-      }
       if (c) return popCard(c, mr(c.m)); // a chased card: every offer online
     }
     if (h?.block) enterGroup(h.block);

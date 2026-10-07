@@ -250,6 +250,25 @@ news belongs in one place, and a story in time reads as yours in a way a flood s
 that switches lenses for you teaches nothing. Dropped: the tour, radical's end card. Also fixed: the summary's worth
 counted printings.
 
+**Round 21: The wall inside the app.** How production's five tabs (Feed, Chase, Trade, Medal, Source) sit around the
+wall. Safe: production's bottom tab bar, the wall as the Chase tab, Feed a list of listings. Bold: the bar as the
+lens bar, every tab a lens flight on one wall. Radical: no tab bar; pinch the wall closed to a map of five live room
+cards one level above it, spread or tap to go in. Kept: radical, with one home per job. The Trade room holds the
+binder, the table and production's trade checker (You give / You get, conditions, cash, Fair / Close / Uneven); the
+Medal room holds the trophy room (the door at the end of the wall is gone); the Source room holds where it looks,
+its switches filtering the Feed. The wall keeps Have / Need / Chase (the Trade lens is gone) and the moments that
+belong to a card. Ryan's line: the Chase lens and the Feed serve two purposes. The Chase lens is your want list,
+each card with its best deal or what you'd pay; the Feed is every listing found, newest first, several per card,
+with source, age, production's score and NEW since your last visit, and a listing opens the listing (the seller's
+photo, title, price, seller, production's price proof and score), not your card. Room cards carry bold's count
+lines; a sideways flick moves room to room; the rooms button carries the Feed's count; Feed and Source are real
+lists. Learned: the map only earns its place if the wall stops carrying the other rooms; a listing and a card are
+different things, and tapping one shouldn't open the other. Also fixed: Ryan's blank screen on an iPhone pinch.
+Radical made a new full-screen picture per pinch (canvas memory climbing past 500 MB at dpr 3 over five rounds,
+past Safari's cap); the harvest takes no per-pinch pictures, draws the moving room live, and holds 25 MB flat, with
+a memory check in npm test. Not verified on an iPhone. Dropped: the tab bars, the deal banner (the Feed and the
+badge carry the news), the cards flying from the wall into the Feed (a page above the canvas would hide them).
+
 ## Open questions (next rounds)
 
 - A deal arriving off screen: one tap from the line to the offers, and whether the arrival should nudge the wall.
@@ -260,4 +279,4 @@ counted printings.
 - The import: a real import without acquisition dates loses the story (round 20); and the Complete Dex can't be chosen on the import path, only in Choose your sets.
 - A chase's twins: should a custom panel's cards also lead in the Chase lens, or only their set's copy? And should a chase hide from the wall once it's complete?
 - Trophies: the worth line is a made-up year; real data would start at the finish date ("Up $27 since you finished"). Medals: whether Undo after a mint should take a medal back (production keeps it), the full-screen completion ceremony production plays, and the server-side luck roll when the two merge. Sharing a trophy (safe's picture card), and whether a sub-chase of a finished set should fold into the set's plaque. The room hides the lenses; Value could recolour the engravings.
-- Bringing the mosaic into the real app as the Chase home.
+- Bringing the wall into the real app: the rooms map is the navigation model (round 21); production's tabs sit at the top, and a merge would put the map where they are. The Trade room's page is long on a phone (cover, checker, traders).

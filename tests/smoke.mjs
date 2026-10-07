@@ -16,7 +16,7 @@ for (const [dark, width, height] of [[false, 390, 844], [true, 390, 844], [false
   const p = await phone(browser, file, { dark, motion: false, dpr: 2, width, height });
   for (const mode of ["set", "value"]) {
     if (mode === "value") { await p.click("#filter"); await wait(120); await p.click('[data-filter="bands"]'); await wait(250); }
-    for (const lens of ["have", "need", "chase", "trade"]) {
+    for (const lens of ["have", "need", "chase"]) {
       await p.click(`[data-lens="${lens}"]`); await wait(200);
       if (lens === "have" || width < 700) await p.screenshot({ path: path.join(out, `${tag}-${mode}-${lens}.png`) });
     }
@@ -33,6 +33,26 @@ for (const [dark, width, height] of [[false, 390, 844], [true, 390, 844], [false
   await p.screenshot({ path: path.join(out, `${tag}-binder.png`) });
   await p.mouse.click(width / 2 - 40, 330); await wait(500);
   await p.screenshot({ path: path.join(out, `${tag}-card.png`) });
+  // The rooms (round 21), on an imported wall chasing what it's missing: the map, each room, a listing's sheet.
+  await p.evaluate(() => {
+    const at = Date.now() - 30 * 86400e3, owned = {}, chase = {}, copies = {};
+    for (const c of __w.cards) { if (c.own0) { owned[c.id] = { on: true, at }; if (c.i % 4 === 0) copies[c.id] = { n: 2, got: at }; } else chase[c.id] = true; }
+    localStorage.clear();
+    localStorage.setItem("wall-owned", JSON.stringify(owned)); localStorage.setItem("wall-chase", JSON.stringify(chase)); localStorage.setItem("wall-copies", JSON.stringify(copies));
+    localStorage.setItem("wall-imported", "TCGplayer"); localStorage.setItem("wall-welcomed", "1"); localStorage.setItem("wall-map-seen", "1");
+  });
+  await p.reload({ waitUntil: "load" }); await wait(600);
+  const room = async (id) => { await p.evaluate((id) => __w.goRoom(id), id); await wait(700); };
+  await p.click("#rooms"); await wait(500); await p.screenshot({ path: path.join(out, `${tag}-room-map.png`) });
+  await p.evaluate(() => __w.openPlace("feed")); await wait(700); await p.screenshot({ path: path.join(out, `${tag}-room-feed.png`) });
+  await p.evaluate(() => __w.openListing(__w.feedList()[0].id)); await wait(500); await p.screenshot({ path: path.join(out, `${tag}-room-listing.png`) });
+  await p.keyboard.press("Escape"); await wait(300);
+  await room("trade"); await p.screenshot({ path: path.join(out, `${tag}-room-trade.png`) });
+  await p.evaluate(() => { __w.tcAdd("give", { id: __w.tbList()[0].id }); __w.tcAdd("get", { id: __w.cards.find((c) => __w.isChase(c) && c.price > 3).id }); document.getElementById("pg-trade").scrollTop = 380; }); await wait(300);
+  await p.screenshot({ path: path.join(out, `${tag}-room-checker.png`) });
+  await p.evaluate(() => { document.querySelector("#tc [data-clear]")?.click(); }); await wait(200);
+  await room("medal"); await p.screenshot({ path: path.join(out, `${tag}-room-medal.png`) });
+  await room("source"); await p.screenshot({ path: path.join(out, `${tag}-room-source.png`) });
   R.push([`${tag}: every layout and lens renders${p.errors.length ? ` (${p.errors[0]})` : ""}`, !p.errors.length]);
   await p.close();
 }

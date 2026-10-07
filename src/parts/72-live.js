@@ -4,10 +4,11 @@
 // 10%. Nothing arrives until something is chased.
 // An arrival is an event in the wall itself, wherever you are (round 12). The tile flashes green where it sits, a
 // green ripple runs through its panel, the panel's header shows the card and the price for a beat ("Mew ex $215"),
-// and a thin green line races from the card to the Chase lens button, which ticks up and glows. In the Chase lens the
-// new tile slides to the front of its set with "just now" under the price; a price drop strikes the old price through.
+// and a thin green line races from the card to the rooms button, which counts the Feed's new listings and glows (round
+// 21: the listing lands at the top of the Feed, and its source pulses in Source). In the Chase lens the tile slides to
+// the front of its set with "just now" under the price; a price drop strikes the old price through.
 // Nothing is a notification: the wall moves when the market does.
-const live = { line: null, until: 0, beat: null, quick: false, badgeN: 0, news: [] }; // news: the arrivals the Chase lens hasn't shown in its banner yet
+const live = { line: null, until: 0, beat: null, quick: false, badgeN: -1 };
 const feedOrder = (a, b) => h32(a.id + "r") - h32(b.id + "r") || a.i - b.i;
 const arrivalPrice = (c) => Math.max(0.25, Math.round(c.price * (0.55 + 0.3 * h32(c.id + "e")) * 100) / 100);
 function agoText(at, now) {
@@ -16,7 +17,7 @@ function agoText(at, now) {
   if (d < 90e3) return "1 min ago";
   if (d < 3600e3) return `${Math.round(d / 60e3)} min ago`;
   if (d < 86400e3) return `${Math.round(d / 3600e3)} hr ago`;
-  return `${Math.round(d / 86400e3)} days ago`;
+  return d < 2 * 86400e3 ? "yesterday" : `${Math.round(d / 86400e3)} days ago`;
 }
 // Measured text widths, remembered per font (measuring every frame is slow).
 const wCache = new Map();
@@ -46,29 +47,32 @@ function arrive() {
   live.quick = false;
   showArrival(c, Boolean(a.was));
 }
-// The feed never lands on a moving wall: while a transition plays, the arrival waits a moment.
+// The feed never lands on a moving wall: while a transition plays, the arrival waits a moment. Each try is a look, for
+// Source's clock (92-feed.js).
 function tickFeed() {
-  if (state.trans || shuffle || tbl.anim || gesture || revealing()) { setTimeout(tickFeed, 600); return; } // nor during the import's story and summary
+  if (state.trans || shuffle || tbl.anim || gesture || mapGesture() || revealing()) { setTimeout(tickFeed, 600); return; } // nor during the import's story and summary
+  scan.last = Date.now(); scan.next = scan.last + 9000;
   arrive();
   setTimeout(tickFeed, 9000);
+  syncSourceClock();
 }
 setTimeout(tickFeed, 6000);
 
 // ----- the event on the wall -----
-const chaseBtn = lensBox.querySelector('[data-lens="chase"]'), badge = chaseBtn.querySelector(".lbadge");
+const badge = roomsBtn.querySelector(".rbadge");
 const lensShown = () => !tbl.on && !document.body.matches(".focused, .offering, .marking, .trading, .welcoming, .listmode, .paying");
+// The rooms button counts the Feed's new listings, from anywhere but the Feed itself (production caps it at 99+).
 function syncBadge() {
-  let n = 0;
-  for (const c of cards) if (c.deal && c.dealAt && !c.dealSeen && isChase(c)) n++;
+  const n = rooms.at === "feed" && !rooms.map ? 0 : feedNewCount();
   if (n === live.badgeN) return;
   live.badgeN = n;
   badge.textContent = n > 99 ? "99+" : String(n); badge.hidden = !n;
-  if (n) chaseBtn.setAttribute("aria-label", `Chase, ${n} new deal${n === 1 ? "" : "s"}`); else chaseBtn.removeAttribute("aria-label");
+  roomsBtn.setAttribute("aria-label", `Rooms: Feed, Chase, Trade, Medal, Source${n ? `. ${n} new in the Feed` : ""}`);
 }
 function glowChase() {
   syncBadge();
-  chaseBtn.classList.remove("lglow"); void chaseBtn.offsetWidth; chaseBtn.classList.add("lglow");
-  clearTimeout(glowChase.t); glowChase.t = setTimeout(() => chaseBtn.classList.remove("lglow"), 1100);
+  roomsBtn.classList.remove("glow"); void roomsBtn.offsetWidth; roomsBtn.classList.add("glow");
+  clearTimeout(glowChase.t); glowChase.t = setTimeout(() => roomsBtn.classList.remove("glow"), 1100);
 }
 // You looked at it: the card popped up, or came up close, or its tile sat on screen in the Chase lens.
 function lookedAt(c) {
@@ -86,40 +90,26 @@ function tileStart(c) {
   return { x: clamp(x, 8, vw - 8), y: clamp(y, topPad() + 4, vh - botPad() - 4) };
 }
 function showArrival(c, drop) {
-  const now = performance.now(), g = groups[c.g];
-  // In the Chase lens the tile slides to the front of its set (a deal leads).
-  if (lifted && !state.focus) { if (state.trans || live.quick) layoutAll(); else liftLayout(true); }
+  const now = performance.now(), g = groups[c.g], away = rooms.map || rooms.at !== "chase" || moving(); // seen from another room
+  // In the Chase lens the tile slides to the front of its set (a deal leads); from another room it just takes its place.
+  if (lifted && !state.focus) { if (state.trans || live.quick || away) layoutAll(); else liftLayout(true); }
   c.flash = { t0: now, drop }; for (const t of twinsOf(c)) t.flash = { t0: now, drop };
   if (!reduced) g.ripple = { t0: now, col: c.col, row: c.row, live: true };
   live.until = now + 3200;
-  if (!live.news.includes(c)) live.news.push(c);
-  if (state.lens === "chase" && !dealBar.hidden) showDealBar();
-  if (lensShown() && !reduced) {
-    const a = tileStart(c), b = chaseBtn.getBoundingClientRect();
-    const x1 = b.left + b.width / 2, y1 = b.top + 3;
-    live.line = { t0: now + 120, x0: a.x, y0: a.y, cx: x1, cy: a.y + (y1 - a.y) * 0.35, x1, y1 };
+  feedArrived(c); // the listing lands at the top of the Feed, and its source pulses in Source
+  // The line races from the tile to the rooms button (Back's place inside a set), which counts the Feed's new listings.
+  const to = upBtn();
+  if (lensShown() && !reduced && !away && to) {
+    const a = tileStart(c), b = to.getBoundingClientRect();
+    const x1 = b.left + b.width / 2, y1 = b.top + b.height - 3;
+    live.line = { t0: now + 120, x0: a.x, y0: a.y, cx: x1 + (a.x - x1) * 0.35, cy: y1, x1, y1 };
     setTimeout(glowChase, 640);
-  } else if (lensShown()) glowChase();
+  } else if (lensShown() && to) glowChase();
   else syncBadge();
   drawList(); kick();
 }
 
 
-// The banner at the top of the Chase lens: what arrived since you last looked, one tap from the first one's offers.
-const dealBar = document.getElementById("dealbar"), dbHead = document.getElementById("db-head"), dbSub = document.getElementById("db-sub");
-function showDealBar() {
-  live.news = live.news.filter((c) => c.deal && isChase(c) && !c.owned);
-  const list = live.news.slice().sort((a, b) => (b.dealAt || 0) - (a.dealAt || 0)), c = list[0];
-  if (!c) { hideDealBar(); return; }
-  const pct = Math.round((1 - c.deal / c.price) * 100);
-  dbHead.textContent = list.length === 1 ? `New deal: ${c.name} ${short(c.deal)}` : `${list.length} new deals`;
-  dbSub.textContent = list.length === 1 ? `${pct}% under market, ${sets[c.si].name}` : `${c.name} ${short(c.deal)}, ${pct}% under, and ${list.length - 1} more`;
-  dealBar.hidden = false;
-  clearTimeout(showDealBar.t); showDealBar.t = setTimeout(hideDealBar, 9000);
-}
-function hideDealBar() { dealBar.hidden = true; clearTimeout(showDealBar.t); }
-document.getElementById("db-main").onclick = () => { const c = live.news[0]; hideDealBar(); live.news = []; if (c && view === "mosaic" && !state.trans) popCard(c, c.m ? mr(c.m) : null); };
-document.getElementById("db-x").onclick = () => { hideDealBar(); live.news = []; };
 // The overlay, drawn after the wall each frame: the line racing to the Chase button.
 function drawLive(now) {
   if (now >= live.until && !live.line) return false;

@@ -1,7 +1,7 @@
 // ---------- trophies: finished things leave the wall ----------
 // When the last card of a set or a chase lands, the panel is minted: its tiles gather into a gold plaque that flies up
 // onto a shelf along the top of the mosaic, and the rest of the wall flows into the space. A trophy stays on that
-// shelf for a day; then it moves to the trophy case at the end of the wall, with the rest. Tapping a plaque opens its
+// shelf for a day; then it moves to the trophy room, the Medal room (round 21), with the rest. Tapping a plaque opens its
 // sealed album (the cards packed tight, the header reading when it was finished and what it's worth) with Back to
 // the wall, which puts the panel back among the others; a finished group kept on the wall offers Put on the shelf.
 // Before the finish, the progress bar on every panel and binder carries gold ticks for the missing cards you're
@@ -132,7 +132,7 @@ function shelfMorph(landing = null) {
 
 // ----- the shelf along the top (the first day) and the trophy case at the end of the wall (after that) -----
 const PLQ_H = 72; // a plaque row, margins included (the plate is 60)
-let shelf = null, trophyCase = null, shelfTimer = 0; // in mosaic coordinates
+let shelf = null, shelfTimer = 0; // in mosaic coordinates
 const plateOf = (m) => ({ x: m.x + PG, y: m.y + PG, w: m.w - PG * 2, h: m.h - PG * 2 });
 function plaqueRows(list, R, y) {
   const cols = Math.min(list.length, R.w >= 700 ? 4 : 2), rows = Math.ceil(list.length / cols);
@@ -154,7 +154,7 @@ function shelfLayout(R) {
   syncShelfPad();
   return h;
 }
-// The toast and the deal bar live where the shelf is: while it shows, they sit just under it.
+// The toast lives where the shelf is: while it shows, it sits just under it.
 function syncShelfPad() { document.body.style.setProperty("--shelf-h", view === "mosaic" && shelf && mode === "set" && !room.on ? `${shelf.h}px` : "0px"); }
 // The engraving: the group's cards packed tight as a strip of colour along the bottom of the plate. The tiles live
 // there (so opening the plaque grows them into the album, and the minting flight lands them there).
@@ -263,10 +263,10 @@ function trophyListHTML(show, rows) {
     const won = sh.all.filter((t) => t.earned), locked = sh.all.filter((t) => !t.earned), g = sh.plaque, items = g ? g.cards.filter(show) : [];
     return `<h3 class="lfin">${esc(sh.name)} <span class="lm-of">${won.length} of ${sh.all.length}</span></h3>${g ? plaque(g) : ""}${won.length ? `<ul class="lmed">${won.map((t) => mdListRow(t)).join("")}</ul>` : ""}${locked.length ? `<details class="lmed-more"><summary>${locked.length} more to earn</summary><ul class="lmed">${locked.map((t) => mdListRow(t)).join("")}</ul></details>` : ""}${items.length ? rows(items) : ""}`;
   };
-  if (!L) return `<section class="lshelf"><h2>Trophies</h2>${fin.map((g) => `<h3 class="lfin">${esc(trophyName(g))}</h3>${plaque(g)}${g.cards.filter(show).length ? rows(g.cards.filter(show)) : ""}`).join("")}</section>`;
+  if (!L) return `<section class="lshelf" data-sec="medal"><h2>Trophies</h2>${fin.map((g) => `<h3 class="lfin">${esc(trophyName(g))}</h3>${plaque(g)}${g.cards.filter(show).length ? rows(g.cards.filter(show)) : ""}`).join("")}</section>`;
   const { started, notYet } = mdShelves(fin);
   const next = L.list.filter((t) => !t.earned && t.goal > 1 && t.have < t.goal).sort((a, b) => b.have / b.goal - a.have / a.goal || (a.goal - a.have) - (b.goal - b.have)).slice(0, 4);
-  return `<section class="lshelf lmedals"><h2>Trophies</h2><p class="lsub">${L.earned.length} of ${L.list.length} earned.${L.hiddenLeft ? ` ${L.hiddenLeft} hidden left to find.` : ""}${fin.length ? ` ${fin.length} finished and sealed.` : ""} Tap a trophy to see the cards behind it.</p>
+  return `<section class="lshelf lmedals" data-sec="medal"><h2>Trophies</h2><p class="lsub">${L.earned.length} of ${L.list.length} earned.${L.hiddenLeft ? ` ${L.hiddenLeft} hidden left to find.` : ""}${fin.length ? ` ${fin.length} finished and sealed.` : ""} Tap a trophy to see the cards behind it.</p>
     ${L.earned.length ? `<h3 class="lfin">Showcase</h3><ul class="lmed">${L.earned.slice(0, 6).map((t) => mdListRow(t, true)).join("")}</ul>` : ""}
     ${next.length ? `<h3 class="lfin">Next up</h3><ul class="lmed">${next.map((t) => mdListRow(t, true)).join("")}</ul>` : ""}
     ${started.map(shelf).join("")}
@@ -279,4 +279,4 @@ document.getElementById("list").addEventListener("click", (e) => {
   toast(`${trophyName(g)} is back on the wall.`, () => { const x = finishOf(g); if (!x) return; x.put = true; persistDone(); layoutAll(); drawList(); kick(); });
 });
 // Debug builds only: the tests' hook sees the shelf.
-setTimeout(() => { if (window.__w) Object.defineProperties(window.__w, { done: { get: () => done }, shelf: { get: () => shelf }, trophyCase: { get: () => trophyCase }, room: { get: () => room }, openRoom: { value: openRoom }, closeRoom: { value: closeRoom }, caseList: { value: caseList }, toggleFan: { value: toggleFan }, seriesOf: { value: seriesOf }, shelfMorph: { value: shelfMorph }, syncDone: { value: syncDone }, toggleShelf: { value: toggleShelf }, markAllInSet: { value: markAllInSet }, enterGroup: { value: enterGroup }, enterMark: { value: enterMark }, leaveMark: { value: leaveMark }, setOwned: { value: setOwned }, layoutAll: { value: layoutAll } }); }, 0);
+setTimeout(() => { if (window.__w) Object.defineProperties(window.__w, { done: { get: () => done }, shelf: { get: () => shelf }, room: { get: () => room }, openRoom: { value: openRoom }, closeRoom: { value: closeRoom }, caseList: { value: caseList }, toggleFan: { value: toggleFan }, seriesOf: { value: seriesOf }, shelfMorph: { value: shelfMorph }, syncDone: { value: syncDone }, toggleShelf: { value: toggleShelf }, markAllInSet: { value: markAllInSet }, enterGroup: { value: enterGroup }, enterMark: { value: enterMark }, leaveMark: { value: leaveMark }, setOwned: { value: setOwned }, layoutAll: { value: layoutAll } }); }, 0);

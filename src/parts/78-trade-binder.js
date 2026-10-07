@@ -2,11 +2,11 @@
 // Real collectors keep a trade binder: nine-pocket pages of the cards they'll part with, flipped through across a table
 // at a show. Here it holds exactly the cards you have a spare copy of (sparesOf > 0, from the copies model in
 // 77-copies.js), most wanted first, each pocket naming who chases it under the card.
-//   The cover sits at the top of the Trade lens, above the traders and the lifted spare tiles, with its first page in
-//   small. Tap it (or spread on it) and that page grows into the binder: a level of its own like the trophy room. Swipe
+//   The cover sits at the top of the Trade room (94-trade-room.js, round 21), with its first page in small. Tap it and
+//   that page grows into the binder: a level inside the room, the way a set is a level inside the wall. Swipe
 //   sideways to turn the page (it folds about the rings under your thumb, then snaps by speed first, distance second).
 //   Tap a pocket and the trade table opens with whoever wants it, the card already on it. Back, a pinch or Escape
-//   returns to the Trade lens.
+//   returns to the Trade room.
 //   Show mode turns the binder into a dark, full-screen spread to hand across a table: no chrome, prices shown or
 //   hidden, swipe to turn. The other person taps what they'd like. Taking the phone back, Done asks who it was: a trader
 //   opens the table with the picks on your side; someone new takes one copy of each (Undo puts them back).
@@ -150,14 +150,11 @@ function tbDraw(now) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1;
   const q = bnd.q, sq = bnd.sq, bg = sq > 0.001 ? mix(theme.bg, SHOW_BG, sq) : theme.bg;
   ctx.fillStyle = theme.bg; ctx.fillRect(0, 0, vw, vh);
-  if (q < 1) { // opening or closing: the Trade lens is under it, and the page grows out of the cover
-    drawWall(now, 1);
-    drawCover(now, 1 - q);
-    if (strip) for (const ch of strip.chips) drawChip(ch, now, 1 - q);
-    ctx.globalAlpha = Math.min(1, q * 1.15); ctx.fillStyle = bg; ctx.fillRect(0, 0, vw, vh); ctx.globalAlpha = 1;
-  } else if (sq > 0.001) { ctx.fillStyle = bg; ctx.fillRect(0, 0, vw, vh); }
+  // Opening or closing: the Trade room's page fades as the binder grows out of the cover on it.
+  pgTrade.style.opacity = q >= 1 ? "0" : String(1 - q);
+  if (sq > 0.001) { ctx.fillStyle = bg; ctx.fillRect(0, 0, vw, vh); }
   let S = tbSpreadRect(G);
-  if (q < 1 && COVER.grid) S = lerpRect(mr(COVER.grid), S, ease(q));
+  if (q < 1 && bnd.from) S = lerpRect(bnd.from, S, ease(q));
   if (bnd.sa) S = lerpRect(bnd.sa.from, S, ease(bnd.sa.k));
   const ha = clamp((q - 0.72) / 0.28, 0, 1);
   tbHeader(G, ha, sq);
@@ -247,53 +244,22 @@ function tbPocketRect(c) {
   return { x: P.x + r.x, y: P.y + r.y, w: r.w, h: r.h };
 }
 // Where a card of yours flies from and back to as the trade table opens and closes: its pocket while the binder is up
-// (off the bottom edge if it isn't on this page), else its tile on the wall.
-const tbHome = (c) => (bnd.on ? tbPocketRect(c) || { x: vw / 2 - 16, y: vh + 20, w: 32, h: 45 } : mr(c.m));
-
-// ----- the cover at the top of the Trade lens: the binder closed, its first page in small -----
-const COVER_H = 140;
-const COVER = { tbCover: true, name: "Trade binder", cards: [], lead: [], base: [], m: null, grid: null, G: null };
-function coverLayout(R) {
-  const G = (COVER.G = tbGeom(false)), gh = COVER_H - PG * 2 - 22, gw = gh * G.pw / G.ph;
-  COVER.m = { x: R.x, y: R.y, w: R.w, h: COVER_H };
-  COVER.grid = { x: R.x + R.w - PG - 14 - gw, y: R.y + PG + 11, w: gw, h: gh };
-  return COVER_H;
-}
-function drawCover(now, alpha) {
-  const M = COVER.m; if (!M || !COVER.grid || alpha <= 0.01) return;
-  const m = mr(M); if (m.y > vh || m.y + m.h < 0) return;
-  const x = m.x + PG, y = m.y + PG, w = m.w - PG * 2, h = m.h - PG * 2, list = tbList(), n = list.length, pages = tbPageCount();
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = alpha;
-  rr(x, y, w, h, 12); ctx.fillStyle = theme.panelFill; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = theme["slot-line"]; ctx.stroke();
-  if (state.press?.g === COVER) { ctx.lineWidth = 1.5; ctx.strokeStyle = theme.ink; ctx.stroke(); }
-  ctx.fillStyle = theme.gold; rr(x, y + 12, 4, h - 24, 2); ctx.fill(); // the spine
-  const gr = mr(COVER.grid), tx = x + 18, tw = gr.x - 16 - tx;
-  ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-  ctx.fillStyle = theme.ink; font(800, 19, true); ctx.fillText(fitText("Trade binder", tw), tx, y + 31);
-  ctx.fillStyle = theme.muted; font(500, 13); ctx.fillText(fitText(n ? `${plural1(n, "card")} on ${plural1(pages, "page")}` : "Empty for now", tw), tx, y + 52);
-  ctx.fillStyle = n && tbMemo.wanted ? theme.gold : theme.muted; font(700, 13, true);
-  ctx.fillText(fitText(n ? (tbMemo.wanted ? `${tbMemo.wanted} someone wants` : "Nobody has asked yet") : "+ on a card adds a spare", tw), tx, y + 70);
-  if (n) { ctx.fillStyle = theme.ink; font(700, 13.5); ctx.fillText(fitText("Open the binder  ›", tw), tx, y + h - 16); }
-  // the first page, small: the thing that grows into the binder when you open it
-  const G = COVER.G, k = gr.w / G.pw;
-  rr(gr.x, gr.y, gr.w, gr.h, 5); ctx.fillStyle = theme["panel-solid"]; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = theme["slot-line"]; ctx.stroke();
-  for (let i = 0; i < 9; i++) {
-    const p = tbPocket(G, 0, i), px = gr.x + p.x * k, py = gr.y + p.y * k, pw = p.w * k, ph = p.h * k, c = list[i];
-    if (!c) { ctx.fillStyle = theme.slot; ctx.fillRect(px, py, pw, ph); continue; }
-    const col = typeColor(c);
-    ctx.fillStyle = col; ctx.fillRect(px, py, pw, ph);
-    ctx.fillStyle = lighter(col); ctx.fillRect(px + 1, py + 1, pw - 2, ph * 0.22);
-    ctx.fillStyle = theme.paper; ctx.fillRect(px + 1, py + ph * 0.76, pw - 2, ph * 0.2);
-  }
-  ctx.globalAlpha = 1;
+// (off the bottom edge if it isn't on this page), the binder's cover in the Trade room, else its tile on the wall.
+function tbHome(c) {
+  if (bnd.on) return tbPocketRect(c) || { x: vw / 2 - 16, y: vh + 20, w: 32, h: 45 };
+  if (rooms.at === "trade" && !rooms.map) { const r = document.getElementById("pt-page").getBoundingClientRect(); if (r.width) return { x: r.left + r.width / 2 - 14, y: r.top + 10, w: 28, h: 39 }; }
+  return mr(c.m);
 }
 
 // ----- opening and closing -----
+// The binder lives in the Trade room: asked for from anywhere else (the import's summary), the room comes first.
 function openBinder() {
+  if (rooms.at !== "trade" || rooms.map) { goRoom("trade", { then: openBinder }); return; }
   if (bnd.on || state.trans || tbl.on || view !== "mosaic" || room.on) return;
   if (!tbFresh().length) { tick(3); cancelPress(); toast("Your trade binder is empty. On a card you have, + adds a spare."); return; } // nothing to leaf through
   hideCaption(); cancelPress(); closePop(true); hideHow(); hideWho(); tick(8);
-  Object.assign(bnd, { on: true, closing: false, turn: 0, tAnim: null, pinch: null, drag: null, rest: false, swallow: false, press: null, show: false, sq: 0, sa: null, vi: 0 });
+  const r = document.getElementById("pt-page").getBoundingClientRect(); // its first page, small, on the cover: what grows into the binder
+  Object.assign(bnd, { on: true, closing: false, turn: 0, tAnim: null, pinch: null, drag: null, rest: false, swallow: false, press: null, show: false, sq: 0, sa: null, vi: 0, from: r.width ? { x: r.left, y: r.top, w: r.width, h: r.height } : null });
   tbFresh(); bnd.L = tbGeom(false);
   bnd.q = reduced ? 1 : 0; bnd.anim = reduced ? null : { from: 0, to: 1, t0: performance.now(), dur: 560 };
   document.body.classList.add("inbinder"); setChrome(); tbSync(); kick();
@@ -308,7 +274,8 @@ function closeBinder(instant = false) {
 }
 function tbEnd() {
   Object.assign(bnd, { on: false, closing: false, anim: null, q: 0, pinch: null, drag: null, press: null, show: false, sq: 0, sa: null });
-  document.body.classList.remove("inbinder", "showing"); setChrome(); kick();
+  pgTrade.style.opacity = "";
+  document.body.classList.remove("inbinder", "showing"); setChrome(); renderTrade(); kick();
 }
 // Turning: animate from wherever the page is to a whole turn (1 forward, -1 back) or back to rest (0).
 function tbTurnTo(to) {
@@ -550,20 +517,11 @@ document.addEventListener("keydown", (e) => {
 lensBox.addEventListener("click", () => { if (bnd.on) closeBinder(true); }, true);
 qIn.addEventListener("input", () => { if (bnd.on) closeBinder(true); }, true);
 document.getElementById("to-list").addEventListener("click", () => { if (bnd.on) closeBinder(true); }, true);
-// From anywhere (the import's toast): out of the set, into the Trade lens, then the binder.
+// From anywhere (the import's summary): the Trade room, then the binder.
 function tbOpenFromAnywhere() {
   if (document.body.classList.contains("listmode") || wel.on || tbl.on || bnd.on) return;
-  closePop(true); if (state.focus) unfocus(); if (room.on) closeRoom(true);
-  let tries = 0;
-  const go = () => {
-    if (bnd.on || tries++ > 60) return;
-    if (state.trans || shuffle || fly) { setTimeout(go, 120); return; }
-    if (view === "set") { exitToMosaic(); setTimeout(go, 120); return; }
-    if (state.lens !== "trade") { setLens("trade"); setTimeout(go, 120); return; }
-    mScroll = 0; openBinder();
-  };
-  go();
+  openBinder();
 }
 
 // Debug builds only: the tests' hook learns about the binder.
-setTimeout(() => { if (window.__w) Object.defineProperties(window.__w, { bnd: { get: () => bnd }, tbList: { value: tbList }, openBinder: { value: openBinder }, closeBinder: { value: closeBinder }, tbEnterShow: { value: tbEnterShow }, tbHandBack: { value: tbHandBack }, tbTurn: { value: tbTurn }, tbPocketRect: { value: tbPocketRect }, tbGiveAway: { value: tbGiveAway }, COVER: { value: COVER }, wantedBy: { value: wantedBy } }); }, 0);
+setTimeout(() => { if (window.__w) Object.defineProperties(window.__w, { bnd: { get: () => bnd }, tbList: { value: tbList }, openBinder: { value: openBinder }, closeBinder: { value: closeBinder }, tbEnterShow: { value: tbEnterShow }, tbHandBack: { value: tbHandBack }, tbTurn: { value: tbTurn }, tbPocketRect: { value: tbPocketRect }, tbGiveAway: { value: tbGiveAway }, wantedBy: { value: wantedBy } }); }, 0);
