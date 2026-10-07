@@ -967,3 +967,94 @@ body.trading #pg-trade { opacity: 0; transition: opacity .3s; }
 #list .lsrc input { width: 22px; height: 22px; accent-color: var(--c-blue); justify-self: end; }
 .src-clock b { color: var(--ink); }
 .titem .cface b, .titem .cface i, .tca-row .cface b, .tca-row .cface i { display: none; }
+
+/* ---------- A phone on its side (round 22) ----------
+   The notch's insets as tokens (the tests stand in for them), and a probe at the safe area's edges that the script
+   measures. On a short, wide screen the chrome shares one row along the top: the strip, then the lens bar at its
+   right. Sheets that rise from the bottom in portrait stand at the right instead, beside what they're about, or
+   lie low and wide. The script's landPhone() is the same test as this media query. */
+:root { --sal: env(safe-area-inset-left, 0px); --sar: env(safe-area-inset-right, 0px); --side-w: min(400px, max(320px, 44vw)); --lens-w: 214px; }
+#safe-probe { position: fixed; z-index: -1; top: env(safe-area-inset-top, 0px); bottom: env(safe-area-inset-bottom, 0px); left: var(--sal); right: var(--sar); pointer-events: none; visibility: hidden; }
+@media (orientation: landscape) and (max-height: 559px) {
+  /* The top row: the strip at the left (clear of the notch), the lens bar at the right. */
+  .top { top: calc(env(safe-area-inset-top, 0px) + 8px); padding: 0 calc(var(--sar) + 20px + var(--lens-w)) 0 calc(var(--sal) + 10px); justify-content: flex-start; }
+  .strip { height: 46px; width: min(600px, 100%); }
+  .strip .ib { width: 38px; height: 38px; }
+  .search { height: 38px; }
+  .lens { top: calc(env(safe-area-inset-top, 0px) + 8px); bottom: auto; left: auto; right: calc(var(--sar) + 10px); width: var(--lens-w); height: 46px; padding: 3px; transform: none; }
+  .lens button { flex: 1; height: 38px; min-width: 0; padding: 0 8px; }
+  .lens .ink { top: 3px; bottom: 3px; }
+  /* Wherever the lens bar steps aside, it rises out of the row rather than dropping into the view. */
+  body:is(.focused, .marking, .offering, .trading, .inroom, .inbinder, .maptrans, .welcoming, .arriving, .building) .lens, body:not([data-room="chase"]) .lens { transform: translateY(-140%); }
+  .arrange-menu { top: calc(env(safe-area-inset-top, 0px) + 60px); left: calc(var(--sal) + 10px); max-height: calc(100dvh - 70px); overflow-y: auto; }
+  .arrange-menu.right { right: auto; left: calc(var(--sal) + 10px + min(600px, 100vw - var(--sal) - var(--sar) - 30px - var(--lens-w)) - min(290px, 100vw - 20px)); }
+  .maptip { left: calc(var(--sal) + 12px); top: calc(env(safe-area-inset-top, 0px) + 62px); }
+  .timebar { bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); }
+  .caption { bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); }
+  .toast { top: calc(env(safe-area-inset-top, 0px) + 62px + var(--shelf-h, 0px)); max-width: min(560px, calc(100vw - var(--sal) - var(--sar) - 20px)); }
+  .markbar, .tradebar { bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); }
+
+  /* A card up close: the card at the left, its panel standing at the right (not over it). */
+  .panel { left: auto; right: calc(var(--sar) + 10px); top: calc(env(safe-area-inset-top, 0px) + 62px); bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); width: var(--side-w);
+    transform: translateX(calc(100% + 30px + var(--sar))); border-radius: 18px; border-bottom: 1px solid var(--line); padding: 14px 16px; align-content: start; grid-auto-rows: max-content; gap: 10px; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
+  body.focused .panel { transform: none; }
+  .panel h1 { font-size: 24px; }
+  .panel .price { font-size: 22px; }
+  .act { height: 44px; }
+  .copies { height: 44px; }
+  /* The offers under a popped-up card (the Chase lens): the same, at the right. */
+  .offers { left: auto; right: calc(var(--sar) + 10px); top: calc(env(safe-area-inset-top, 0px) + 62px); bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); width: var(--side-w);
+    transform: translateX(calc(100% + 30px + var(--sar))); border-radius: 18px; border-bottom: 1px solid var(--line); align-content: start; grid-auto-rows: max-content; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
+  body.offering .offers { transform: none; }
+  .o-acts .mbtn { height: 44px; }
+  /* What did you pay: the keypad beside the amount, low and wide. */
+  .pay { width: min(620px, calc(100% - var(--sal) - var(--sar) - 20px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); border-radius: 18px; border-bottom: 1px solid var(--line);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); grid-template-rows: auto 1fr auto; column-gap: 14px; }
+  .pay-head { grid-column: 1; grid-row: 1; }
+  .pay-amt { grid-column: 1; grid-row: 2; align-self: center; text-align: left; }
+  .pay-acts { grid-column: 1; grid-row: 3; }
+  .pay-keys { grid-column: 2; grid-row: 1 / 4; gap: 6px; }
+  .pay-keys button { height: 46px; font-size: 21px; }
+  .pay-acts .mbtn { height: 46px; }
+
+  /* The welcome: low and wide, its words at the left and its buttons at the right, so the wall above keeps working. */
+  .welcome { width: min(820px, calc(100% - var(--sal) - var(--sar) - 20px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); border-radius: 18px; border-bottom: 1px solid var(--line);
+    padding: 10px 16px 14px; grid-template-columns: minmax(0, 1fr) minmax(250px, 330px); column-gap: 18px; row-gap: 6px; align-items: start; }
+  .welcome > * { grid-column: 1; }
+  .welcome .w-top { grid-column: 1 / -1; }
+  .welcome .w-acts { grid-column: 2; grid-row: 2 / span 4; align-self: center; gap: 6px; }
+  .w-next, .w-src .mbtn { height: 44px; }
+  .w-alt, .w-all { height: 40px; }
+  .w-text b { font-size: 21px; }
+  .w-or { margin: -3px 0; }
+  /* The New chase form: at the right, the wall dimming to its match beside it. */
+  .chase-sheet { left: auto; right: calc(var(--sar) + 10px); top: calc(env(safe-area-inset-top, 0px) + 62px); bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); width: var(--side-w); max-height: none;
+    transform: translateX(calc(100% + 30px + var(--sar))); border-radius: 18px; border-bottom: 1px solid var(--line); grid-template-rows: auto minmax(0, 1fr) auto; }
+  body.building .chase-sheet.on { transform: none; }
+  body.building.focused .chase-sheet, body.building.offering .chase-sheet, body.building.paying .chase-sheet, body.building.trading .chase-sheet { transform: translateX(calc(100% + 30px + var(--sar))); }
+
+  /* Import complete: what came in at the left with See your wall; its rows, each a door, at the right. */
+  .arrival { width: min(780px, calc(100% - var(--sal) - var(--sar) - 20px)); max-height: calc(100dvh - 20px); bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); border-radius: 18px; border-bottom: 1px solid var(--line);
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); grid-template-rows: auto auto auto minmax(0, 1fr) auto; column-gap: 8px; }
+  .ar-scroll { display: contents; }
+  .ar-kick { grid-column: 1; grid-row: 1; padding: 20px 0 0 20px; }
+  .arrival h2 { grid-column: 1; grid-row: 2; padding: 0 0 0 20px; }
+  .ar-line { grid-column: 1; grid-row: 3; padding: 0 0 0 20px; }
+  .ar-rows { grid-column: 2; grid-row: 1 / -1; margin: 0; padding: 8px 14px 8px 4px; border-top: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; align-self: stretch; }
+  .ar-foot { grid-column: 1; grid-row: 5; padding: 10px 4px 16px 18px; }
+  /* A listing: the seller's photo at the left, the details scrolling at the right. */
+  .lsheet { width: min(780px, calc(100% - var(--sal) - var(--sar) - 20px)); max-height: calc(100dvh - 20px); margin: auto; border-radius: 20px; padding-left: 38%; }
+  .ls-photo { position: absolute; left: 0; top: 0; bottom: 0; width: 38%; height: auto; }
+  .ls-photo .cface { width: min(150px, 58%); }
+  .ls-foot { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); }
+  .tcadd { width: min(560px, calc(100% - var(--sal) - var(--sar) - 20px)); max-height: calc(100dvh - 20px); margin: auto; border-radius: 20px; }
+  .msheet { max-height: calc(100dvh - 20px); }
+  dialog { max-height: calc(100dvh - 20px); }
+
+  /* The rooms that are pages: under the top row, clear of the notch. */
+  .rpage { padding: calc(env(safe-area-inset-top, 0px) + 66px) calc(var(--sar) + 16px) calc(env(safe-area-inset-bottom, 0px) + 28px) calc(var(--sal) + 16px); }
+  .rp-head h1 { font-size: 28px; }
+  /* The Feed: two listings to a row, each a phone's width. */
+  #pg-feed .rp-wrap { max-width: 920px; }
+  #pg-feed .feed { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
+}

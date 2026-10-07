@@ -5,19 +5,37 @@ const TW = 63, TH = 88, GAP = 10, COLS = 10, HEAD = 176;
 const stepX = (g) => (tight(g) ? TW : TW + GAP) * g.sz, stepY = (g) => (tight(g) ? TH : TH + GAP) * g.sz; // a sealed album packs edge to edge
 function binderLayout(g) {
   // As many across as stay readable: five on a phone, up to ten on a wide screen; bigger cards, fewer across.
-  const base = clamp(Math.floor((vw - 24) / 74), 4, COLS);
+  const base = clamp(Math.floor(frameW() / 74), 4, COLS);
   g.cols = Math.max(1, Math.floor(base / g.sz));
   g.x = 0; g.y = 0;
   g.w = g.cols * stepX(g) - (tight(g) ? 0 : GAP * g.sz);
-  // The title block is a fixed height on screen, whatever the card size: 132px at the framed zoom.
-  if (g.set) popLayout(g); else if (g.natdex) dexLayout(g); else { g.popChips = null; g.popH = g.chase ? 30 : 0; g.hdrBtn = g.chase ? { x: vw - 24 - 118, y: 2, w: 118, h: 22 } : null; g.hdrBtn2 = null; } // a chase's header: a row with Remove chase
+  // The title block is a fixed height on screen, whatever the card size: 132px at the framed zoom (less on a phone on
+  // its side, where height is what's short).
+  if (g.set) popLayout(g); else if (g.natdex) dexLayout(g); else { g.popChips = null; g.popH = g.chase ? 30 : 0; g.hdrBtn = g.chase ? { x: frameW() - 118, y: 2, w: 118, h: 22 } : null; g.hdrBtn2 = null; } // a chase's header: a row with Remove chase
   albumHeader(g); // a finished group's header: Back to the wall, or Put on the shelf
-  g.head = (132 + (g.popH || 0)) / ((vw - 24) / g.w); // the title block, plus the People chase row in a set
+  g.head = (headH() + (g.popH || 0)) / (frameW() / g.w); // the title block, plus the People chase row in a set
   g.h = g.head + Math.ceil(g.cards.length / g.cols) * stepY(g) - (tight(g) ? 0 : GAP * g.sz);
   g.cards.forEach((c, k) => { c.sz = g.sz; c.col = k % g.cols; c.row = Math.floor(k / g.cols); c.x = c.col * stepX(g); c.y = g.head + c.row * stepY(g); });
 }
 let vw = innerWidth, vh = innerHeight;
-const topPad = () => 70, botPad = () => (document.body.classList.contains("timing") ? 160 : 72);
+// A phone on its side (round 22): a short, wide screen. The chrome shares one row along the top (the strip, then the
+// lens bar at its right), so the views below get the height; sheets that rise from the bottom in portrait stand at
+// the right instead, beside what they're about. The same test is the stylesheet's
+// @media (orientation: landscape) and (max-height: 559px).
+const landPhone = () => vw > vh && vh < 560;
+// The safe area (the notch and the home indicator), measured from a probe the stylesheet places at its edges. Left
+// and right come from --sal and --sar (env(safe-area-inset-left/right), which the tests can stand in for).
+const SAFE = { top: 0, bottom: 0, left: 0, right: 0 };
+const safeProbe = document.createElement("div"); safeProbe.id = "safe-probe"; safeProbe.setAttribute("aria-hidden", "true"); document.body.append(safeProbe);
+function readSafe() {
+  const r = safeProbe.getBoundingClientRect();
+  SAFE.top = Math.max(0, r.top || 0); SAFE.bottom = Math.max(0, vh - (r.bottom || vh));
+  SAFE.left = Math.max(0, r.left || 0); SAFE.right = Math.max(0, vw - (r.right || vw));
+}
+const frameW = () => vw - 24 - SAFE.left - SAFE.right; // a framed binder's width on screen, clear of the notch
+const headH = () => (landPhone() ? 100 : 132); // a binder's title block at the framed zoom
+const topPad = () => (landPhone() ? SAFE.top + 62 : 70);
+const botPad = () => { const b = document.body.classList; return landPhone() ? SAFE.bottom + (b.contains("timing") ? 104 : b.contains("marking") ? 74 : 18) : b.contains("timing") ? 160 : 72; };
 const LABEL = 40, PG = 6;
 // Ordered strip treemap: groups keep their order (oldest set first), rows fill the width, the rows fill the height.
 // The mosaic scrolls when it needs to: every card gets at least a small tile, so a big collection grows downward
@@ -62,7 +80,7 @@ const W_FOLD = 50, NEW_H = 56;
 let newPanel = null; // the New chase panel at the end of the wall, in mosaic coordinates
 const wallW = (g) => g.weight || g.cards.length; // a panel's share of the wall: its cards (the Dex's empty pockets count for less)
 function mosaicLayout() {
-  const R0 = { x: 8, y: topPad(), w: vw - 16 }, top = R0.y + shelfLayout(R0); // the shelf first: trophies finished today
+  const R0 = { x: 8 + SAFE.left, y: topPad(), w: vw - 16 - SAFE.left - SAFE.right }, top = R0.y + shelfLayout(R0); // the shelf first: trophies finished today
   const live = groups.filter((g) => !g.done);
   const newH = mode === "set" && !picking() ? NEW_H : 0;
   newPanel = null;
@@ -71,7 +89,7 @@ function mosaicLayout() {
   if (mode === "set" && pickedSets.size && pickedSets.size < sets.length) {
     const mine = live.filter((g) => g.chase || pickedSets.has(g.set.id)), rest = live.filter((g) => g.set && !pickedSets.has(g.set.id));
     const n = mine.reduce((a, g) => a + wallW(g), 0);
-    const R = { x: R0.x, y: top, w: R0.w, h: mine.length ? Math.max(fitH - rest.length * W_FOLD, fitH * 0.62, (n * 340) / (vw - 16)) : 0 };
+    const R = { x: R0.x, y: top, w: R0.w, h: mine.length ? Math.max(fitH - rest.length * W_FOLD, fitH * 0.62, (n * 340) / R0.w) : 0 };
     const items = mine.map((g) => ({ g, v: Math.max(wallW(g), 45) }));
     const floor = items.reduce((t, i) => t + i.v, 0) * 0.06;
     for (const i of items) i.v = Math.max(i.v, floor);
@@ -87,7 +105,7 @@ function mosaicLayout() {
     return;
   }
   const n = live.reduce((a, g) => a + wallW(g), 0);
-  const R = { x: R0.x, y: top, w: R0.w, h: live.length ? Math.max(fitH, (n * 340) / (vw - 16)) : 0 };
+  const R = { x: R0.x, y: top, w: R0.w, h: live.length ? Math.max(fitH, (n * 340) / R0.w) : 0 };
   let y = R.y + R.h;
   if (newH) { newPanel = { x: R.x, y, w: R.w, h: newH }; y += newH; }
   y += caseLayout(R0, y);
@@ -142,7 +160,7 @@ function packFolded(g) {
   g.cards.forEach((c, k) => { c.m = { x: x + (w * k) / n, y: m.y + PG + 30, w: Math.max(0.5, w / n), h: 2 }; });
 }
 function liftedLayout() {
-  const R = { x: 8, y: topPad(), w: vw - 16 };
+  const R = { x: 8 + SAFE.left, y: topPad(), w: vw - 16 - SAFE.left - SAFE.right };
   let y = R.y + shelfLayout(R);
   const live = groups.filter((g) => !g.done && g.lead.length), folded = groups.filter((g) => !g.done && !g.lead.length);
   // On a wide screen two live panels sit side by side; on a phone they stack.
@@ -172,12 +190,12 @@ function layoutAll() {
 
 // ---------- camera (inside a set) ----------
 const cam = { x: 0, y: 0, s: 1 };
-const fitCam = (g) => { const s = (vw - 24) / g.w; return { s, x: -12 / s, y: -(topPad() + 6) / s }; };
+const fitCam = (g) => { const s = frameW() / g.w; return { s, x: -(12 + SAFE.left) / s, y: -(topPad() + 6) / s }; };
 const maxS = () => Math.min(vw * 0.86 / TW, (vh - 120) / TH);
 const toWorld = (sx, sy) => ({ x: cam.x + sx / cam.s, y: cam.y + sy / cam.s });
 function clampCam(g) {
-  if (!g) return;
-  const left = -12 / cam.s, right = g.w + 12 / cam.s - vw / cam.s;
+  if (!g || state.focus) return; // a card up close is composed by focusCam, not by the binder's edges
+  const left = -(12 + SAFE.left) / cam.s, right = g.w + (12 + SAFE.right) / cam.s - vw / cam.s;
   cam.x = right < left ? (left + right) / 2 : clamp(cam.x, left, right);
   const top = -(topPad() + 6) / cam.s, bottom = g.h + (botPad() + 20) / cam.s - vh / cam.s;
   cam.y = bottom < top ? top : clamp(cam.y, top, bottom);

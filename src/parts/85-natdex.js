@@ -129,7 +129,7 @@ function natdexGroup(r, i) {
 // Laid out in framed pixels like a set's People chase row (1 = the binder framed to the screen).
 const DEX_ROW = 24;
 function dexLayout(g) {
-  const W = vw - 24, sw = (W - 4) / 3;
+  const W = frameW(), sw = (W - 4) / 3;
   g.popChips = null; g.seg = null; g.hdrBtn2 = null;
   g.dexSeg = DEX_RAR.map(([v, label], i) => ({ v, label, x: i * (sw + 2), y: 2, w: sw, h: SEG_H }));
   g.dexType = { x: 0, y: 38, w: Math.min(176, W - 130), h: 22 };

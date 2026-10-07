@@ -19,11 +19,31 @@ function readTheme() {
   if (typeof heatCache !== "undefined") heatCache.clear();
   theme.dark = cs.colorScheme === "dark" || matchMedia("(prefers-color-scheme: dark)").matches && document.documentElement.dataset.theme !== "light";
 }
+// A new screen size, or the phone turning on its side (round 22): whatever is moving lands first, then every level
+// lays out again and the view you were in is composed again for the new screen. A set stays framed with the row you
+// were reading at the top; a card up close comes up close again; the wall keeps the panel you were looking at.
 function resize() {
+  const was = { w: vw, h: vh };
   vw = innerWidth; vh = innerHeight; dpr = Math.min(3, devicePixelRatio || 1);
   canvas.width = Math.round(vw * dpr); canvas.height = Math.round(vh * dpr);
+  readSafe();
+  const turned = started && (was.w !== vw || was.h !== vh);
+  if (turned) { const T = state.trans; if (T && (T.anim || T.t0)) finishTransition(); fly = null; inertia = false; }
+  // Where you are, before the layout moves under it.
+  const g = view === "set" ? state.g : null;
+  let row = null, wallAt = null;
+  if (turned && g && !state.focus) { const y = cam.y + (topPad() + 6) / cam.s; row = g.cards.find((c) => c.y + TH * c.sz * 0.5 > y) || null; }
+  if (turned && view === "mosaic" && !room.on && mScroll > 0) { const y = mScroll + topPad(); wallAt = groups.find((x) => x.m && !x.done && x.m.y + x.m.h > y) || null; }
   layoutAll();
-  if (view === "set" && state.g) { const f = fitCam(state.g); if (!state.focus) { cam.s = Math.max(cam.s, f.s); } clampCam(state.g); }
+  if (view === "set" && g) {
+    const f = fitCam(g);
+    if (state.focus) { if (turned) focusCam(state.focus, true); }
+    else if (turned) { Object.assign(cam, f); if (row) cam.y = row.y - (topPad() + 6) / cam.s - (row.row ? GAP * row.sz : 0); }
+    else cam.s = Math.max(cam.s, f.s);
+    clampCam(g);
+  }
+  if (wallAt) mScroll = clamp(wallAt.m.y - topPad() - 4, 0, mMax);
+  if (turned) mapUI.L = null;
   kick();
 }
 
@@ -249,7 +269,7 @@ function cardFace(c, sx, sy, w, h, now, value) {
 // A set's title inside the set view, drawn with whichever camera is in use (they differ mid-transition).
 function drawHeader(st, now, C = cam, ox = 0, alpha = 1) {
   const sx = (st.x - C.x) * C.s + ox, sy = (st.y - C.y) * C.s, sw = st.w * C.s;
-  const k = (st.head * C.s) / (132 + (st.popH || 0)), hh = 132 * k; // 1 at the framed zoom; the title block is 132 of the header
+  const k = (st.head * C.s) / (headH() + (st.popH || 0)), hh = headH() * k; // 1 at the framed zoom; the title block is 132 of the header (100 on a phone on its side)
   const owned = ownedNow(st.cards), n = st.cards.length, f = finishOf(st);
   ctx.globalAlpha = alpha * (state.focus ? 1 - state.dimAll * 0.7 : 1);
   ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
