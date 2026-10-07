@@ -1,8 +1,8 @@
-// npm test: gestures, smoke, performance, canvas memory and card pictures, for the base wall or one variant (--variant name).
+// npm test: gestures, landscape, smoke, performance, canvas memory and card pictures, for the base wall or one variant (--variant name).
 import { spawnSync } from "node:child_process";
 const extra = process.argv.slice(2);
 let failed = 0;
-for (const t of ["gestures", "smoke", "perf", "memory", "art"]) {
+for (const t of ["gestures", "landscape", "smoke", "perf", "memory", "art"]) {
   console.log(`\n=== ${t} ===`);
   const r = spawnSync(process.execPath, [new URL(`./${t}.mjs`, import.meta.url).pathname, ...extra], { stdio: "inherit" });
   if (r.status !== 0) failed++;

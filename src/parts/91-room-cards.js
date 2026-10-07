@@ -31,7 +31,7 @@ function cardFrame(id, w, h, fill = theme["panel-solid"]) {
 function cardTitle(id, w, line, { ink = theme.ink, muted = theme.muted, col = null } = {}) {
   ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
   ctx.fillStyle = ink; font(800, 19, true); ctx.fillText(fitText(ROOM_NAME[id], w - 28), 14, 29);
-  if (line) { ctx.fillStyle = col || muted; font(col ? 700 : 600, 12.5); ctx.fillText(fitText(line, w - 28), 14, 46); }
+  if (line) { ctx.fillStyle = col || muted; font(col ? 700 : 600, w < 190 ? 11.5 : 12.5); ctx.fillText(fitText(line, w - 28), 14, 46); } // a narrow card (the map across) sets it smaller
 }
 // Each room's count line: production's tabs carry the same.
 function countLine(id) {
@@ -59,22 +59,24 @@ const PAINT = {
     cardFrame("feed", w, h);
     const F = feedData(), n = F.list.length, cl = countLine("feed");
     cardTitle("feed", w, cl.t, { col: cl.col });
-    const y0 = CARD_HEAD + 2, th = h - y0 - 10, tw = Math.min(176, Math.max(150, th * 1.75)), step = tw + 8;
+    // A wide card (the map in portrait) runs its listings across; a tall one (a phone on its side) stacks them.
+    const vert = h > w * 1.3, y0 = CARD_HEAD + 2, th = vert ? 72 : h - y0 - 10, tw = vert ? w - 24 : Math.min(176, Math.max(150, th * 1.75)), step = (vert ? th : tw) + 8;
     if (!n) {
       ctx.fillStyle = theme.muted; font(500, 13.5);
-      wrapLines(F.chased ? `Every listing found for the ${plural1(F.chased, "card")} you chase lands here, newest first.` : "Chase a card and every listing found for it lands here, newest first.", w - 28, 3).forEach((l, i) => ctx.fillText(l, 14, y0 + 16 + i * 19));
-      return { step, y0, th, tw };
+      wrapLines(F.chased ? `Every listing found for the ${plural1(F.chased, "card")} you chase lands here, newest first.` : "Chase a card and every listing found for it lands here, newest first.", w - 28, vert ? 6 : 3).forEach((l, i) => ctx.fillText(l, 14, y0 + 16 + i * 19));
+      return { step, y0, th, tw, vert };
     }
     const now = performance.now();
-    for (let i = 0; i < n && 12 + i * step < w; i++) feedChip(F.list[i], 12 + i * step, y0, tw, th, now);
-    return { step, y0, th, tw };
+    if (vert) for (let i = 0; i < n && y0 + i * step + th <= h - 8; i++) feedChip(F.list[i], 12, y0 + i * step, tw, th, now);
+    else for (let i = 0; i < n && 12 + i * step < w; i++) feedChip(F.list[i], 12 + i * step, y0, tw, th, now);
+    return { step, y0, th, tw, vert };
   },
   trade(w, h) {
     cardFrame("trade", w, h);
     const list = tbList(), cl = countLine("trade");
     cardTitle("trade", w, cl.t, { col: cl.col });
     // the binder's first page, small: what grows into the binder when you open it from the room
-    const G = tbGeom(false), gh = clamp(h - CARD_HEAD - 44, 44, 150), gw = gh * G.pw / G.ph, gx = Math.round((w - gw) / 2), gy = CARD_HEAD + 4, k = gw / G.pw;
+    const G = tbGeom(false, 1), gh = clamp(h - CARD_HEAD - 44, 44, 150), gw = gh * G.pw / G.ph, gx = Math.round((w - gw) / 2), gy = CARD_HEAD + 4, k = gw / G.pw;
     rr(gx, gy, gw, gh, 5); ctx.fillStyle = theme.slot; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = theme["slot-line"]; ctx.stroke();
     ctx.fillStyle = theme.gold; rr(gx + 3, gy + 8, 2.5, gh - 16, 1.2); ctx.fill(); // the spine
     for (let i = 0; i < 9; i++) {
@@ -139,15 +141,19 @@ const PAINT = {
 function feedChip(L, x, y, w, h, now) {
   const c = L.c;
   rr(x, y, w, h, 10); ctx.fillStyle = dealTint(); ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = theme.deal; ctx.stroke();
-  const ch = h - 14, cw = ch * TW / TH;
-  foilOff = true; cardFace(c, x + 7, y + 7, cw, ch, now, false); foilOff = false;
+  const bare = h < 80 && w < 150, ch = h - 14, cw = bare ? -1 : ch * TW / TH; // bare: a narrow chip in a stack keeps its words and leaves out the card
+  if (!bare) { foilOff = true; cardFace(c, x + 7, y + 7, cw, ch, now, false); foilOff = false; }
   ctx.globalAlpha = 1; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-  const tx = x + 7 + cw + 8, tw = x + w - 8 - tx;
-  ctx.fillStyle = theme.deal; font(800, 16.5); ctx.fillText(fitText(short(L.price), tw), tx, y + 23);
-  font(700, 11.5); ctx.fillText(fitText(`${pctOf(L)}% under`, tw), tx, y + 38);
-  ctx.fillStyle = theme.ink; font(700, 12.5, true); ctx.fillText(fitText(c.name, tw), tx, y + h - 22);
-  ctx.fillStyle = theme.muted; font(500, 10.5); ctx.fillText(fitText(`${srcName(L.src, true)} · ${agoText(L.seen, Date.now())}`, tw), tx, y + h - 8);
-  if (isNewL(L)) pill("NEW", x + w - 6, y + 6, theme["c-blue"], "#fff");
+  // low: a chip in a stack (the map on a phone on its side), where NEW is a dot in the corner rather than a tag
+  const tx = x + 7 + cw + 8, tw = x + w - 8 - tx, low = h < 80, fresh = isNewL(L);
+  let nw = 0;
+  if (fresh && low && w < 150) { ctx.beginPath(); ctx.arc(x + w - 9, y + 9, 4, 0, Math.PI * 2); ctx.fillStyle = theme["c-blue"]; ctx.fill(); nw = 8; }
+  else if (fresh) nw = pill("NEW", x + w - 6, y + 6, theme["c-blue"], "#fff") + 4;
+  ctx.textAlign = "left";
+  ctx.fillStyle = theme.deal; font(800, 16.5); ctx.fillText(fitText(short(L.price), tw - nw), tx, y + (low ? 21 : 23));
+  font(700, 11.5); ctx.fillText(fitText(`${pctOf(L)}% under`, tw), tx, y + (low ? 36 : 38));
+  ctx.fillStyle = theme.ink; font(700, 12.5, true); ctx.fillText(fitText(c.name, tw), tx, y + h - (low ? 19 : 22));
+  ctx.fillStyle = theme.muted; font(500, 10.5); ctx.fillText(fitText(`${srcName(L.src, true)} · ${agoText(L.seen, Date.now())}`, tw), tx, y + h - (low ? 6 : 8));
 }
 function pill(text, x, y, fill, ink) { // a small rounded tag; x is its right edge
   font(800, 10); const w = textW(text) + 12, px = x - w;
@@ -186,7 +192,7 @@ function drawCard(id, r, now, a) {
       ctx.save(); ctx.beginPath(); ctx.rect(bx, by, bw, bh); ctx.clip();
       ctx.fillStyle = theme["panel-solid"]; ctx.fillRect(bx, by, bw, bh);
       const sx = Math.round(6 * kk), sy = Math.round((E.y0 - 4) * kk), sw = b.cv.width - sx * 2, sh = b.cv.height - sy - Math.round(6 * kk); // inside the card's edges only
-      ctx.drawImage(b.cv, sx, sy, sw, sh, bx - E.step * k * (1 - e), by, bw, bh);
+      ctx.drawImage(b.cv, sx, sy, sw, sh, bx - (E.vert ? 0 : E.step * k * (1 - e)), by - (E.vert ? E.step * k * (1 - e) : 0), bw, bh);
       ctx.restore(); curFont = "";
       ctx.globalAlpha = a * (1 - p); ctx.lineWidth = 2; ctx.strokeStyle = theme.deal; const g = 4 + 8 * p;
       rr(r.x + (12 - g) * k, r.y + (E.y0 - g) * k, (E.tw + g * 2) * k, (E.th + g * 2) * k, 12 + g); ctx.stroke();
@@ -194,6 +200,7 @@ function drawCard(id, r, now, a) {
   } else ctx.drawImage(b.cv, r.x, r.y, r.w, r.h);
   if (id === "source") { // its clock as its count line, and a pulse on the source that just found something
     ctx.globalAlpha = a; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; ctx.fillStyle = theme.muted; font(600, 12.5);
+    if (r.w / k < 190) font(600, 11.5);
     ctx.fillText(fitText(clockText(true), r.w / k - 28), r.x + 14 * k, r.y + 46 * k);
     const P = mapUI.pulse;
     if (P && b.extra) {

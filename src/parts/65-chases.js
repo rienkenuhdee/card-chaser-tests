@@ -286,23 +286,26 @@ document.getElementById("list").addEventListener("click", (e) => { const n = e.t
 const POP_CHIP = 24, POP_GAP = 6, POP_ROWS = 3, SEG_W = 72, SEG_H = 26;
 const SCOPES = [["set", "Set"], ["master", "Master set"], ["grand", "Grand set"]];
 function popLayout(g) {
-  const st = g.set, W = vw - 24, chips = [];
+  const st = g.set, W = frameW(), chips = [];
   // line one: the view (Set, Master set, Grand set) and Chase these; then People chase and its chips
   g.seg = st.master.length || st.grand.length ? SCOPES.map(([key, label], i) => ({ key, label, x: i * (SEG_W + 2), y: 2, w: SEG_W, h: SEG_H })) : null;
   g.hdrBtn = { x: W - 112, y: 4, w: 112, h: 22, pop: true };
-  const top = g.seg ? 46 : 0;
-  g.hdrBtn2 = { x: W - 96, y: top + 2, w: 96, h: 22, remove: true }; // Remove set, on the People chase line
-  let x = 0, row = 0, more = 0;
+  // A phone on its side has width to spare and no height: both buttons share line one, and People chase leads its
+  // chips on the next (two rows at most).
+  const flat = landPhone(), top = flat ? 40 : g.seg ? 46 : 0, maxRows = flat ? 2 : POP_ROWS, x0 = flat ? 86 : 0;
+  if (flat) { g.hdrBtn.y = 10; if (g.seg) for (const sg of g.seg) sg.y = 8; } // clear of the next medal hanging under the bar
+  g.hdrBtn2 = flat ? { x: W - 112 - 8 - 96, y: 10, w: 96, h: 22, remove: true } : { x: W - 96, y: top + 2, w: 96, h: 22, remove: true }; // Remove set, on the People chase line
+  let x = x0, row = 0, more = 0;
   for (const c of st.pop) {
-    const price = short(c.price), w = Math.min(W, Math.round(c.name.length * 6.1 + price.length * 6.4 + 26));
-    if (x + w > W && x > 0) { row++; x = 0; }
-    if (row >= POP_ROWS) { more++; continue; }
-    chips.push({ c, x, y: top + 30 + row * (POP_CHIP + POP_GAP), w, h: POP_CHIP, price });
+    const price = short(c.price), w = Math.min(W - x0, Math.round(c.name.length * 6.1 + price.length * 6.4 + 26));
+    if (x + w > W && x > x0) { row++; x = x0; }
+    if (row >= maxRows) { more++; continue; }
+    chips.push({ c, x, y: top + (flat ? 0 : 30) + row * (POP_CHIP + POP_GAP), w, h: POP_CHIP, price });
     x += w + POP_GAP;
   }
-  const rows = chips.length ? Math.min(POP_ROWS, row + 1) : 0;
+  const rows = chips.length ? Math.min(maxRows, row + 1) : 0;
   g.popChips = chips; g.popMore = more; g.popTop = top;
-  g.popH = top + 32 + rows * (POP_CHIP + POP_GAP) + 2;
+  g.popH = flat ? top + Math.max(1, rows) * (POP_CHIP + POP_GAP) + 2 : top + 32 + rows * (POP_CHIP + POP_GAP) + 2;
 }
 // The set, its master set (every printing), or its grand set (the reprints too): the binder reshuffles, the new
 // printings springing out of the cards they print.
@@ -342,11 +345,11 @@ function removeSet(st) {
 }
 // The chip or the button under a point in a binder's header, in framed pixels.
 function headAt(g, sx, sy) {
-  const p = toWorld(sx, sy), k = (vw - 24) / g.w, fx = (p.x - g.x) * k, fy = (p.y - g.y) * k;
-  for (const b of [g.hdrBtn, g.hdrBtn2]) if (b) { const by = 132 + b.y; if (fx >= b.x - 6 && fx <= b.x + b.w + 6 && fy >= by - 4 && fy <= by + b.h + 4) return { btn: b }; }
-  if (g.natdex && !finishOf(g)?.put) return dexHeadAt(g, fx, fy - 132); // the Dex's prints, type and regions
+  const p = toWorld(sx, sy), k = frameW() / g.w, fx = (p.x - g.x) * k, fy = (p.y - g.y) * k, H = headH();
+  for (const b of [g.hdrBtn, g.hdrBtn2]) if (b) { const by = H + b.y; if (fx >= b.x - 6 && fx <= b.x + b.w + 6 && fy >= by - 4 && fy <= by + b.h + 4) return { btn: b }; }
+  if (g.natdex && !finishOf(g)?.put) return dexHeadAt(g, fx, fy - H); // the Dex's prints, type and regions
   if (!g.popChips) return null;
-  const py = fy - 132; if (py < 0 || py > g.popH) return null;
+  const py = fy - H; if (py < 0 || py > g.popH) return null;
   if (g.seg) for (const s of g.seg) if (fx >= s.x && fx <= s.x + s.w && py >= s.y - 3 && py <= s.y + s.h + 3) return { seg: s.key };
   for (const ch of g.popChips) if (fx >= ch.x && fx <= ch.x + ch.w && py >= ch.y - 3 && py <= ch.y + ch.h + 3) return { c: ch.c };
   return null;
@@ -390,7 +393,7 @@ function drawPopRow(g, sx, y0, k, alpha) {
   if (g.popMore) {
     const last = g.popChips[g.popChips.length - 1], x = sx + (last.x + last.w + POP_GAP) * k, y = y0 + last.y * k;
     ctx.fillStyle = theme.muted; font(600, 10.5 * k);
-    if (x + textW(`and ${g.popMore} more`) <= sx + (vw - 24) * k) ctx.fillText(`and ${g.popMore} more`, x, y + last.h * k * 0.68);
+    if (x + textW(`and ${g.popMore} more`) <= sx + frameW() * k) ctx.fillText(`and ${g.popMore} more`, x, y + last.h * k * 0.68);
   }
 }
 // The New chase panel at the end of the wall (laid out in 30-layout, drawn in 40-render).

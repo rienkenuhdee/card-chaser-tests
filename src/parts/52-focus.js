@@ -6,14 +6,25 @@ function focus(c, dir = 0) {
   state.focus = c;
   document.body.classList.add("focused");
   fillPanel(c, dir);
-  const top = 70, avail = vh - panelH() - top - 12;
-  const ch = Math.min(avail * 0.92, (vw * 0.78) * TH / TW);
-  const S = TH * c.sz, s = Math.min(ch / S, maxS() * 1.4);
-  const cy = top + avail / 2;
-  flyTo({ s, x: c.x + TW * c.sz / 2 - vw / 2 / s, y: c.y + S / 2 - cy / s }, dir ? 360 : 520);
+  focusCam(c, false, dir);
   lookedAt(c); // bringing a card up close is looking at its deal
   tick(6);
 }
+// Where a card up close sits: over the panel in portrait; on a phone on its side the panel stands at the right and the
+// card fills the space beside it (round 22). now: straight there (the screen turned), else a flight.
+function focusCam(c, now = false, dir = 0) {
+  let top = 70, avail = vh - panelH() - top - 12, cx = vw / 2, wide = vw * 0.78;
+  if (landPhone()) {
+    const side = sideW(); top = topPad(); avail = vh - top - SAFE.bottom - 12;
+    const L = SAFE.left + 10, R = vw - side; cx = (L + R) / 2; wide = (R - L) * 0.86;
+  }
+  const ch = Math.min(avail * 0.92, wide * TH / TW);
+  const S = TH * c.sz, s = Math.min(ch / S, maxS() * 1.4);
+  const cy = top + avail / 2, t = { s, x: c.x + TW * c.sz / 2 - cx / s, y: c.y + S / 2 - cy / s };
+  if (now) { fly = null; Object.assign(cam, t); kick(); } else flyTo(t, dir ? 360 : 520);
+}
+// On a phone on its side, what a sheet standing at the right takes: its width and the gap beside it.
+const sideW = () => Math.min(400, Math.max(320, vw * 0.44)) + 10 + SAFE.right;
 function unfocus() {
   if (!state.focus) return;
   state.focus = null;

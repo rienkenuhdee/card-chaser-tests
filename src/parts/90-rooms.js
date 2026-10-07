@@ -31,11 +31,12 @@ const SCREEN = () => ({ x: 0, y: 0, w: vw, h: vh });
 // ----- the map's layout: Feed along the top, Chase and Trade over Medal in the middle, Source along the bottom -----
 // It reads like production's tab bar: Feed, Chase, Trade, Medal, Source. Chase is the biggest: its card has the wall's
 // own proportions, so the wall shrinks into it without cropping.
-const wallBand = () => ({ x: 0, y: topPad() - 4, w: vw, h: vh - botPad() + 4 - (topPad() - 4) });
+const wallBand = () => ({ x: SAFE.left, y: topPad() - 4, w: vw - SAFE.left - SAFE.right, h: vh - botPad() + 4 - (topPad() - 4) });
 const CARD_HEAD = 56; // a card's name and its count line
 function mapLayout() {
-  const key = `${vw}|${vh}|${botPad()}`;
+  const key = `${vw}|${vh}|${botPad()}|${SAFE.left}|${SAFE.right}`;
   if (mapUI.L?.key === key) return mapUI.L;
+  if (landPhone()) return (mapUI.L = mapAcross(key));
   const W = Math.min(vw - 20, 1180), x0 = Math.round((vw - W) / 2), gap = 10, top = topPad() - 2, bottom = vh - 34, avail = bottom - top;
   const fH = Math.round(clamp(avail * 0.21, 132, 186)), sH = Math.round(clamp(avail * 0.18, 126, 156));
   const my = top + fH + gap, mh = avail - fH - sH - gap * 2;
@@ -53,6 +54,24 @@ function mapLayout() {
   };
   const thumb = { x: x0 + (cw - thW) / 2, y: my + CARD_HEAD, w: thW, h: thH };
   return (mapUI.L = { key, r, thumb, hintY: vh - 14 });
+}
+// On a phone on its side (round 22) the map reads across, in the tab bar's order: Feed, then Chase (the biggest, the
+// wall's own proportions), then Trade over Medal, then Source, each a column clear of the notch.
+function mapAcross(key) {
+  const gap = 10, x0 = 10 + SAFE.left, W = vw - 20 - SAFE.left - SAFE.right, top = topPad() - 2, bottom = vh - SAFE.bottom - 30, h = bottom - top;
+  const B = wallBand(), asp = B.w / B.h, FOOT = 50, U = W - gap * 3;
+  let cw = Math.round(Math.min(U * 0.42, U - 3 * 150)), thW = cw - 16, thH = thW / asp; // the others keep a readable width
+  if (thH > h - CARD_HEAD - FOOT) { thH = h - CARD_HEAD - FOOT; thW = thH * asp; cw = Math.round(thW + 16); }
+  const sw = Math.round((U - cw) / 3), fx = x0, cx = fx + sw + gap, tx = cx + cw + gap, sx = tx + sw + gap, sW = x0 + W - sx, th = Math.round((h - gap) / 2);
+  const r = {
+    feed: { x: fx, y: top, w: sw, h },
+    chase: { x: cx, y: top, w: cw, h },
+    trade: { x: tx, y: top, w: sw, h: th },
+    medal: { x: tx, y: top + th + gap, w: sw, h: h - th - gap },
+    source: { x: sx, y: top, w: sW, h },
+  };
+  const thumb = { x: cx + (cw - thW) / 2, y: top + CARD_HEAD + Math.max(0, (h - CARD_HEAD - FOOT - thH) / 2), w: thW, h: thH };
+  return { key, r, thumb, hintY: vh - SAFE.bottom - 12 };
 }
 function mapHit(x, y, nearest = false) {
   const L = mapLayout();

@@ -468,7 +468,6 @@ body.inroom .caption { display: none; }
 .sl-acts .pill-btn[hidden] { display: none; }
 
 /* The trade binder (round 17): its bar, and Show mode's bar and prices switch. */
-#tb-safe { position: fixed; top: env(safe-area-inset-top, 0px); bottom: env(safe-area-inset-bottom, 0px); left: 0; width: 0; pointer-events: none; visibility: hidden; }
 .bbar { position: fixed; z-index: 3; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); transform: translate(-50%, 160%); opacity: 0; pointer-events: none;
   width: min(460px, calc(100vw - 20px)); display: flex; align-items: center; gap: 6px; padding: 5px 5px 5px 14px; border-radius: 14px;
   transition: transform .4s cubic-bezier(.2,.9,.25,1.04), opacity .3s; }
@@ -775,6 +774,7 @@ body:is(.welcoming, .storying, .arriving, .listmode) .top #rooms + #back[hidden]
   padding: calc(env(safe-area-inset-top, 0px) + 74px) 16px calc(env(safe-area-inset-bottom, 0px) + 40px); transform-origin: 0 0; -webkit-user-select: none; user-select: none; }
 .rpage[hidden], body.listmode .rpage { display: none; }
 body.inbinder #pg-trade, body.trading #pg-trade { pointer-events: none; }
+body.inbinder #pt-page { visibility: hidden; } /* the binder is off the page, on the canvas */
 body.trading #pg-trade { opacity: 0; transition: opacity .3s; }
 .rp-wrap { max-width: 640px; margin: 0 auto; }
 .rp-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
@@ -890,9 +890,17 @@ body.trading #pg-trade { opacity: 0; transition: opacity .3s; }
 .tc-text em { font-style: normal; font-weight: 700; font-size: 13.5px; color: var(--gold); }
 .tc-text em.none { color: var(--muted); font-weight: 500; }
 .tc-text .tc-open { margin-top: auto; padding-top: 10px; color: var(--ink); font-weight: 700; }
-.tc-page { flex: none; width: 92px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 5px 5px 5px 9px; border: 1px solid var(--slot-line); border-radius: 6px; background: var(--panel-solid); align-content: start; }
-.tc-page i { aspect-ratio: 63 / 88; border-radius: 1.5px; background: var(--slot); }
-.tc-page i[style] { background: linear-gradient(180deg, color-mix(in srgb, var(--t) 70%, #fff) 0 22%, var(--t) 22% 76%, var(--paper) 76%); }
+/* The Trade room's binder, closed (round 22): green board, a darker spine, the title in gold. Tap it and its cover
+   swings open into the pages (78-trade-binder.js paints the same cover on the canvas). */
+.tc-page { flex: none; width: 96px; aspect-ratio: 66 / 100; display: block; position: relative; padding: 0; border: 0; border-radius: 6px; overflow: hidden; align-self: center;
+  background: linear-gradient(135deg, #2F7A52, #1F5A3B 60%, #174A30); box-shadow: 0 6px 14px rgb(0 0 0 / .22), inset 0 0 0 1px rgb(0 0 0 / .25); }
+.tc-page::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 10px; background: rgb(0 0 0 / .22); box-shadow: 1.5px 0 0 rgb(255 255 255 / .1); }
+.tc-page::after { content: ""; position: absolute; left: 15px; top: 6px; bottom: 6px; border-left: 1px dashed rgb(255 236 190 / .3); }
+.tc-page .tcb-label { position: absolute; left: 22px; right: 10px; top: 30%; height: 26%; display: grid; place-content: center; text-align: center; gap: 2px; border: 1px solid rgb(241 207 114 / .55); border-radius: 4px; }
+.tc-page .tcb-label b { font: 800 11.5px/1.05 var(--font); font-stretch: 80%; color: #F1CF72; }
+.tc-page .tcb-label small { font: 600 9px var(--font); color: rgb(241 207 114 / .8); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tc-page { background: linear-gradient(135deg, #2B6B4A, #1C4F36 60%, #133B28); } }
+:root[data-theme="dark"] .tc-page { background: linear-gradient(135deg, #2B6B4A, #1C4F36 60%, #133B28); }
 .traders { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .trader { width: 100%; display: grid; grid-template-columns: 34px 1fr auto; align-items: center; column-gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px;
   background: var(--panel-fill); color: var(--ink); text-align: left; cursor: pointer; font: inherit; }
@@ -1043,3 +1051,139 @@ body.trading #pg-trade { opacity: 0; transition: opacity .3s; }
 #list .lsrc input { width: 22px; height: 22px; accent-color: var(--c-blue); justify-self: end; }
 .src-clock b { color: var(--ink); }
 .titem .cface b, .titem .cface i, .tca-row .cface b, .tca-row .cface i { display: none; }
+
+/* ---------- A phone on its side (round 22) ----------
+   The notch's insets as tokens (the tests stand in for them), and a probe at the safe area's edges that the script
+   measures. On a short, wide screen the chrome shares one row along the top: the strip, then the lens bar at its
+   right. Sheets that rise from the bottom in portrait stand at the right instead, beside what they're about, or
+   lie low and wide. The script's landPhone() is the same test as this media query. */
+:root { --sal: env(safe-area-inset-left, 0px); --sar: env(safe-area-inset-right, 0px); --side-w: min(400px, max(320px, 44vw)); --lens-w: 214px; }
+#safe-probe { position: fixed; z-index: -1; top: env(safe-area-inset-top, 0px); bottom: env(safe-area-inset-bottom, 0px); left: var(--sal); right: var(--sar); pointer-events: none; visibility: hidden; }
+@media (orientation: landscape) and (max-height: 559px) {
+  /* The top row: the strip at the left (clear of the notch), the lens bar at the right. */
+  .top { top: calc(env(safe-area-inset-top, 0px) + 8px); padding: 0 calc(var(--sar) + 20px + var(--lens-w)) 0 calc(var(--sal) + 10px); justify-content: flex-start; }
+  .strip { height: 46px; width: min(600px, 100%); }
+  .strip .ib { width: 38px; height: 38px; }
+  .search { height: 38px; }
+  .lens { top: calc(env(safe-area-inset-top, 0px) + 8px); bottom: auto; left: auto; right: calc(var(--sar) + 10px); width: var(--lens-w); height: 46px; padding: 3px; transform: none; }
+  .lens button { flex: 1; height: 38px; min-width: 0; padding: 0 8px; }
+  .lens .ink { top: 3px; bottom: 3px; }
+  /* Wherever the lens bar steps aside, it rises out of the row rather than dropping into the view. */
+  body:is(.focused, .marking, .offering, .trading, .inroom, .inbinder, .maptrans) .lens, body:not([data-room="chase"]) .lens { transform: translateY(-140%); }
+  body:is(.welcoming, .arriving) .lens { transform: translateY(-6px); } /* waits in place, faded, to come back when the sheet goes */
+  .arrange-menu { top: calc(env(safe-area-inset-top, 0px) + 60px); left: calc(var(--sal) + 10px); max-height: calc(100dvh - 70px); overflow-y: auto; }
+  .arrange-menu.right { right: auto; left: calc(var(--sal) + 10px + min(600px, 100vw - var(--sal) - var(--sar) - 30px - var(--lens-w)) - min(290px, 100vw - 20px)); }
+  .maptip { left: calc(var(--sal) + 12px); top: calc(env(safe-area-inset-top, 0px) + 62px); }
+  .timebar { bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); }
+  .caption { bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); }
+  .toast { top: calc(env(safe-area-inset-top, 0px) + 62px + var(--shelf-h, 0px)); max-width: min(560px, calc(100vw - var(--sal) - var(--sar) - 20px)); }
+  .markbar, .tradebar { bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); }
+
+  /* A card up close: the card at the left, its panel standing at the right (not over it). */
+  .panel { left: auto; right: calc(var(--sar) + 10px); top: calc(env(safe-area-inset-top, 0px) + 62px); bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); width: var(--side-w);
+    transform: translateX(calc(100% + 30px + var(--sar))); border-radius: 18px; border-bottom: 1px solid var(--line); padding: 14px 16px; align-content: start; grid-auto-rows: max-content; gap: 10px; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
+  body.focused .panel { transform: none; }
+  .panel h1 { font-size: 24px; }
+  .panel .price { font-size: 22px; }
+  .act { height: 44px; }
+  .copies { height: 44px; }
+  /* The offers under a popped-up card (the Chase lens): the same, at the right. */
+  .offers { left: auto; right: calc(var(--sar) + 10px); top: calc(env(safe-area-inset-top, 0px) + 62px); bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); width: var(--side-w);
+    transform: translateX(calc(100% + 30px + var(--sar))); border-radius: 18px; border-bottom: 1px solid var(--line); align-content: start; grid-auto-rows: max-content; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
+  body.offering .offers { transform: none; }
+  .o-acts .mbtn { height: 44px; }
+  /* What did you pay: the keypad beside the amount, low and wide. */
+  .pay { width: min(620px, calc(100% - var(--sal) - var(--sar) - 20px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); border-radius: 18px; border-bottom: 1px solid var(--line);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); grid-template-rows: auto 1fr auto; column-gap: 14px; }
+  .pay-head { grid-column: 1; grid-row: 1; }
+  .pay-amt { grid-column: 1; grid-row: 2; align-self: center; text-align: left; }
+  .pay-acts { grid-column: 1; grid-row: 3; }
+  .pay-keys { grid-column: 2; grid-row: 1 / 4; gap: 6px; }
+  .pay-keys button { height: 46px; font-size: 21px; }
+  .pay-acts .mbtn { height: 46px; }
+
+  /* The welcome: low and wide, its words at the left and its buttons at the right, so the wall above keeps working. */
+  .welcome { width: min(820px, calc(100% - var(--sal) - var(--sar) - 20px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); border-radius: 18px; border-bottom: 1px solid var(--line);
+    padding: 10px 16px 14px; grid-template-columns: minmax(0, 1fr) minmax(250px, 330px); column-gap: 18px; row-gap: 6px; align-items: start; }
+  .welcome > * { grid-column: 1; }
+  .welcome .w-top { grid-column: 1 / -1; }
+  .welcome .w-acts { grid-column: 2; grid-row: 2 / span 4; align-self: center; gap: 6px; }
+  .w-next, .w-src .mbtn { height: 44px; }
+  .w-alt, .w-all { height: 40px; }
+  .w-text b { font-size: 21px; }
+  .w-or { margin: -3px 0; }
+  /* The New chase form: at the right, the wall dimming to its match beside it. */
+  .chase-sheet { left: auto; right: calc(var(--sar) + 10px); top: calc(env(safe-area-inset-top, 0px) + 62px); bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); width: min(480px, 54vw); max-height: none;
+    transform: translateX(calc(100% + 30px + var(--sar))); border-radius: 18px; border-bottom: 1px solid var(--line); grid-template-rows: auto minmax(0, 1fr) auto; }
+  body.building .chase-sheet.on { transform: none; }
+  .cs-line { font-size: 12.5px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  body.building.focused .chase-sheet, body.building.offering .chase-sheet, body.building.paying .chase-sheet, body.building.trading .chase-sheet { transform: translateX(calc(100% + 30px + var(--sar))); }
+
+  /* Import complete: what came in at the left with See your wall; its rows, each a door, at the right. */
+  .arrival { width: min(780px, calc(100% - var(--sal) - var(--sar) - 20px)); max-height: calc(100dvh - 20px); bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); border-radius: 18px; border-bottom: 1px solid var(--line);
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); grid-template-rows: auto auto auto minmax(0, 1fr) auto; column-gap: 8px; }
+  .ar-scroll { display: contents; }
+  .ar-kick { grid-column: 1; grid-row: 1; padding: 20px 0 0 20px; }
+  .arrival h2 { grid-column: 1; grid-row: 2; padding: 0 0 0 20px; }
+  .ar-line { grid-column: 1; grid-row: 3; padding: 0 0 0 20px; }
+  .ar-rows { grid-column: 2; grid-row: 1 / -1; margin: 0; padding: 8px 14px 8px 4px; border-top: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; align-self: stretch; }
+  .ar-foot { grid-column: 1; grid-row: 5; padding: 10px 4px 16px 18px; }
+  /* A listing: the seller's photo at the left, the details scrolling at the right. */
+  .lsheet { width: min(780px, calc(100% - var(--sal) - var(--sar) - 20px)); max-height: calc(100dvh - 20px); margin: auto; border-radius: 20px; padding-left: 38%; }
+  .ls-photo { position: absolute; left: 0; top: 0; bottom: 0; width: 38%; height: auto; }
+  .ls-photo .cface { width: min(150px, 58%); }
+  .ls-foot { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); }
+  .tcadd { width: min(560px, calc(100% - var(--sal) - var(--sar) - 20px)); max-height: calc(100dvh - 20px); margin: auto; border-radius: 20px; }
+  .msheet { max-height: calc(100dvh - 20px); }
+  dialog { max-height: calc(100dvh - 20px); overflow-y: auto; }
+  /* The import's story: lower and wider, the moment beside the date rather than over the wall. */
+  .story { padding: 0 calc(var(--sar) + 16px) calc(env(safe-area-inset-bottom, 0px) + 8px) calc(var(--sal) + 16px); }
+  .st-in { width: min(900px, 100%); }
+  .st-date { font-size: 24px; }
+  .st-moment { left: auto; width: min(400px, 52%); }
+  .st-skip { top: calc(env(safe-area-inset-top, 0px) + 10px); right: calc(var(--sar) + 12px); }
+  .mpop { bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); }
+  body.focused .mpop, body.medaling .mpop { top: auto; bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); left: calc(var(--sal) + 10px + (100vw - var(--sal) - var(--side-w) - 30px) / 2); }
+
+  /* The rooms that are pages: under the top row, clear of the notch. */
+  .rpage { padding: calc(env(safe-area-inset-top, 0px) + 66px) calc(var(--sar) + 16px) calc(env(safe-area-inset-bottom, 0px) + 28px) calc(var(--sal) + 16px); }
+  .rp-head h1 { font-size: 28px; }
+  /* The Feed: two listings to a row, each a phone's width. */
+  #pg-feed .rp-wrap { max-width: 920px; }
+  #pg-feed .feed { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
+  /* The Trade room in two columns: the closed binder and who to trade with at the left, the checker at the right. */
+  #pg-trade .rp-wrap { max-width: 1000px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); column-gap: 22px; align-items: start;
+    grid-template-areas: "head head" "sub sub" "stripe stripe" "cover h2a" "cover tc" "h2b tc" "trs tc" ". tc"; grid-template-rows: repeat(7, auto) 1fr; }
+  #pg-trade .rp-head { grid-area: head; } #pg-trade .rp-sub { grid-area: sub; } #pg-trade .rp-stripe { grid-area: stripe; }
+  #pg-trade .tcover { grid-area: cover; } #pg-trade h2:nth-of-type(1) { grid-area: h2a; } #pg-trade .checker { grid-area: tc; }
+  #pg-trade h2:nth-of-type(2) { grid-area: h2b; } #pg-trade .traders { grid-area: trs; }
+  .arrange-menu.tradehow { bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); max-height: calc(100dvh - 20px); }
+
+  /* The binder open on a phone on its side: the spread takes the height; Back at the top left corner, the title in the
+     margin under it (drawn), Show mode and the page count in the margin at the right. */
+  body.inbinder .top { padding-right: 0; }
+  body.inbinder .strip { width: auto; }
+  body.inbinder .strip > :not(#back) { display: none; }
+  body.inbinder .bbar { left: auto; right: calc(var(--sar) + 12px); top: calc(env(safe-area-inset-top, 0px) + 8px); bottom: auto; width: var(--tb-side, 140px); transform: translateY(-12px);
+    flex-direction: column-reverse; align-items: flex-end; gap: 10px; padding: 0; background: none; border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  body.inbinder:not(.showing):not(.trading) .bbar { transform: none; }
+  body.inbinder .bbar .mtext { text-align: right; gap: 3px; }
+  body.inbinder .bbar b, body.inbinder .bbar span { white-space: normal; }
+  body.inbinder .bbar .mbtn { height: 44px; }
+  /* Show mode: the same spread, dark; what's picked at the bottom left, Done at the bottom right. */
+  .showbar { left: calc(var(--sal) + 14px); right: calc(var(--sar) + 12px); bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); padding: 0; align-items: flex-end; }
+  body.showing .showbar { pointer-events: none; }
+  body.showing .showbar > * { pointer-events: auto; }
+  .showbar .mtext { flex: 0 1 auto; max-width: var(--tb-side, 140px); }
+  .showbar b { font-size: 16px; white-space: normal; }
+  .showbar span { font-size: 12.5px; white-space: normal; }
+  .showbar .mbtn { margin-left: auto; height: 44px; padding: 0 22px; }
+  .showpill { top: calc(env(safe-area-inset-top, 0px) + 12px); right: calc(var(--sar) + 12px); }
+  /* The trade table runs across: Back over their column, the trade bar under the table in the middle. */
+  body.trading .top { padding-right: 0; }
+  body.trading .strip { width: auto; }
+  body.trading .strip > :not(#back) { display: none; }
+  .tradebar { left: var(--tbl-mid-x, 50%); width: var(--tbl-mid-w, min(520px, calc(100vw - 20px))); }
+  .tradebar .mbtn { max-width: none; }
+}
+

@@ -17,7 +17,7 @@ function renderTrade() {
   ptCoverN.textContent = n ? `${plural1(n, "card")} on ${plural1(pages, "page")}` : "Empty for now";
   ptCoverW.textContent = n ? (tbMemo.wanted ? `${tbMemo.wanted} someone wants` : "Nobody has asked yet") : "+ on a card you have adds a spare";
   ptCoverW.className = n && tbMemo.wanted ? "" : "none";
-  ptPage.innerHTML = Array.from({ length: 9 }, (_, i) => (list[i] ? `<i style="--t:${typeColor(list[i])}"></i>` : "<i></i>")).join("");
+  ptPage.innerHTML = `<span class="tcb-label"><b>Trade binder</b><small>${plural1(n, "card")}</small></span>`; // the binder, closed
   const ts = TRADERS.filter((t) => wantsOf(t).length || offersOf(t).length || threadOf(t).length).sort((a, b) => (activeOf(b) ? 1 : 0) - (activeOf(a) ? 1 : 0) || wantsOf(b).length - wantsOf(a).length || offersOf(b).length - offersOf(a).length);
   ptTraders.innerHTML = ts.length ? ts.map((t) => { const st = chipState(t); return `<li><button type="button" class="trader" data-t="${t.id}"><span class="tav" style="background:${t.ink}" aria-hidden="true">${t.name[0]}</span><span class="tw"><b>${esc(t.name)}</b><small>${esc(t.where)}</small><em class="${st.col === theme.deal ? "deal" : ""}">${esc(st.text)}</em></span><span class="chev" aria-hidden="true">›</span></button></li>`; }).join("")
     : `<li class="rp-note" style="margin:0">Nobody wants your spares yet. On a card you have, + counts a copy; every copy past the first is a spare.</li>`;

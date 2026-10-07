@@ -107,7 +107,7 @@ function mintFlight(g) {
   const now = performance.now();
   for (const c of drawnCards) { c.pm = { ...c.m }; c.delay = 0; }
   for (const x of groups) { x.pm = { ...x.m }; x.ripple = null; x.burst = 0; }
-  const R = { x: 8, w: vw - 16 }, n = groups.filter((x) => x.done && onShelf(x)).length + 1, cols = Math.min(n, R.w >= 700 ? 4 : 2);
+  const R = { x: 8 + SAFE.left, w: vw - 16 - SAFE.left - SAFE.right }, n = groups.filter((x) => x.done && onShelf(x)).length + 1, cols = Math.min(n, R.w >= 700 ? 4 : 2);
   const m = g.m, pw = Math.min(m.w, R.w / cols);
   g.minting = true; g.plq = plaqueInfo(g);
   g.m = { x: m.x + (m.w - pw) / 2, y: m.y + (m.h - PLQ_H) / 2, w: pw, h: PLQ_H };
@@ -215,7 +215,7 @@ const tight = (g) => Boolean(g.done || g.tight);
 // the usual row (in place of Chase these on a set: there is nothing left to chase).
 function albumHeader(g) {
   const f = finishOf(g); if (!f) return;
-  const W = vw - 24, btn = { x: W - 128, y: 2, w: 128, h: 22, shelf: true };
+  const W = frameW(), btn = { x: W - 128, y: 2, w: 128, h: 22, shelf: true };
   if (f.put) { g.popChips = null; g.seg = null; g.popH = 30; g.hdrBtn = btn; g.hdrBtn2 = onShelf(g) ? { x: W - 128 - 8 - 112, y: 2, w: 112, h: 22, away: true } : null; } // on its first day: skip the wait
   else if (g.set) g.hdrBtn = { ...btn, y: 4 };
   else g.hdrBtn2 = { ...btn, x: W - 118 - 8 - 128 };

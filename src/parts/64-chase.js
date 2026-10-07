@@ -165,6 +165,11 @@ function closePop(instant = false) {
   pop.closing = true; pop.t0 = performance.now(); kick();
 }
 function popRect() {
+  if (landPhone()) { // the offers stand at the right: the card fills the space beside them
+    const L = SAFE.left + 10, R = vw - sideW(), top = topPad(), bot = vh - SAFE.bottom - 14;
+    const h = Math.min((bot - top) * 0.94, (R - L) * 0.8 * TH / TW), w = h * TW / TH;
+    return { x: (L + R - w) / 2, y: top + (bot - top - h) / 2, w, h };
+  }
   const sheet = offersEl.offsetHeight || vh * 0.46, top = topPad() + 6, bot = vh - sheet - 14;
   const h = Math.min((bot - top) * 0.92, vw * 0.78 * TH / TW), w = h * TW / TH;
   return { x: (vw - w) / 2, y: top + (bot - top - h) / 2, w, h };
