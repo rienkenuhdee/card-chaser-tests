@@ -277,11 +277,10 @@ function drawnFace(c, sx, sy, w, h, now, value) {
   ctx.globalAlpha /= 0.7;
   // The rarity mark, printed where the card prints it: gold from holo up.
   ctx.textAlign = "right"; ctx.fillStyle = c.tier >= 3 ? theme.gold : theme["paper-ink"]; if (c.tier < 3) ctx.globalAlpha *= 0.7;
-  ctx.fillText(RARITY_MARK[c.tier], sx + w - pad, ly + lh * 0.82);
+  ctx.fillText(GLYPH[c.tier], sx + w - pad, ly + lh * 0.82);
   if (c.tier < 3) ctx.globalAlpha /= 0.7;
   if (value || w > 110) { ctx.textAlign = "right"; ctx.fillStyle = "rgb(255 255 255 / .92)"; font(700, w * 0.078); ctx.fillText(short(c.price), sx + w - pad, sy + pad + w * 0.07); }
 }
-const RARITY_MARK = ["●", "◆", "★", "★", "★★", "★★", "★★★"]; // a holo's star is the gold one
 
 // A set's title inside the set view, drawn with whichever camera is in use (they differ mid-transition).
 function drawHeader(st, now, C = cam, ox = 0, alpha = 1) {
