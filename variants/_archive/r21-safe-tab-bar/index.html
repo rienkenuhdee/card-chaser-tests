@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Card Chaser: The Wall</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
+<style>
+/* STYLES */
+</style>
+</head>
+<body>
+<canvas id="wall" tabindex="0" aria-label="Your whole card collection as one wall. Pinch or use plus and minus to zoom, drag or arrow keys to move, tap or Enter to open a card." role="application"></canvas>
+<div class="top">
+  <div class="hdr glass">
+  <div class="strip">
+    <button class="ib" id="back" aria-label="Back to everything" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <button class="mark" id="mark" aria-label="Mark several cards" hidden>Mark</button>
+    <label class="search" id="search"><span class="sr">Find a card</span>
+      <input id="q" type="search" placeholder="Search cards" autocomplete="off" enterkeyhint="search">
+      <button class="count" id="count" aria-label="Show the whole wall"></button>
+      <button class="clear" id="clear" aria-label="Clear search"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" style="stroke:currentColor;stroke-width:2.2;stroke-linecap:round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </label>
+    <button class="ib" id="filter" aria-haspopup="menu" aria-expanded="false" aria-controls="filter-menu" aria-pressed="false" aria-label="Filters: value and time"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="9" cy="7" r="2.2" fill="var(--panel-solid)"/><circle cx="15" cy="12" r="2.2" fill="var(--panel-solid)"/><circle cx="8" cy="17" r="2.2" fill="var(--panel-solid)"/></svg></button>
+    <button class="ib" id="settings" aria-label="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M5.6 18.4l1.6-1.6M16.8 7.2l1.6-1.6"/></svg></button>
+    <button class="ib" id="info" aria-label="About this experiment"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.8v.4"/></svg></button>
+  </div>
+  <div class="lens" role="group" aria-label="Lens">
+    <span class="ink" aria-hidden="true"></span>
+    <button data-lens="have" aria-pressed="true">Have</button>
+    <button data-lens="need" aria-pressed="false">Need</button>
+    <button data-lens="chase" aria-pressed="false">Chase<i class="lbadge" aria-hidden="true" hidden></i></button>
+  </div>
+  </div>
+</div>
+<div class="dealbar glass" id="dealbar" role="status" hidden><button type="button" class="db-main" id="db-main"><b id="db-head"></b><span id="db-sub"></span></button><button type="button" class="ib db-x" id="db-x" aria-label="Dismiss"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+<div class="timebar glass" role="group" aria-label="Time">
+  <button class="ib" id="t-play" aria-label="Play your collection's story"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg></button>
+  <div class="tl"><b id="t-when">Now</b><span id="t-count"></span></div>
+  <div class="tr"><svg id="t-spark" viewBox="0 0 1000 40" preserveAspectRatio="none" aria-hidden="true"><path id="t-area"/><path id="t-line"/></svg>
+  <input type="range" id="t-range" min="0" max="1000" value="1000" aria-label="When you got your cards"></div>
+</div>
+<div class="markbar glass" id="markbar" role="group" aria-label="Marking">
+  <div class="mtext" aria-live="polite"><b id="m-head">Mark cards</b><span id="m-sub">Tap a card, drag across a row, or hold one to chase it</span></div>
+  <button type="button" class="mbtn" id="m-all">All</button><button type="button" class="mbtn" id="m-undo" disabled>Undo</button><button type="button" class="mbtn primary" id="m-done">Done</button>
+</div>
+<div class="arrange-menu tradehow glass" id="trade-how" role="menu" aria-label="How to trade" hidden><p class="th-head" id="th-head">Trade with Maya</p><button role="menuitem" data-how="person"><span><b>In person</b><small>Across the table, card for card</small></span><span class="tick" aria-hidden="true">›</span></button><button role="menuitem" data-how="online" aria-disabled="true"><span><b>Online</b><small>Send an offer and ship the cards</small></span><span class="soon">Soon</span></button></div>
+<div class="arrange-menu right glass" id="filter-menu" role="menu" aria-label="Filters" hidden>
+  <button role="menuitemcheckbox" data-filter="value" aria-checked="false"><span><b>Value</b><small>The more it's worth, the hotter</small></span><span class="tick" aria-hidden="true">✓</span></button>
+  <button role="menuitemcheckbox" data-filter="bands" aria-checked="false"><span><b>Group by price</b><small>Price bands, the dearest biggest</small></span><span class="tick" aria-hidden="true">✓</span></button>
+  <button role="menuitemcheckbox" data-filter="time" aria-checked="false"><span><b>Time</b><small>Play through when you got each card</small></span><span class="tick" aria-hidden="true">✓</span></button>
+</div>
+<main id="list" aria-label="Your collection as a list">
+  <div class="lwrap">
+    <div class="lhead"><h1 tabindex="-1">Your collection</h1><button class="pill-btn" id="to-wall">Back to the wall</button></div>
+    <p class="lsub">Tap a card to mark it. The lens and search at the top work here too.</p>
+    <div id="list-body"></div>
+  </div>
+</main>
+<main class="page" id="pg-feed" aria-label="Feed" tabindex="-1"><div class="pwrap" id="pg-feed-body"></div></main>
+<main class="page" id="pg-source" aria-label="Source" tabindex="-1"><div class="pwrap" id="pg-source-body"></div></main>
+<main class="page" id="pg-medal" aria-label="Medal" tabindex="-1"><div class="pwrap" id="pg-medal-body"></div></main>
+<nav class="tabbar" id="tabbar" aria-label="Sections">
+  <button type="button" data-tab="feed"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4" width="5" height="5" rx="1.2"/><path d="M11.5 5.2h9M11.5 8h5.5"/><rect x="3.5" y="15" width="5" height="5" rx="1.2"/><path d="M11.5 16.2h9M11.5 19h5.5"/></svg><span>Feed</span><i class="tbadge" aria-hidden="true" hidden></i></button>
+  <button type="button" data-tab="chase" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="8" height="10" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="6" rx="1.5"/><rect x="13.5" y="11.5" width="7" height="9" rx="1.5"/><rect x="3.5" y="15.5" width="8" height="5" rx="1.5"/></svg><span>Chase</span></button>
+  <button type="button" data-tab="trade" data-lens="trade"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h15M15.5 4.5L19 8l-3.5 3.5M20 16H5M8.5 12.5L5 16l3.5 3.5"/></svg><span>Trade</span></button>
+  <button type="button" data-tab="medal"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.2 3.5l2.4 5.2M15.8 3.5l-2.4 5.2"/><circle cx="12" cy="14.8" r="5.7"/><circle cx="12" cy="14.8" r="2.3"/></svg><span>Medal</span></button>
+  <button type="button" data-tab="source"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.4"/><path d="M12 12l5.6-5.6"/></svg><span>Source</span></button>
+</nav>
+<div class="caption glass" id="caption" hidden>Your whole collection. Tap a set to open it.</div>
+<section class="chase-sheet glass" id="chase-sheet" aria-label="New chase" inert>
+  <div class="cs-top"><b class="cs-title" id="cs-title">New chase</b><button type="button" class="ib" id="cs-close" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="cs-fields">
+    <div class="cs-field cs-dexf"><span class="cs-lbl">The whole Dex</span><div class="cs-chips"><button type="button" class="cs-chip" id="cs-dex" aria-pressed="false">Complete Dex<small>one of every Pokémon</small></button></div></div>
+    <div class="cs-field cs-card"><label class="cs-lbl" for="cs-q">Pokémon</label><input class="cs-in" id="cs-q" type="text" placeholder="Type a name" autocomplete="off" autocapitalize="words" enterkeyhint="done"><div class="cs-chips wrap" id="cs-sugg"></div></div>
+    <div class="cs-field cs-card"><span class="cs-lbl">Set</span><div class="cs-chips" id="cs-sets"></div></div>
+    <div class="cs-field cs-card"><span class="cs-lbl">Artist</span><div class="cs-chips" id="cs-artists"></div></div>
+    <div class="cs-field"><span class="cs-lbl" id="cs-rar-lbl">Rarity</span><div class="seg cs-rar" role="group" aria-label="Rarity"><button type="button" data-rar="0">Any</button><button type="button" data-rar="3">Holo and up</button><button type="button" data-rar="4">Full art only</button></div></div>
+    <div class="cs-field"><span class="cs-lbl">Type</span><div class="cs-chips" id="cs-types"></div></div>
+  </div>
+  <div class="cs-foot"><div class="cs-tally"><b id="cs-n">0</b><small>to find</small></div><span class="cs-line" id="cs-line"></span><button type="button" class="mbtn primary" id="cs-save" disabled>Put it on the wall</button></div>
+</section>
+<section class="welcome glass" id="welcome" aria-label="Welcome">
+  <div class="w-top"><span class="w-dots" aria-hidden="true"><i></i><i></i><i></i></span><button type="button" class="w-skip" id="w-skip">Skip</button></div>
+  <div class="w-row"><div class="w-text"><b id="w-title"></b><span id="w-line" aria-live="polite"></span></div><div class="w-tally" id="w-tally"><b id="w-n">0</b><small id="w-what"></small></div></div>
+  <div class="w-prog" id="w-prog" hidden><i></i></div>
+  <label class="w-opt" id="w-dex" hidden><input type="checkbox" id="w-dexon"><span>Also chase the complete Dex, one of every Pokémon</span></label>
+  <label class="w-opt" id="w-opt" hidden><input type="checkbox" id="w-chase"><span>Chase every card I'm missing</span></label>
+  <div class="w-acts">
+    <button type="button" class="mbtn primary w-next" id="w-next">Continue</button>
+    <div class="w-src" id="w-src" hidden><button type="button" class="mbtn primary" data-src="TCGplayer">TCGplayer</button><button type="button" class="mbtn primary" data-src="Collectr">Collectr</button></div>
+    <button type="button" class="mbtn w-all" id="w-all" hidden>Select all in this set</button>
+    <span class="w-or" id="w-or" hidden>or</span><button type="button" class="mbtn w-alt" id="w-alt" hidden>Pick your sets and mark by hand</button>
+  </div>
+</section>
+<p class="sr" id="where" aria-live="polite"></p>
+<section class="panel glass" id="panel" aria-live="polite" aria-label="Card">
+  <div class="swap" id="swap">
+    <div class="row"><div><h1 id="p-name">Card</h1><p class="meta" id="p-meta"></p></div><div class="price" id="p-price"></div></div>
+    <p class="deal" id="p-deal" hidden></p>
+  </div>
+  <div class="acts"><button class="act primary" id="p-own">I have it</button><button class="act want" id="p-want" aria-pressed="false">Chase it</button><button class="act" id="p-buy">Find a copy</button></div>
+  <p class="hint">Flick the card to move along the set. Drag the wall to leave.</p>
+</section>
+<div class="toast" id="toast" role="status"></div>
+<div class="tradebar glass" id="tradebar" role="group" aria-label="The trade"><div class="thread" id="thread" aria-live="polite" aria-label="The thread"></div><div class="tb-row"><div class="mtext" aria-live="polite"><b id="tb-head">Trade</b><span id="tb-sub"></span></div><button type="button" class="mbtn" id="tb-take" hidden>Take back</button><button type="button" class="mbtn" id="tb-dec" hidden>Decline</button><button type="button" class="mbtn" id="tb-alt" hidden>Counter</button><button type="button" class="mbtn primary" id="tb-go" disabled>Shake hands</button></div></div>
+<div class="offers glass" id="offers" role="dialog" aria-labelledby="o-name" inert>
+  <div class="o-head"><div class="o-title"><b id="o-name"></b><span id="o-meta"></span></div><button class="ib" id="o-close" aria-label="Put the card back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="seg o-seg" role="group" aria-label="What to look for"><button type="button" data-kind="single" aria-pressed="true">Single</button><button type="button" data-kind="pack" aria-pressed="false">Pack</button><button type="button" data-kind="box" aria-pressed="false">Box</button></div>
+  <p class="o-sub" id="o-sub"></p>
+  <div class="o-row" id="o-row"></div>
+  <div class="o-acts"><button type="button" class="mbtn primary" id="o-got">Got it</button><button type="button" class="mbtn" id="o-flag">Chasing ✓</button></div>
+</div>
+<div class="pay-scrim" id="pay-scrim"></div>
+<div class="pay glass" id="pay" role="dialog" aria-labelledby="pay-q" inert>
+  <div class="pay-head"><b id="pay-q">What did you pay?</b><span id="pay-sub"></span></div>
+  <output class="pay-amt" id="pay-amt" aria-live="polite">$0</output>
+  <div class="pay-keys" id="pay-keys"><button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button><button type="button" data-k="4">4</button><button type="button" data-k="5">5</button><button type="button" data-k="6">6</button><button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button><button type="button" data-k=".">.</button><button type="button" data-k="0">0</button><button type="button" data-k="⌫" aria-label="Delete">⌫</button></div>
+  <div class="pay-acts"><button type="button" class="mbtn" id="pay-skip">Skip</button><button type="button" class="mbtn primary" id="pay-done">Done</button></div>
+</div>
+<dialog id="about" aria-labelledby="about-h">
+  <h2 id="about-h">The Wall</h2>
+  <p>An experiment for Card Chaser: the wall inside the app. Production's five tabs sit along the bottom, and <b>Chase</b> is the wall: your whole collection on one surface, where zooming is the navigation.</p>
+  <ul>
+    <li><b>Feed</b>: listings found for the cards you chase, newest first, each against its market price. Tap one to fly to the card on the wall.</li>
+    <li><b>Chase</b>: the wall, with Have, Need and Chase at the top.</li>
+    <li><b>Trade</b>: your trade binder, the collectors who want your spares, and the table.</li>
+    <li><b>Medal</b>: the trophy room.</li>
+    <li><b>Source</b>: where Card Chaser looks.</li>
+  </ul>
+  <p>On the wall:</p>
+  <ul>
+    <li><b>Starting out</b>: import your collection from TCGplayer or Collectr, or pick the sets you collect and mark by hand. Choose your sets again any time in Settings.</li>
+    <li><b>Tap a set</b> (or spread two fingers on it) to open it. Its cards grow into a binder. Scroll down it; flick sideways for the next set; pinch out or tap back to close it.</li>
+    <li><b>Tap a card</b> to bring it up close. Flick it sideways to move along the set.</li>
+    <li><b>Have, Need, Chase</b> at the top of the Chase tab are lenses: they recolor the wall rather than taking you somewhere else.</li>
+    <li><b>The wall is live.</b> When a copy of a card you chase comes up for less, its tile flashes where it sits, the listing lands at the top of the Feed, and the Feed tab counts it. Nothing nags.</li>
+    <li><b>Chase</b> is your chase list: the cards you're after deal out of the wall as a feed of tiles, live deals first. Tap one and it pops up with every copy online: swipe through them, or switch to the packs and boxes it comes in. Got it asks what you paid. <b>Chase it</b> on any card adds it; On a card you own, <b>+</b> counts a copy: every copy past your first is a spare, up for trade.</li>
+    <li><b>The Complete Dex</b> is a chase with one slot for every Pokémon, #1 to #1,025, in Dex order. Add it from New chase, or in Choose your sets. A slot fills when you have any card of that Pokémon; the ones your sets don't print read "Not in your sets". Its settings count only holo or full art prints, or one type.</li>
+    <li><b>Trade</b> (a tab) shows your spares and who wants them. Tap a collector and the screen becomes a table between you: their spares above, yours below. Drag cards onto the table and shake hands. At the top, the <b>trade binder</b> holds every card you have a spare of, most wanted first: swipe its pages, tap a card to trade it, or use <b>Show mode</b> to hand it across a table and let the other person pick.</li>
+    <li><b>Trophies</b>: every set and chase earns them as it fills, with production's names and luck (now and then one comes up Critical or Shiny). Inside a set the next one hangs on the bar; mark the card that tips it and it mints right there. A finished set becomes a plaque. They all live in the <b>trophy room</b>: the Medal tab, and the door at the end of the wall. Tap a trophy to see the cards behind it.</li>
+    <li><b>Filters</b> (top, by the search) add <b>Value</b>, the more it's worth the hotter, and <b>Time</b>: scrub or play through when you got each card.</li>
+    <li><b>Search</b> flies you to the cards that match.</li>
+    <li><b>Press and hold</b> any card to mark it, then keep the finger down and sweep along the row. <b>Mark</b> (top, inside a set) does the same by tapping: a handful at once, Done sums it up. <b>Tap the count</b> to see everything again.</li>
+      </ul>
+  <p style="color:var(--muted);font-size:13.5px">1,327 real cards from 10 sets. Ownership, prices and deals are made up for the demo, and your taps are kept on this device only.</p>
+  <div class="row"><button class="btn primary" id="about-close">Back to the wall</button></div>
+</dialog>
+<dialog id="prefs" aria-labelledby="prefs-h">
+  <h2 id="prefs-h">Settings</h2>
+  <p class="lbl">Appearance</p>
+  <div class="seg" role="group" aria-label="Appearance"><button type="button" data-theme="auto" aria-pressed="true">Auto</button><button type="button" data-theme="light" aria-pressed="false">Light</button><button type="button" data-theme="dark" aria-pressed="false">Dark</button></div>
+  <p class="lbl">Your collection</p>
+  <div class="row" style="justify-content:flex-start"><button class="btn" id="to-list">Show as a list</button><button class="btn" id="w-sets">Choose your sets</button><button class="btn" id="reset">Reset the demo</button></div>
+  <div class="row"><button class="btn primary" id="prefs-close">Done</button></div>
+</dialog>
+<script>
+/* SCRIPT */
+</script>
+</body>
+</html>

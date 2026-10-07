@@ -13,6 +13,7 @@ function setT(t, { user = false } = {}) {
   if (m !== lastMonth) { if (user || playing) tick(3); lastMonth = m; } // a soft detent each month
   const n = cards.filter((c) => c.owned && c.got && c.got <= state.t).length;
   tWhen.textContent = p > 0.995 ? "Now" : m; tCount.textContent = `${n.toLocaleString()} cards`;
+  timeMoment(); // passing one of the import story's moments says it above the bar (86-story.js)
   updateCount(); kick();
 }
 function playTime(fromStart = false) {
@@ -42,6 +43,7 @@ function drawSpark() {
   const line = pts.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`).join("");
   document.getElementById("t-line").setAttribute("d", line);
   document.getElementById("t-area").setAttribute("d", `${line}L1000,40L0,40Z`);
+  storyMarks(); // the import story's moments, as gold dots on the slider
 }
 tPlay.onclick = () => (playing ? stopTime() : playTime());
 tRange.addEventListener("input", () => { stopTime(); setT(tMin() + (T_MAX() - tMin()) * Number(tRange.value) / 1000, { user: true }); });

@@ -1,0 +1,8 @@
+/* Round 17, bold: copies are physical. The Trade button takes the copies you flicked up with a count, in gold. */
+.lens button[data-lens="trade"] { z-index: 2; }
+.lbadge.sbadge { background: var(--gold); color: #1b1608; }
+.lens button.sglow { color: var(--ink); }
+.lens button.sglow .sbadge { transform: scale(1.3); }
+.lens button.sglow::after { content: ""; position: absolute; inset: 0; border-radius: 10px; pointer-events: none;
+  box-shadow: 0 0 0 1.5px var(--gold), 0 0 18px color-mix(in srgb, var(--gold) 60%, transparent); animation: lglow 1.4s ease-out both; }
+@media (prefers-reduced-motion: reduce) { .lens button.sglow::after { animation: none; opacity: 1; } }

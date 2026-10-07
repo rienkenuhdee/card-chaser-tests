@@ -23,9 +23,11 @@
   handful like Photos. The mosaic is novel; how you move through it shouldn't be.
 - **A collector's archive, not a toy.** Archivo (condensed for names, tabular figures for prices), hairlines, small
   radii, color from the cards themselves. Rounded, bouncy type read as "comic sans".
-- **Lenses over pages.** Have, Need, Chase and Trade recolor what you're looking at instead of navigating away. A lens
-  may rearrange as well as recolor (Chase deals your chase list out of the wall), as long as every other lens flies it
-  all home and the wall is exactly as it was. Value and Time are filters by the search box: they sit on top of any lens.
+- **Lenses over pages.** Collection and Chase recolor or rearrange what you're looking at instead of navigating away
+  (Chase deals your chase list out of the wall), as long as the other flies it all home and the wall is exactly as it
+  was. What used to be the Need lens is a filter now: Show (All / Missing / Have), Color by, Group by and Time sit in
+  one Filters sheet on top of either, with a chip that names what's on. Places that aren't the wall (Feed, Trade,
+  Trophies, Source) are rooms one level up, not lenses (round 21).
 - **A deal is a property of a want.** A live listing matters because you're chasing the card, so deals live inside the
   want list, leading their set, rather than as a surface of their own.
 - **Frame budget is a feature.** A slow frame makes pinches lag and makes a flick read as a slow release, so snapping
@@ -158,13 +160,142 @@ sentence is a query language, and dimming the wall to the popular cards left a v
 Popular filter, the active-chase pill, the chases list in the menu. Also: starting a trade asks In person or Online
 (coming soon).
 
+**Round 15: Finishing a chase.** Three answers to the last card landing: a checklist's finish (gold ticks on the
+progress bar for the missing cards you chase, the bar filling gold with "Complete since Oct 6", a Finished filter
+folding done panels to a line); the last card as a moment (every panel naming its next card, the final card lifting
+to the centre while "Complete" stamps the header, Keep on the wall or Put it away); and a trophy wall (finished things
+minted from their own tiles into gold plaques on a shelf along the top, a sealed album behind each, a ring gauge on
+every panel before then). Kept: the trophy wall with the safe ticks, and Ryan's rule that a trophy stays on the
+shelf at the top for a day and then moves to the trophy case at the end of the wall with the rest. A finished set or
+chase is minted where it sits, flies up, and the wall flows into the space; its album packs the cards edge to edge
+with Back to the wall; a finished group kept on the wall offers Put on the shelf. Learned: a finish wants to leave
+the working wall, and a plaque made of the group's own colours carries the memory better than a checkmark; the ring
+gauge duplicated the bar, and the stamp edged toward a toy. Dropped: the ring gauge, the Finished filter and list in
+Settings, the stamp, the next-card line (worth a return). Also fixed: completing a set threw, and Select all in a
+chase marked its twins instead of the cards.
+
+**Round 16: Where trophies live.** Three homes for a trophy after its day on the shelf: a trophy case at the end of
+the wall (a header with the count, the total and a sort, plaques with a plain third line, a set's master and grand set
+tucked under it, Share as a picture card); a trophy room behind a door at the end of the wall (one dark row with every
+plaque's colours, tapping it slides the wall away for lit plaques on wood shelves, each with its worth over the year as
+a thin line and the header summing the room, a set's other views stacked behind it and fanned on a tap); and a
+timeline one level above the wall (pinch the mosaic and it shrinks to "Today" with the trophies hung on a line of dates
+beside a growth curve). Kept: the room, whole. A pinch in the room or Back returns to the wall where you were; Back from
+an album opened in the room returns to the room. Also: a trophy on its first day has To the case now in its album,
+which sends it into the room without waiting the day (it keeps its real finish date). Learned: the room reads as an
+achievement because it leaves the working wall entirely, and a worth line turns a trophy from a record into something
+that is still doing something; the case's families and the timeline's history were good ideas that cost more to read.
+Dropped: the sort, Share, the ghost plaques, the timeline. On a phone, safe's case didn't show a moved trophy for Ryan
+(not chased down, since it was dropped).
+
+**Round 17: Your spares.** How doubles get onto the wall and how a spare finds someone. All three gave every card a
+copy count, with the import seeding doubles by card id (mostly commons and uncommons), and a done trade taking one
+copy rather than the card. Safe: a stepper on the card panel ("You have 2"), every copy past the first a spare unless
+you keep it, and a line saying who wants it with Trade with Maya. Bold: copies drawn as stacks at every level, and a
+flick up off the stack to put one up for trade. Radical: a nine-pocket trade binder of your spares, most wanted first
+with who chases each pocket, and Show mode, a dark full-screen spread handed across a table, whose picks become a trade.
+Kept (the critic's mix): safe's counts, stepper and "Wanted by" line; the binder as a level behind a cover at the top
+of the Trade lens, with Show mode into the table and a new Someone new that gives the picks away with Undo; bold's
+copies stacked behind the mini card in spare tiles. The Trade lift stays, most wanted first. Learned: the empty Trade
+lens was a data problem, not a layout one, and once copies exist a spare is just arithmetic; a binder handed across a
+table is the most natural trading object we've tried. Dropped: the flick and the drag into the binder (a vertical drag
+on a close-up meaning something new, depending on state you can't see), the far-out stack slivers (they read as
+misdrawn tiles), the likely-doubles review (a seeded guess dressed as a review), Mark's Into the trade binder. Also
+fixed: the import toast counted printings, so it disagreed with the counter.
+
+**Round 18: Trading online (pinned).** Three takes on a trade when the other person isn't across the table, all on a
+demo clock (a day every 20 s, Skip a day): a marketplace flow (the trader's record, a grade and a photo of their copy
+on hold, Send offer, then Ship by, Mark shipped, Got them); the same with the mail on the wall (an incoming card faint in
+its own slot, its edge filling as it travels, filling in solid on arrival); and a live shared table (the other
+collector's hand on the mat, Hold to shake, both sides' cards held mid-mat until both arrive). Pinned by Ryan: online
+trading needs real backend work first (accounts, addresses, shipping, trust), so nothing was harvested and the variants
+live only on the round 18 branch (PR #27, left open). The critic's pick for when it returns: the incoming ghost on the
+wall, the photo on hold, the shipping thread, the trader's record; not the live table or Hold to shake. Missing for
+strangers in all three: swapping addresses, cancel before shipping, report a problem, a rating, a warning on a lopsided
+offer, who ships first.
+
+**Round 19: Production's trophies in the room.** Ryan asked to bring the trophy types of the live app into dev. All
+three ported production's catalog where the wall's data supports it (per-chase milestones named by kind, Holo hunter,
+Chase cards, Clean sweep, crowned signature trophies hand-made per set and generic, hidden "?" trophies, Dex and
+global ones), production's medal artwork (a shape per kind, four tiers, nameplate), and luck (1 in 100 Shiny, about 1
+in 10 Critical, seeded by trophy id here where production rolls on its server). Safe made the room production's Medal
+tab (summary, Showcase, Next up, filters, a shelf per chase, the trophy sheet with the cards behind a medal); bold put
+each chase's medals on its bar as pins and minted them there when the tipping card was marked; radical made the
+catalog one more set on the wall. Kept: safe's room and sheet, bold's mint (inside a set only, one pin for the next
+medal), bold's ribbons, and Ryan's ask that a finished set's plaque sit with that set's medals: one shelf per set or
+chase, its plaque at the head with Binder Complete mounted on it, locked medals folded behind "12 more to earn". An
+import or Select all earns in one card rather than a stream. Learned: production's catalog drops onto the wall's data
+almost unchanged, so the two can merge; a medal earns most where its progress is (on the bar), and is read best
+where its siblings are (the shelf); the catalog is long, and locked medals have to fold. Dropped: the trophy set,
+pins in the mosaic (they read as glitches beside the gold ticks), the bar's end cluster, region masters past Kanto.
+Left out of the catalog for want of data: buying trophies, region chases, promo milestones, Gym Circuit, Full
+Evolution, the rarities the wall's sets don't have, and counts the wall can't reach (2,500 cards, 500 and 1,000
+Pokémon, Splash!, Unown Alphabet).
+Also, after the round: a Complete Dex chase (Ryan's ask), one pocket per Pokémon from #1 to #1,025 in Dex order,
+each filled by your best print of that Pokémon (else the cheapest, to chase), the ones the wall's sets don't print as
+dashed "Not in your sets" pockets that count in its total; its settings filter the prints (Any, Holo and up, Full art)
+and the type. Picked in Choose your sets or the New chase sheet; it owns the Kanto, 50 and 151 Pokémon medals. It
+doesn't flood the chase list; Need on its panel shows what your sets can fill.
+
+**Round 20: The import's reveal.** What the first minute after your collection arrives shows you, now that an import
+also brings spares, a trade binder, trophies and maybe the Dex, each of which used to announce itself separately.
+Safe: one "Import complete" sheet after the flood, its rows doors into the wall. Bold: the camera toured composed
+stops with a caption each (the set closest to done with its missing pockets ringed in gold, the binder cover, the
+trophy door). Radical: the import played the collection in the order it was got, the Time clock running from the
+first card to today with the moments landing on their dates. Kept (Ryan's mix): radical's story as the intro and
+safe's sheet as the finish, with the critic's fixes: no empty lead-in (the clock starts on the first card), only the
+first lucky trophy stops the clock (17 s from the tap to the sheet), the camera home before the sheet, worth counted
+over the wall's own cards, a touch during the story ending it and leaving a toast with Open instead of the sheet, the
+closest-to-done row opening that set with bold's gold rings on its gaps, and the moments kept as dots on the Time
+slider when the import carries dates (an undated import does the plain flood into the sheet). Learned: an import's
+news belongs in one place, and a story in time reads as yours in a way a flood set by set doesn't; an autoplay tour
+that switches lenses for you teaches nothing. Dropped: the tour, radical's end card. Also fixed: the summary's worth
+counted printings.
+
+**Round 21: The wall inside the app.** How production's five tabs (Feed, Chase, Trade, Medal, Source) sit around the
+wall. Safe: production's bottom tab bar, the wall as the Chase tab, Feed a list of listings. Bold: the bar as the
+lens bar, every tab a lens flight on one wall. Radical: no tab bar; pinch the wall closed to a map of five live room
+cards one level above it, spread or tap to go in. Kept: radical, with one home per job. The Trade room holds the
+binder, the table and production's trade checker (You give / You get, conditions, cash, Fair / Close / Uneven); the
+Medal room holds the trophy room (the door at the end of the wall is gone); the Source room holds where it looks,
+its switches filtering the Feed. The wall keeps Have / Need / Chase (the Trade lens is gone) and the moments that
+belong to a card. Ryan's line: the Chase lens and the Feed serve two purposes. The Chase lens is your want list,
+each card with its best deal or what you'd pay; the Feed is every listing found, newest first, several per card,
+with source, age, production's score and NEW since your last visit, and a listing opens the listing (the seller's
+photo, title, price, seller, production's price proof and score), not your card. Room cards carry bold's count
+lines; a sideways flick moves room to room; the rooms button carries the Feed's count; Feed and Source are real
+lists. Learned: the map only earns its place if the wall stops carrying the other rooms; a listing and a card are
+different things, and tapping one shouldn't open the other. Also fixed: Ryan's blank screen on an iPhone pinch.
+Radical made a new full-screen picture per pinch (canvas memory climbing past 500 MB at dpr 3 over five rounds,
+past Safari's cap); the harvest takes no per-pinch pictures, draws the moving room live, and holds 25 MB flat, with
+a memory check in npm test. Not verified on an iPhone. Dropped: the tab bars, the deal banner (the Feed and the
+badge carry the news), the cards flying from the wall into the Feed (a page above the canvas would hide them).
+
+**Round 22: Polish.** No variants: four areas polished in parallel and merged, then a pass for text and noise, then
+the critic's rough edges fixed. Trophies: "Medal" gone from everything a person reads, the room brought into the
+app's own light and dark look (hairline panels, the plaque a flat gold plate heading its set's panel, medals on
+threads in the set's colour; no wood), two columns when wide. Landscape everywhere: the trade binder opens as two
+facing pages with rings down the spine and a page that folds over it under the thumb; a card sits beside its panel;
+the map, Feed, listing, Trade room, table and sheets are laid out for a wide screen; rotating keeps your place.
+Collection · Chase: Have and Need were one axis shown as two lenses, so Need became Show: Missing in one Filters sheet
+(Show, Color by type or value, Group by set, price, rarity or type, the order inside a binder, Time) with a chip that
+names and clears what's on; the Chase lens and the Feed gained sorts, the Feed condition filters. Card pictures:
+real scans from the image hosts production uses wherever a card is big enough to see, lazy, decoded off the frame,
+capped at 32 MB, with a redrawn face as the fallback (the sandbox blocks the hosts, so this is unverified on a
+phone). Learned: four builders in parallel worktrees merge cleanly when each owns a lane, but their scaffolding
+leaks (a committed node_modules link replaced the real folder on merge); a pass for noise needs the user's earlier
+decisions in hand (it removed Remove set, which Ryan had asked to keep; restored). Open from the critic: whether
+Show: Missing and the Chase lens both earn a place once everything missing is chased; greyed art in missing pockets;
+the medal art is still the loudest thing on screen.
+
 ## Open questions (next rounds)
 
 - A deal arriving off screen: one tap from the line to the offers, and whether the arrival should nudge the wall.
 - Painting past the screen's edge: should a sweep scroll the binder as it goes?
 - At the show: does the Wants lens alone carry a vendor table, or does the verdict (NEED IT, pay up to) earn a place when a card is looked up?
-- Trading: a real other side (the twelve-second reply is a stand-in), more than one card per counter, and whether a done trade should fall off the chip after a day.
-- Starting a trade: spares begin empty, so the demo needs a few marked by hand; an import option for doubles, or a hint on a spare's panel naming who wants it.
-- The import's reveal: the round 11 assembly from nothing as the flood after an import.
+- Trading: a real other side (the twelve-second reply is a stand-in), more than one card per counter, and whether a done trade should fall off the chip after a day. Online trading is pinned on backend work (round 18).
+- Spares: Show mode's Someone new gives cards away with nothing back; a stranger at a show might want to offer a card, which needs their side of the table without an account.
+- The import: a real import without acquisition dates loses the story (round 20); and the Complete Dex can't be chosen on the import path, only in Choose your sets.
 - A chase's twins: should a custom panel's cards also lead in the Chase lens, or only their set's copy? And should a chase hide from the wall once it's complete?
-- Bringing the mosaic into the real app as the Chase home.
+- Trophies: the worth line is a made-up year; real data would start at the finish date ("Up $27 since you finished"). Medals: whether Undo after a mint should take a medal back (production keeps it), the full-screen completion ceremony production plays, and the server-side luck roll when the two merge. Sharing a trophy (safe's picture card), and whether a sub-chase of a finished set should fold into the set's plaque. The room hides the lenses; Value could recolour the engravings.
+- Bringing the wall into the real app: the rooms map is the navigation model (round 21); production's tabs sit at the top, and a merge would put the map where they are. 

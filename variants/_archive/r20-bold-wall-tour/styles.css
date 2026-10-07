@@ -1,0 +1,22 @@
+/* Round 20, bold: the wall's tour of itself after an import. The lens bar steps back while the camera tours; the
+   caption sits where the lens bar was, a segment per stop along its top edge, like a photo app's memories. */
+body.touring .lens, body.touring .markbar { opacity: 0; pointer-events: none; transform: translate(-50%, 12px); }
+body.touring .caption { opacity: 0; }
+
+.tour { position: fixed; z-index: 4; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); width: min(440px, calc(100vw - 20px)); height: 56px;
+  display: flex; align-items: stretch; border-radius: 14px; overflow: hidden;
+  transform: translate(-50%, 14px); opacity: 0; pointer-events: none; transition: transform .4s cubic-bezier(.2,.9,.25,1.04), opacity .3s; }
+.tour.on { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
+.tr-segs { position: absolute; top: 6px; left: 14px; right: 14px; display: flex; gap: 4px; pointer-events: none; }
+.tr-segs i { flex: 1; height: 2.5px; border-radius: 2px; background: var(--slot-line); overflow: hidden; }
+.tr-segs b { display: block; height: 100%; width: 0; background: var(--ink); }
+.tr-go { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; border: 0; background: none; padding: 10px 6px 0 14px; text-align: left; color: var(--ink); cursor: pointer; font: inherit; }
+.tr-text { flex: 1; min-width: 0; display: grid; gap: 1px; transition: opacity .25s, transform .25s; }
+.tr-big { font: 800 16.5px/1.15 var(--font); font-stretch: 78%; letter-spacing: -0.005em; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tr-small { font: 500 12.5px/1.3 var(--font); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tr-act { flex: none; font: 700 13px var(--font); color: var(--gold); white-space: pre; transition: opacity .25s; }
+.tour:not(.acts) .tr-act { display: none; }
+.tour.blank .tr-text, .tour.blank .tr-act { opacity: 0; transform: translateY(3px); }
+.tr-skip { flex: none; border: 0; border-left: 1px solid var(--line); background: none; padding: 10px 14px 0; font: 600 14px var(--font); color: var(--muted); cursor: pointer; }
+.tr-skip:hover, .tr-go:hover .tr-act { color: var(--ink); }
+@media (prefers-reduced-motion: reduce) { .tour, .tr-text, .tr-act { transition: opacity .15s; } .tour.blank .tr-text { transform: none; } }

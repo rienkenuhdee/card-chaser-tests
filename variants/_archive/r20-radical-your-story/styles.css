@@ -1,0 +1,79 @@
+/* Round 20, radical: the import plays your collection's story. The chrome steps aside; along the bottom, over a scrim,
+   the moment, the date in large type, the growth curve revealed as the clock goes, and the tally. */
+.top { transition: opacity .3s, transform .3s; }
+body.storying .top { opacity: 0; transform: translateY(-10px); pointer-events: none; }
+body.storying .lens, body.storying .markbar { opacity: 0; pointer-events: none; transform: translate(-50%, 12px); }
+body.storying .dealbar, body.storying .timebar, body.storying .mpop, body.storying .toast, body.storying .caption { opacity: 0; pointer-events: none; }
+
+.story { position: fixed; z-index: 4; left: 0; right: 0; bottom: 0; padding: 0 16px calc(env(safe-area-inset-bottom, 0px) + 16px); pointer-events: none;
+  opacity: 0; transform: translateY(18px); transition: opacity .4s, transform .5s cubic-bezier(.2,.9,.25,1.04); }
+.story.on { opacity: 1; transform: none; }
+.story::before { content: ""; position: absolute; z-index: -1; left: 0; right: 0; bottom: 0; height: calc(100% + 70px);
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--bg) 0%, transparent), color-mix(in srgb, var(--bg) 82%, transparent) 38%, var(--bg) 78%); }
+.st-in { width: min(520px, 100%); margin: 0 auto; display: grid; gap: 4px; }
+
+/* The moment: a card-sized line, like the celebration card, that swaps as the story goes. */
+.st-moment { display: flex; align-items: center; gap: 12px; min-height: 68px; padding: 10px 14px 10px 10px; border-radius: 14px; margin-bottom: 8px;
+  opacity: 0; transform: translateY(10px) scale(.98); transition: opacity .25s, transform .35s cubic-bezier(.2,.9,.25,1.1); }
+.st-moment.show { opacity: 1; transform: none; }
+.st-moment.crit { border-color: #C99A00; box-shadow: 0 0 0 1px #C99A00, 0 10px 34px rgb(201 154 0 / .35); }
+.st-moment.shiny { border-color: transparent; box-shadow: 0 0 0 2px #C77DFF, 0 10px 34px rgb(160 120 255 / .4); }
+.st-moment.shiny .st-kick { color: #8A6BE0; }
+.st-pic { flex: none; width: 46px; height: 50px; display: grid; place-items: center; }
+.st-pic.medal .medal { width: 46px; }
+.st-moment.show .st-pic { animation: md-pop .7s cubic-bezier(.2,1.6,.4,1) both; }
+.st-card { position: relative; display: block; width: 34px; height: 47px; border-radius: 3px; overflow: hidden; background: linear-gradient(135deg, color-mix(in srgb, var(--tc) 78%, #fff), var(--tc) 55%, color-mix(in srgb, var(--tc) 72%, #000));
+  box-shadow: 0 3px 8px rgb(0 0 0 / .25); }
+.st-card::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 24%; background: var(--paper); border-top: 1px solid rgb(0 0 0 / .14); }
+.st-card em { position: absolute; z-index: 1; left: 3px; right: 2px; bottom: 1.5px; font: 600 6.5px/1 var(--font); font-style: normal; color: var(--paper-ink); opacity: .75; white-space: nowrap; overflow: hidden; }
+.st-stack { box-shadow: 4px -4px 0 -1px color-mix(in srgb, var(--tc) 55%, var(--bg)), 0 3px 8px rgb(0 0 0 / .25); }
+.st-plaque { display: block; width: 44px; height: 30px; border-radius: 4px; background: linear-gradient(135deg, #F3D27A, #C99A00 60%, #9A6A00); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--tc) 60%, transparent), 0 3px 8px rgb(0 0 0 / .25); }
+.st-text { min-width: 0; display: grid; gap: 2px; }
+.st-kick { font: 700 11.5px var(--font); letter-spacing: .05em; text-transform: uppercase; color: var(--gold); }
+.st-text b { font: 800 18px/1.15 var(--font); font-stretch: 80%; }
+.st-text > span { font-size: 13px; color: var(--muted); line-height: 1.35; }
+.st-moment.end .st-text b { font-size: 16.5px; font-stretch: 88%; font-weight: 750; }
+.st-acts { display: flex; gap: 8px; justify-content: flex-end; margin: -2px 0 6px; pointer-events: auto; }
+.st-acts[hidden] { display: none; }
+
+/* The date: the biggest type on the page, condensed, with tabular figures. */
+.st-date { display: block; font: 800 42px/1 var(--font); font-stretch: 72%; letter-spacing: -0.01em; color: var(--ink); white-space: nowrap; }
+.story.end .st-date { color: var(--gold); }
+.st-curve { position: relative; height: 34px; margin-top: 4px; }
+.st-curve svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.st-track { fill: none; stroke: var(--slot-line); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.st-area { fill: color-mix(in srgb, var(--gold) 22%, transparent); }
+.st-line { fill: none; stroke: var(--gold); stroke-width: 1.8; vector-effect: non-scaling-stroke; }
+.st-head { position: absolute; bottom: -3px; width: 2px; height: calc(100% + 6px); margin-left: -1px; border-radius: 1px; background: var(--ink); }
+.story.end .st-head { opacity: 0; }
+.st-dots { position: absolute; inset: 0; }
+.st-dots i { position: absolute; width: 8px; height: 8px; margin: 0 0 -4px -4px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 2px var(--bg); opacity: 0; transform: scale(.2); transition: opacity .2s, transform .4s cubic-bezier(.2,1.6,.4,1); }
+.st-dots i.on { opacity: 1; transform: none; }
+.st-tally { display: flex; justify-content: space-between; align-items: center; min-height: 26px; font: 600 14px var(--font); color: var(--muted); }
+.st-tally #st-n { color: var(--ink); }
+.st-meds { display: flex; align-items: center; gap: 6px; }
+.st-med { display: block; width: 22px; }
+.st-med .medal { width: 22px; display: block; }
+.st-med.pop { animation: md-pop .6s cubic-bezier(.2,1.6,.4,1) both; }
+
+/* Skip: small, always there, top right where the settings usually are. */
+.st-skip { position: fixed; z-index: 5; top: calc(env(safe-area-inset-top, 0px) + 12px); right: 12px; height: 36px; padding: 0 16px; border-radius: 18px; font: 700 14px var(--font); color: var(--ink); cursor: pointer;
+  opacity: 0; pointer-events: none; transform: translateY(-8px); transition: opacity .3s, transform .3s; }
+body.storying .st-skip { opacity: 1; pointer-events: auto; transform: none; }
+body.storying .story.end ~ .st-skip { opacity: 0; pointer-events: none; }
+
+/* Time keeps the story: gold marks on the slider for its moments, and the moment above the bar while you're near it. */
+.timebar .t-marks { position: absolute; left: 9px; right: 9px; bottom: 9px; height: 5px; pointer-events: none; }
+.timebar .t-marks i { position: absolute; top: 0; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: var(--gold); }
+.timebar .t-mom { position: absolute; left: 0; right: 0; bottom: calc(100% + 8px); display: grid; gap: 1px; padding: 9px 14px; border-radius: 12px; pointer-events: none; background: var(--panel-solid);
+  opacity: 0; transform: translateY(6px); transition: opacity .2s, transform .25s; }
+.timebar .t-mom.show { opacity: 1; transform: none; }
+.t-mom small { font: 700 11px var(--font); letter-spacing: .05em; text-transform: uppercase; color: var(--gold); }
+.t-mom b { font: 800 16px/1.15 var(--font); font-stretch: 82%; }
+.t-mom span { font-size: 12.5px; color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  .story, .st-moment, .st-skip, .timebar .t-mom { transition: opacity .2s; transform: none; }
+  .st-moment.show .st-pic, .st-med.pop { animation: none; }
+  .st-dots i { transition: none; }
+}

@@ -21,11 +21,25 @@ function stepInertia(dt) {
 function hit(sx, sy, nearest = false) {
   if (state.trans) return null;
   if (view === "mosaic") {
+    if (room.on && room.closing) return null;
+    if (room.on && room.anim) finishRoomAnim();
     const y = sy + mScroll;
-    for (const g of groups) if (g.m && sx >= g.m.x && sx <= g.m.x + g.m.w && y >= g.m.y && y <= g.m.y + g.m.h) return { block: g };
+    if (room.on) {
+      for (const it of room.L?.hits || []) if (inR(it, sx, y)) return { block: it.blk }; // a medal, a filter, a fold line
+      for (const g of room.plaques) {
+        if (g.fanR && inR(g.fanR, sx, y)) return { block: g.fanBtn };
+        if (g === room.fan) for (const r of fanRows(g)) if (inR(r.m, sx, y)) return { block: r };
+        if (inR(g.m, sx, y)) return { block: g };
+      }
+      if (!nearest) return null;
+      let best = null, bd = Infinity;
+      for (const g of room.plaques) { const dx = Math.max(g.m.x - sx, 0, sx - g.m.x - g.m.w), dy = Math.max(g.m.y - y, 0, y - g.m.y - g.m.h), d = Math.hypot(dx, dy); if (d < bd) { bd = d; best = g; } }
+      return best && bd < 60 ? { block: best } : null;
+    }
+    for (const g of groups) if (g.m && !inCase(g) && inR(g.m, sx, y)) return { block: g };
     if (!nearest) return null;
     let best = null, bd = Infinity;
-    for (const g of groups) { if (!g.m) continue; const dx = Math.max(g.m.x - sx, 0, sx - g.m.x - g.m.w), dy = Math.max(g.m.y - y, 0, y - g.m.y - g.m.h), d = Math.hypot(dx, dy); if (d < bd) { bd = d; best = g; } }
+    for (const g of groups) { if (!g.m || inCase(g)) continue; const dx = Math.max(g.m.x - sx, 0, sx - g.m.x - g.m.w), dy = Math.max(g.m.y - y, 0, y - g.m.y - g.m.h), d = Math.hypot(dx, dy); if (d < bd) { bd = d; best = g; } }
     return best && bd < 60 ? { block: best } : null;
   }
   const g = state.g; if (!g) return null;
@@ -60,16 +74,20 @@ function onDown(pts) {
   samples = [{ x: p.x, y: p.y, t: now }];
   const h0 = hit(p.x, p.y);
   if (view === "mosaic" && h0?.block) { state.press = { g: h0.block, t0: now, timer: 0 }; kick(); }
-  // Press and hold a card in a set to mark it; keep the finger down and sweep to mark the ones beside it.
-  if (view === "set" && !state.focus && h0?.card && TW * h0.card.sz * cam.s >= 14) {
+  if (view === "set" && !state.focus && h0?.card && !h0.card.ph && TW * h0.card.sz * cam.s >= 14) { // a Dex pocket with no card has nothing to hold
     const card = h0.card;
     gesture.card = card;
     state.press = { c: card, t0: now, timer: setTimeout(() => {
       if (gesture?.kind !== "one" || gesture.moved || state.press?.c !== card) return;
-      if (marking) { // already marking: a hold puts the card on your chase list (or, owned, up for trade)
-        gesture = null; cancelPress(); tick(8);
-        if (card.owned) { spares[card.id] = !isSpare(card); try { localStorage.setItem("wall-spares", JSON.stringify(spares)); } catch { /* fine */ } toast(spares[card.id] ? `${card.name} is a spare, up for trade.` : `${card.name} is no longer a spare.`); }
-        else { chasing[card.id] = !isChase(card); persistChase(); toast(chasing[card.id] ? `${card.name} on your chase list.` : `${card.name} off your chase list.`); }
+      if (marking) { // already marking: a hold on a card you have adds a copy (sweep on for the next ones); else it's a chase
+        cancelPress(); tick(8);
+        if (card.owned) {
+          const at = samples[samples.length - 1] || { x: gesture.x, y: gesture.y };
+          gesture.stroke = { copy: true, seen: new Set([card]), last: { x: at.x, y: at.y } }; gesture.moved = true;
+          addCopy(card); return;
+        }
+        gesture = null;
+        chasing[card.id] = !isChase(card); persistChase(); toast(chasing[card.id] ? `${card.name} on your chase list.` : `${card.name} off your chase list.`);
         drawList(); kick(); return;
       }
       enterMark();
@@ -122,6 +140,12 @@ function pinchMove(a, b) {
   const g = gesture, d = dist(a, b), m = mid(a, b), r = d / g.d0, now = evT || performance.now();
   if (g.snap) return;
   if (view === "mosaic") {
+    // Closing fingers on the wall, or in the trophy room, take the room up to the map (round 21), held under them; a
+    // spread still opens what's under the fingers. The pinch commits to whichever way it first goes.
+    if (!g.mapT && !g.out) { if (r < 0.96 && !state.trans && mapReady()) { g.mapT = true; g.tqs = []; tick(4); beginMap(rooms.at, "out"); } else if (r > 1.01) g.out = true; }
+    if (g.mapT) { const T = state.trans; if (T?.kind === "map" && !T.anim) { T.q = clamp((1 - r) / 0.5, 0, 1); g.tqs.push({ q: T.q, t: now }); kick(); } return; }
+    if (room.on && !g.g?.done) return; // in the room a spread opens a plaque's album and nothing else
+    if (g.g && (g.g.fan || g.g.pick)) return;
     if (!g.g) return;
     const q = clamp((r - 1) / 1.1, 0, 1);
     if (!state.trans && q > 0.01) state.trans = openTrans(g.g, 0, fitCam(g.g));
@@ -133,7 +157,6 @@ function pinchMove(a, b) {
   g.m = m; g.r = r;
   if (s < f.s * 0.995) {
     if (g.noClose) { Object.assign(cam, f); kick(); return; }
-    // Pinching out of a framed set closes it, under your fingers, measured from where the fingers crossed the frame.
     if (!state.trans) { Object.assign(cam, f); state.trans = openTrans(state.g, 1, f); g.closeD = d * (f.s / s); }
     if (!state.trans.anim) { const q = clamp(1 - (1 - d / (g.closeD || d)) / 0.6, 0, 1); state.trans.q = q; g.qs.push({ q, t: now }); }
     kick(); return;
@@ -150,18 +173,17 @@ function pinchMove(a, b) {
 function releasePinch() {
   const g = gesture, T = state.trans;
   if (g.snap) return;
+  if (g.mapT) { if (T?.kind === "map" && !T.anim) mapSettle(snapQ(g.tqs, T.q, 0.4)); return; } // up to the map, or a slow small pinch stays
   if (T?.kind === "open" && !T.anim) {
-    // Speed over the last tenth of a second of movement (at least the last two samples).
     const qs = g.qs, last = qs[qs.length - 1];
     let first = qs.find((s) => last && last.t - s.t < 160);
     if (qs.length >= 2 && (first === last || qs.indexOf(last) - qs.indexOf(first) < 2)) first = qs[Math.max(0, qs.length - 3)];
-    const v = first && last && first !== last ? (last.q - first.q) / Math.max(8, last.t - first.t) : 0; // q per ms
+    const v = first && last && first !== last ? (last.q - first.q) / Math.max(8, last.t - first.t) : 0;
     let to;
     if (Math.abs(v) > 0.0011) to = v > 0 ? 1 : 0;
     else to = T.q > (view === "mosaic" ? 0.35 : 0.65) ? 1 : 0;
     settle(to);
   } else if (view === "set" && state.g && cam.s < fitCam(state.g).s) flyTo(fitCam(state.g), 260);
-  // A spread that zooms well in lands on the card under the fingers, centred, the way a tap would.
   else if (view === "set" && state.g && !g.noClose && g.r > 1.15 && g.m && cam.s > fitCam(state.g).s * 1.8) {
     const h = hit(g.m.x, g.m.y);
     let c = h?.card || null;
@@ -193,6 +215,7 @@ function onUp(remaining, end, cancelled = false) {
   }
   if (!g.moved) return tap(p.x, p.y);
   if (view === "set" && g.axis === "x") { if (Math.abs(dx) > 50) slideGroup(dx < 0 ? 1 : -1); return; }
+  if (view === "mosaic" && roomFlick(dx, dy, dt)) return; // a sideways flick at a room's own level: the next room along
   const s0 = samples.find((s) => performance.now() - s.t < 90) || samples[0];
   if (s0 && !reduced) {
     const t = Math.max(1, performance.now() - s0.t);
@@ -216,6 +239,7 @@ canvas.addEventListener("wheel", (e) => {
   if (state.trans) finishTransition();
   if (view === "mosaic") {
     if (e.ctrlKey && e.deltaY < -2) { const h = hit(e.clientX, e.clientY, true); if (h?.block) enterGroup(h.block); return; }
+    if (e.ctrlKey && e.deltaY > 2) { toMap(); return; } // a trackpad pinch: up to the map
     mScroll = clamp(mScroll + e.deltaY, 0, mMax); kick(); return;
   }
   fly = null; inertia = false;
@@ -235,14 +259,8 @@ function tap(sx, sy) {
   if (picking() && !state.focus && h?.block) return togglePick(h.block); // which sets do you collect?
   if (state.focus) { if (h?.card === state.focus) return; unfocus(); return; }
   if (view === "mosaic") {
-    const ch = chipAt(sx, sy); if (ch) return startTrade(ch.t, ch); // a trader: how to trade, then the table
-    if (h?.block && lifted) {
+    if (h?.block && lifted && !h.block.done) { // a plaque is sealed: a tap opens the album, never a tile in its engraving
       const c = liftedAt(h.block, sx, sy);
-      if (c && state.lens === "trade") { // a spare: the table with whoever wants it
-        const who = wantedBy(c);
-        if (who.length) { const chip = strip?.chips.find((x) => x.t === who[0]); return startTrade(who[0], chip); }
-        tick(3); return toast(`Nobody is chasing ${c.name} yet.`);
-      }
       if (c) return popCard(c, mr(c.m)); // a chased card: every offer online
     }
     if (h?.block) enterGroup(h.block);
@@ -250,10 +268,12 @@ function tap(sx, sy) {
     return;
   }
   if (!h?.card) {
-    if (h?.block && !marking && !fly && !shuffle) { const p = headAt(h.block, sx, sy); if (p) { tick(4); if (p.seg) setScope(h.block.set, p.seg); else if (p.btn) { if (p.btn.pop) chasePopular(h.block.set); else if (p.btn.remove) removeSet(h.block.set); else removeChase(h.block.chase); } else focus(p.c); } }
+    if (!state.focus && !marking) { const t = pinHit(sx, sy); if (t) return openMedal(t.id); } // the next medal on the bar
+    if (h?.block && !marking && !fly && !shuffle) { const p = headAt(h.block, sx, sy); if (p) { tick(4); if (p.dex) dexHeadTap(h.block, p.dex); else if (p.seg) setScope(h.block.set, p.seg); else if (p.btn) { if (p.btn.shelf) toggleShelf(h.block); else if (p.btn.away) putAway(h.block); else if (p.btn.pop) chasePopular(h.block.set); else if (p.btn.remove) removeSet(h.block.set); else removeChase(h.block.chase); } else focus(p.c); } }
     return;
   }
   const w = TW * h.card.sz * cam.s;
+  if (h.card.ph && w >= 14) return phSay(h.card); // a Pokémon with no card in your sets: nothing to mark, said plainly
   if (marking && w >= 14) return markCard(h.card, !h.card.owned); // in mark mode a tap toggles the card
   if (w >= 34) return focus(h.card);
   tick(5);

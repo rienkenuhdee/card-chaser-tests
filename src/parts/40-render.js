@@ -14,16 +14,36 @@ function font(weight, size, narrow = false) {
 }
 function readTheme() {
   const cs = getComputedStyle(document.documentElement);
-  for (const k of ["bg", "slot", "slot-line", "ink", "muted", "deal", "gold", "panel", "panel-solid", "paper", "paper-ink"]) theme[k] = cs.getPropertyValue(`--${k}`).trim();
+  for (const k of ["bg", "slot", "slot-line", "ink", "muted", "deal", "gold", "panel", "panel-solid", "paper", "paper-ink", "plaque", "plaque-ink", "plaque-hi", "plaque-lo", "room-bg", "room-bg2", "room-wood", "room-wood-hi", "room-ink", "room-muted", "room-plaque", "room-plaque-ink", "room-plaque-lo", "room-up", "room-down", "c-red", "c-yellow", "c-green", "c-blue", "m-surface"]) theme[k] = cs.getPropertyValue(`--${k}`).trim();
   theme.panelFill = cs.getPropertyValue("--panel-fill").trim();
   if (typeof heatCache !== "undefined") heatCache.clear();
   theme.dark = cs.colorScheme === "dark" || matchMedia("(prefers-color-scheme: dark)").matches && document.documentElement.dataset.theme !== "light";
 }
+// A new screen size, or the phone turning on its side (round 22): whatever is moving lands first, then every level
+// lays out again and the view you were in is composed again for the new screen. A set stays framed with the row you
+// were reading at the top; a card up close comes up close again; the wall keeps the panel you were looking at.
 function resize() {
+  const was = { w: vw, h: vh };
   vw = innerWidth; vh = innerHeight; dpr = Math.min(3, devicePixelRatio || 1);
   canvas.width = Math.round(vw * dpr); canvas.height = Math.round(vh * dpr);
+  readSafe();
+  const turned = started && (was.w !== vw || was.h !== vh);
+  if (turned) { const T = state.trans; if (T && (T.anim || T.t0)) finishTransition(); fly = null; inertia = false; }
+  // Where you are, before the layout moves under it.
+  const g = view === "set" ? state.g : null;
+  let row = null, wallAt = null;
+  if (turned && g && !state.focus) { const y = cam.y + (topPad() + 6) / cam.s; row = g.cards.find((c) => c.y + TH * c.sz * 0.5 > y) || null; }
+  if (turned && view === "mosaic" && !room.on && mScroll > 0) { const y = mScroll + topPad(); wallAt = groups.find((x) => x.m && !x.done && x.m.y + x.m.h > y) || null; }
   layoutAll();
-  if (view === "set" && state.g) { const f = fitCam(state.g); if (!state.focus) { cam.s = Math.max(cam.s, f.s); } clampCam(state.g); }
+  if (view === "set" && g) {
+    const f = fitCam(g);
+    if (state.focus) { if (turned) focusCam(state.focus, true); }
+    else if (turned) { Object.assign(cam, f); if (row) cam.y = row.y - (topPad() + 6) / cam.s - (row.row ? GAP * row.sz : 0); }
+    else cam.s = Math.max(cam.s, f.s);
+    clampCam(g);
+  }
+  if (wallAt) mScroll = clamp(wallAt.m.y - topPad() - 4, 0, mMax);
+  if (turned) mapUI.L = null;
   kick();
 }
 
@@ -64,14 +84,14 @@ function fitText(t, max) {
 const state = { lens: "have", value: false, time: false, q: "", matches: null, focus: null, dimAll: 0, introT0: 0, trans: null, press: null, g: null };
 // Where you are: the mosaic of everything, or inside one group (a set, a region, a price band).
 let view = "mosaic";
-try { const l = localStorage.getItem("wall-lens"); if (["have", "need", "chase", "trade"].includes(l)) state.lens = l; state.value = localStorage.getItem("wall-value") === "1"; } catch { /* default */ }
+try { const l = localStorage.getItem("wall-lens"); if (["have", "chase"].includes(l)) state.lens = l; state.value = localStorage.getItem("wall-value") === "1"; } catch { /* default */ }
 function emphasis(c) {
   if (c.away) return 0; // out on the trade table: its tile is empty
   if (preview) return preview.has(c.base || c) ? (c.owned ? 0.42 : 1) : 0.1; // the New chase form: what it would match
   if (state.matches) return state.matches.has(rootOf(c)) ? 1 : 0.1;
-  if (state.lens === "need") return c.owned ? 0.1 : 1;
   if (state.lens === "chase") return isChase(c) ? 1 : 0.18;
-  if (state.lens === "trade") return isSpare(c) ? 1 : 0.18;
+  if (state.show === "missing") return c.owned ? 0.1 : c.ph ? 0.3 : 1; // Show: Missing (Filters); a Dex pocket your sets can't fill stays quieter
+  if (state.show === "have") return c.owned ? 1 : 0.1;
   return 1;
 }
 
@@ -85,6 +105,7 @@ function drawTile(c, sx, sy, w, h, now, mult = 1) {
     sx += (w - w * k) / 2; sy += (h - h * k) / 2; w *= k; h *= k;
   }
   drawTile0(c, sx, sy, w, h, now, mult);
+  if (c.reg && w >= 34 && view === "set") dexRegionTag(c, sx, sy, w, mult); // the first pocket of a region in the Dex
   // Inside a set the cards people chase wear a gold corner.
   if (c.pop && view === "set" && groups[c.g]?.set && w >= 14 && c.e > 0.3 && (!state.focus || state.focus === c)) {
     const s = clamp(w * 0.36, 4, 18), r = w >= 26 ? w * 0.045 : 0;
@@ -92,9 +113,9 @@ function drawTile(c, sx, sy, w, h, now, mult = 1) {
     ctx.beginPath(); ctx.moveTo(sx + w - s, sy); ctx.lineTo(sx + w - r, sy); ctx.lineTo(sx + w, sy + r); ctx.lineTo(sx + w, sy + s); ctx.closePath(); ctx.fill();
     ctx.globalAlpha = 1;
   }
-  // In the Need lens the cards you're chasing stand out further still: a gold ring.
-  if (state.lens === "need" && !c.owned && w >= 5 && c.e > 0.5 && !c.lift && isChase(c)) {
-    ctx.globalAlpha = Math.min(1, mult); ctx.lineWidth = Math.max(1.5, w * 0.07); ctx.strokeStyle = theme.gold;
+  // Showing what's missing, the cards you're chasing stand out further still: a gold ring (green where a deal waits).
+  if (showNow() === "missing" && !c.owned && w >= 5 && c.e > 0.5 && !c.lift && isChase(c)) {
+    ctx.globalAlpha = Math.min(1, mult); ctx.lineWidth = Math.max(1.5, w * 0.07); ctx.strokeStyle = c.deal && !state.time ? theme.deal : theme.gold;
     rr(sx + 0.5, sy + 0.5, w - 1, h - 1, w * 0.09); ctx.stroke(); ctx.globalAlpha = 1;
   }
   // The green: the flash on the card that changed, and the ripple's tint on its neighbours.
@@ -132,9 +153,10 @@ function drawTile0(c, sx, sy, w, h, now, mult = 1) {
     sx += (w - w * k) / 2; sy += (h - h * k) / 2; w *= k; h *= k;
   }
   ctx.globalAlpha = alpha;
+  if (c.ph) { dexPocket(c, sx, sy, w, h, alpha); return; } // a Pokémon with no card in your sets (85-natdex.js)
   // A chased card out in front: while its tile is wider than it is tall it reads as a feed tile (the deal, or the
   // most you'd pay); as it grows into the binder it becomes the card.
-  if (c.lift && w > h * 1.05) { if (c.owned) drawSpareTile(c, sx, sy, w, h, alpha, now); else drawFeedTile(c, sx, sy, w, h, alpha, now); ctx.globalAlpha = 1; return; }
+  if (c.lift && w > h * 1.05) { drawFeedTile(c, sx, sy, w, h, alpha, now); ctx.globalAlpha = 1; return; }
   const value = state.value && !state.matches;
   // Marking animation: the owned face floods in from the middle.
   let flood = c.owned ? 1 : 0;
@@ -153,8 +175,8 @@ function drawTile0(c, sx, sy, w, h, now, mult = 1) {
     return;
   }
   if (w < 26) { // binder at arm's length: shapes and colour (kept cheap: this draws a thousand times a frame)
-    const r = w * 0.09, round = w >= 12;
-    const dealOn = !c.owned && c.deal && isChase(c) && state.lens !== "need" && !state.time; // a deal is a property of a chase
+    const r = w * 0.09, round = w >= (foilOff ? 18 : 12); // mid-move (a room shrinking to the map) small tiles stay square: rounding a thousand is the costliest part of the frame, and nobody sees corners in motion
+    const dealOn = !c.owned && c.deal && isChase(c) && !state.time; // a deal is a property of a chase
     if (flood < 1) {
       ctx.fillStyle = theme.slot;
       if (round) { rr(sx, sy, w, h, r); ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = dealOn ? theme.deal : theme["slot-line"]; ctx.stroke(); }
@@ -187,7 +209,7 @@ function drawTile0(c, sx, sy, w, h, now, mult = 1) {
 // An empty pocket: a hairline outline, and once you can read it, what it is and what it costs to fill.
 function emptyPocket(c, sx, sy, w, h, value) {
   const r = w * 0.045;
-  const dealOn = c.deal && isChase(c) && state.lens !== "need" && !state.time;
+  const dealOn = c.deal && isChase(c) && !state.time;
   rr(sx, sy, w, h, r); ctx.fillStyle = theme.slot; ctx.fill();
   ctx.lineWidth = Math.max(1, w * 0.008);
   ctx.strokeStyle = value ? heat(c.price) : dealOn ? theme.deal : theme["slot-line"];
@@ -205,67 +227,112 @@ function emptyPocket(c, sx, sy, w, h, value) {
   font(500, w * 0.064); ctx.fillText(fitText(`${sets[c.si].code} ${c.num}/${sets[c.si].printed}${c.tag ? ` ${c.tag}` : ""}`, w - pad * 2), sx + pad, sy + h - pad);
 }
 
-// A card you own: a full-bleed colour chip with a printed label strip, like a specimen in a catalogue.
+// A card you own, close up: its picture once it's in (41-art.js), and the drawn face until then, or instead.
 function cardFace(c, sx, sy, w, h, now, value) {
+  const pic = artFor(c, w), k = pic ? artFade(pic, now) : 0;
+  if (k < 1) drawnFace(c, sx, sy, w, h, now, value);
+  else if (w > 90) faceShadow(sx, sy, w, h);
+  if (pic) artDraw(c, pic, sx, sy, w, h, now, value, k);
+  if (state.focus === c) artNote(c, pic);
+}
+function faceShadow(sx, sy, w, h) { ctx.save(); ctx.shadowColor = "rgb(0 0 0 / .32)"; ctx.shadowBlur = w * 0.09; ctx.shadowOffsetY = w * 0.035; rr(sx, sy, w, h, w * 0.045); ctx.fillStyle = "#000"; ctx.fill(); ctx.restore(); }
+const darkCache = new Map();
+const darker = (h) => { let v = darkCache.get(h); if (!v) { v = shade(h, -0.3); darkCache.set(h, v); } return v; };
+// The drawn face: a colour chip with a printed label strip, like a specimen in a catalogue. A card has an art window
+// framed in its type's colour (a holo's window catches the light); a full art (ultra rares and up) is art to its edges;
+// a trainer's window sits over its text, and an energy wears its symbol. All flat fills but the full art's sweep.
+function drawnFace(c, sx, sy, w, h, now, value) {
   const st = sets[c.si];
   const col = value ? heat(c.price) : typeColor(c);
-  const r = w * 0.045;
-  if (w > 90) { ctx.save(); ctx.shadowColor = "rgb(0 0 0 / .32)"; ctx.shadowBlur = w * 0.09; ctx.shadowOffsetY = w * 0.035; rr(sx, sy, w, h, r); ctx.fillStyle = "#000"; ctx.fill(); ctx.restore(); }
+  const r = w * 0.045, full = c.tier >= 4, lh = h * 0.24, ly = sy + h - lh;
+  if (w > 90) faceShadow(sx, sy, w, h);
   ctx.save(); rr(sx, sy, w, h, r); ctx.clip();
-  const g = ctx.createLinearGradient(sx, sy, sx + w, sy + h);
-  g.addColorStop(0, shade(col, 0.2)); g.addColorStop(0.55, col); g.addColorStop(1, shade(col, -0.28));
-  ctx.fillStyle = g; ctx.fillRect(sx, sy, w, h);
-  // Fine engraving: a few diagonal hairlines, quieter than a pattern.
-  if (w > 60) { ctx.fillStyle = engraving(); ctx.fillRect(sx, sy, w, h); }
-  // Foil: holos and up catch the light as the wall moves under your finger.
+  // The art: a window inside the card's frame, or the whole card for a full art.
+  const m = w * 0.075, energy = c.type === "e" && !full, trainer = c.type === "t" && !full;
+  const ax = full ? sx : sx + m, ay = full ? sy : sy + m, aw = full ? w : w - m * 2, ah = full ? ly - sy : (ly - sy - m * 1.6) * (trainer ? 0.62 : 1);
+  if (full) {
+    const g = ctx.createLinearGradient(sx, sy, sx + w, sy + h);
+    g.addColorStop(0, shade(col, 0.22)); g.addColorStop(0.55, col); g.addColorStop(1, shade(col, -0.3));
+    ctx.fillStyle = g; ctx.fillRect(sx, sy, w, h);
+  } else {
+    ctx.fillStyle = col; ctx.fillRect(sx, sy, w, h);
+    if (energy) { // no window: the energy's symbol, a ring in the middle of the card
+      const R = Math.min(w, ly - sy) * 0.3;
+      ctx.beginPath(); ctx.arc(sx + w / 2, sy + (ly - sy) / 2, R, 0, Math.PI * 2); ctx.fillStyle = darker(col); ctx.fill();
+      ctx.lineWidth = Math.max(1, R * 0.16); ctx.strokeStyle = "rgb(255 255 255 / .55)"; ctx.stroke();
+    } else {
+      ctx.fillStyle = darker(col); ctx.fillRect(ax, ay, aw, ah);
+      ctx.fillStyle = "rgb(255 255 255 / .09)"; ctx.fillRect(ax, ay, aw, ah * 0.46); // light from above, so it reads as a picture
+      if (trainer && w > 34) { ctx.fillStyle = "rgb(255 255 255 / .28)"; for (let i = 0; i < 3; i++) ctx.fillRect(ax, ay + ah + m * (0.9 + i * 0.75), aw * (i === 2 ? 0.55 : 1), Math.max(1, w * 0.018)); } // its text
+    }
+  }
+  // Fine engraving over the art: a few diagonal hairlines, quieter than a pattern.
+  if (w > 60 && !energy) { ctx.fillStyle = engraving(); ctx.fillRect(ax, ay, aw, ah); }
+  // A holo's window carries a sheen at rest; holos and up catch the light as the wall comes to rest under your finger.
   // (Skipped while things are moving: nobody sees foil mid-gesture, and it's the costliest thing on a card.)
+  if (c.tier === 3 && !energy && w > 34) {
+    ctx.fillStyle = "rgb(255 255 255 / .13)"; ctx.beginPath();
+    ctx.moveTo(ax + aw * 0.3, ay); ctx.lineTo(ax + aw * 0.56, ay); ctx.lineTo(ax + aw * 0.26, ay + ah); ctx.lineTo(ax, ay + ah); ctx.closePath(); ctx.fill();
+  }
   if (c.tier >= 3 && !reduced && !foilOff && !state.trans && !fly && !inertia && !(tbl.on && tableMoving())) {
     frameFoil = true;
     const phase = ((now * 0.00005 + (sx + cam.x * cam.s * 0.25) * 0.0011) % 1 + 1) % 1;
-    const fx = sx - w + phase * w * 3;
-    const fg = ctx.createLinearGradient(fx, sy, fx + w * 0.9, sy + h);
+    const fx = ax - aw + phase * aw * 3;
+    const fg = ctx.createLinearGradient(fx, ay, fx + aw * 0.9, ay + ah);
     fg.addColorStop(0, "rgb(255 255 255 / 0)"); fg.addColorStop(0.38, "rgb(150 220 255 / .28)"); fg.addColorStop(0.5, "rgb(255 226 160 / .42)"); fg.addColorStop(0.62, "rgb(160 245 205 / .28)"); fg.addColorStop(1, "rgb(255 255 255 / 0)");
-    ctx.globalCompositeOperation = "screen"; ctx.fillStyle = fg; ctx.fillRect(sx, sy, w, h); ctx.globalCompositeOperation = "source-over";
+    ctx.globalCompositeOperation = "screen"; ctx.fillStyle = fg; ctx.fillRect(ax, ay, aw, ah); ctx.globalCompositeOperation = "source-over";
   }
+  if (!full && !energy && w > 34) { ctx.lineWidth = 1; ctx.strokeStyle = "rgb(0 0 0 / .22)"; ctx.strokeRect(ax + 0.5, ay + 0.5, aw - 1, ah - 1); } // the window's edge
   // The label strip
-  const lh = h * 0.24, ly = sy + h - lh;
   ctx.fillStyle = theme.paper; ctx.fillRect(sx, ly, w, lh);
   ctx.fillStyle = "rgb(0 0 0 / .14)"; ctx.fillRect(sx, ly, w, Math.max(1, w * 0.006));
   ctx.restore();
-  // Secret and special rares wear a thin gold rule.
-  if (c.tier >= 5) { rr(sx + w * 0.03, sy + w * 0.03, w * 0.94, h - lh - w * 0.04, r * 0.7); ctx.lineWidth = Math.max(1, w * 0.012); ctx.strokeStyle = "rgb(240 200 110 / .85)"; ctx.stroke(); }
+  // A full art wears a hairline inside its edge; secret and special rares wear it in gold.
+  if (full) { rr(sx + w * 0.03, sy + w * 0.03, w * 0.94, h - lh - w * 0.045, r * 0.7); ctx.lineWidth = Math.max(1, w * 0.012); ctx.strokeStyle = c.tier >= 5 ? "rgb(240 200 110 / .9)" : "rgb(255 255 255 / .45)"; ctx.stroke(); }
   if (w < 40) return;
   const pad = w * 0.075;
   ctx.textBaseline = "alphabetic"; ctx.textAlign = "left"; ctx.fillStyle = theme["paper-ink"];
   font(800, w * 0.092, true); ctx.fillText(fitText(c.name, w * 0.84), sx + pad, ly + lh * 0.46);
   font(500, w * 0.064); ctx.globalAlpha *= 0.7;
-  ctx.fillText(fitText(`${st.code} ${c.num}/${st.printed}${c.tag ? ` ${c.tag}` : ""}`, w * 0.6), sx + pad, ly + lh * 0.82);
-  ctx.textAlign = "right"; ctx.fillText(GLYPH[c.tier], sx + w - pad, ly + lh * 0.82);
+  ctx.fillText(fitText(`${st.code} ${c.num}/${st.printed}${c.tag ? ` ${c.tag}` : ""}`, w * 0.62), sx + pad, ly + lh * 0.82);
   ctx.globalAlpha /= 0.7;
+  // The rarity mark, printed where the card prints it: gold from holo up.
+  ctx.textAlign = "right"; ctx.fillStyle = c.tier >= 3 ? theme.gold : theme["paper-ink"]; if (c.tier < 3) ctx.globalAlpha *= 0.7;
+  ctx.fillText(GLYPH[c.tier], sx + w - pad, ly + lh * 0.82);
+  if (c.tier < 3) ctx.globalAlpha /= 0.7;
   if (value || w > 110) { ctx.textAlign = "right"; ctx.fillStyle = "rgb(255 255 255 / .92)"; font(700, w * 0.078); ctx.fillText(short(c.price), sx + w - pad, sy + pad + w * 0.07); }
 }
 
 // A set's title inside the set view, drawn with whichever camera is in use (they differ mid-transition).
 function drawHeader(st, now, C = cam, ox = 0, alpha = 1) {
   const sx = (st.x - C.x) * C.s + ox, sy = (st.y - C.y) * C.s, sw = st.w * C.s;
-  const k = (st.head * C.s) / (132 + (st.popH || 0)), hh = 132 * k; // 1 at the framed zoom; the title block is 132 of the header
-  const owned = ownedNow(st.cards), n = st.cards.length;
+  const k = (st.head * C.s) / (headH() + (st.popH || 0)), hh = headH() * k; // 1 at the framed zoom; the title block is 132 of the header (86 on a phone on its side)
+  const owned = ownedNow(st.cards), n = st.cards.length, f = finishOf(st);
   ctx.globalAlpha = alpha * (state.focus ? 1 - state.dimAll * 0.7 : 1);
   ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-  const title = clamp(34 * k, 16, 64), sub = clamp(14 * k, 10, 24);
+  // On a phone on its side the title and its line share one line (buttons at its right), and the bar sits close under.
+  const flat = landPhone(), title = clamp((flat ? 24 : 34) * k, 16, 64), sub = clamp(14 * k, 10, 24), barY = sy + hh * (flat ? 0.57 : 0.82);
+  let roomW = sw; if (flat) for (const b of [st.hdrBtn, st.hdrBtn2]) if (b && b.y < 0) roomW = Math.min(roomW, (b.x - 12) * k);
   ctx.fillStyle = theme.ink; font(800, title, true);
-  ctx.fillText(fitText(st.name, sw), sx, sy + hh * 0.5);
-  const pct = `${Math.floor((owned / n) * 100)}%`;
-  font(700, sub); const pw = ctx.measureText(pct).width;
-  ctx.textAlign = "right"; ctx.fillStyle = theme.ink; ctx.fillText(pct, sx + sw, sy + hh * 0.72);
-  ctx.textAlign = "left"; ctx.fillStyle = theme.muted; font(500, sub);
-  const line = state.time ? `${owned} of ${n} by ${monthOf(state.t)}` : st.sub();
-  ctx.fillText(fitText(line, sw - pw - 12), sx, sy + hh * 0.72);
-  const by = sy + hh * 0.82, bh = Math.max(1.5, 3 * k);
-  ctx.fillStyle = theme["slot-line"]; ctx.fillRect(sx, by, sw, bh);
-  ctx.fillStyle = owned === n ? "#E2B33C" : st.ink; ctx.fillRect(sx, by, sw * (owned / n), bh);
-  if (st.popChips) drawPopRow(st, sx, sy + hh, k, ctx.globalAlpha);
-  else if (st.chase && st.hdrBtn && k >= 0.3) { drawHdrBtn(st, st.hdrBtn, sx, sy + hh + st.hdrBtn.y * k, k, ctx.globalAlpha); ctx.textBaseline = "alphabetic"; }
+  const name = fitText(f ? trophyName(st) : st.name, roomW), nameW = flat ? textW(name) + 10 * k : 0;
+  ctx.fillText(name, sx, sy + hh * (flat ? 0.45 : 0.5));
+  ctx.fillStyle = theme.muted; font(500, sub); // the count is in the line, and the bar under it shows how far (no percent besides)
+  // Finished: when, and what it's worth. Otherwise the group's own line.
+  const line = state.time ? `${owned} of ${n} by ${monthOf(state.t)}` : f ? `Finished ${dayOf(f.at)}, worth ${money(worthOf(st.base || st.cards))}.${f.put ? "" : " On the wall."}` : st.sub() + orderNote(st);
+  if (!flat) ctx.fillText(fitText(line, sw), sx, sy + hh * 0.72);
+  else if (roomW - nameW > 40 * k) ctx.fillText(fitText(line, roomW - nameW), sx + nameW, sy + hh * 0.45);
+  drawBar(st, sx, barY, sw, Math.max(1.5, 3 * k), now, k);
+  drawNextPin(st, sx, barY, sw, Math.max(1.5, 3 * k), now, k); // the next medal to earn, at its point on the bar
+  // The header's buttons and chips are for the framed binder: zoomed in toward a card they fade rather than grow
+  // past legible (and behind the top strip).
+  const ca = headChrome(k), a0 = ctx.globalAlpha;
+  if (ca > 0) {
+    ctx.globalAlpha = a0 * ca;
+    if (st.natdex && !f?.put && k >= 0.3) drawDexRow(st, sx, sy + hh, k, ctx.globalAlpha); // prints, type, regions
+    if (st.popChips) drawPopRow(st, sx, sy + hh, k, ctx.globalAlpha);
+    else if ((st.chase || f) && k >= 0.3) { for (const b of [st.hdrBtn, st.hdrBtn2]) if (b) drawHdrBtn(st, b, sx, sy + hh + b.y * k, k, ctx.globalAlpha); ctx.textBaseline = "alphabetic"; }
+    ctx.globalAlpha = a0;
+  }
   if (st.burst) {
     const p = (now - st.burst) / 1400;
     if (p < 1) {
@@ -277,6 +344,8 @@ function drawHeader(st, now, C = cam, ox = 0, alpha = 1) {
   }
   ctx.globalAlpha = 1;
 }
+// The header's chrome at a zoom (1 = framed): whole up to 1.3 times framed, gone by 1.8 (a card up close is 3 or more).
+const headChrome = (k) => clamp((1.8 - k) / 0.5, 0, 1);
 const ownedNow = (list) => (state.time ? list.filter((c) => c.owned && c.got && c.got <= state.t).length : ownedIn(list));
 
 // A mosaic panel: the group's name and how it's going, over a field of its cards.
@@ -284,32 +353,36 @@ function panelStat(g) {
   if (picking()) return "\u2003\u2003"; // the tick's place
   const n = g.cards.length, owned = ownedNow(g.cards);
   if (state.matches) { const m = g.cards.filter((c) => state.matches.has(rootOf(c))).length; return m ? `${m} found` : ""; }
-  if (state.lens === "need") return `${n - owned} to go`;
-  if (state.lens === "chase") { const d = g.cards.filter(isChase).length; return d ? `${d} to find` : "Nothing to chase"; }
-  if (state.lens === "trade") { const d = g.cards.filter(isSpare).length; return d ? `${d} spare${d === 1 ? "" : "s"}` : ""; }
+  if (state.lens === "chase") { const d = g.cards.filter(isChase).length; return d ? `${d} to go` : "Nothing to chase"; } // "to go", as Show: Missing and the sets say it
+  if (state.show === "missing") return `${n - owned} to go`;
   if (state.value) return short(worthOf(g.cards));
   return `${owned}/${n}`;
 }
 const mr = (r) => ({ x: r.x, y: r.y - mScroll, w: r.w, h: r.h });
 function drawPanel(g, now, alpha = 1, labelAlpha = 1) {
   if (!g.m) return;
-  let m = mr(g.m);
-  // During a lens flight the panel travels too, from where it was to where it's going.
+  let m = mr(g.m), k = 1;
   const T = state.trans;
   if (T?.kind === "morph" && g.pm) {
-    const k = ease(clamp((now - T.t0 - 140) / (T.dur - 520), 0, 1)), a = mr(g.pm);
+    k = ease(clamp((now - T.t0 - 140) / (T.dur - 520), 0, 1)); const a = mr(g.pm);
     m = { x: a.x + (m.x - a.x) * k, y: a.y + (m.y - a.y) * k, w: a.w + (m.w - a.w) * k, h: a.h + (m.h - a.h) * k };
   }
   if (m.y > vh || m.y + m.h < 0) return;
+  if (inCase(g)) {
+    if (room.on) { drawRoomPlaque(g, m, now, alpha, labelAlpha); return; }
+    if (k < 1 && m.h >= 30) drawPlaque(g, m, now, alpha * (1 - k), 0); // coming down from the shelf: it shrinks away to Trophies
+    return;
+  }
+  if (g.done || g.minting) { drawPlaque(g, m, now, alpha, labelAlpha); return; }
   ctx.globalAlpha = alpha;
   rr(m.x + PG, m.y + PG, m.w - PG * 2, m.h - PG * 2, 12);
   ctx.fillStyle = theme.panelFill; ctx.fill();
   if (state.press?.g === g) { ctx.lineWidth = 1.5; ctx.strokeStyle = theme.ink; ctx.stroke(); }
+  if (g.unmint && k < 1) drawPlaque(g, m, now, alpha * (1 - k), 0);
   ctx.globalAlpha = alpha * labelAlpha;
   const x = m.x + PG + 10, w = m.w - PG * 2 - 20;
   const size = clamp(m.w * 0.075, 12, 17);
   ctx.textBaseline = "alphabetic"; ctx.textAlign = "left"; ctx.fillStyle = theme.ink;
-  // For three seconds after a deal arrives in this panel, its header shows the card and the price, in green.
   let beat = null;
   if (g.beat) { const p = (now - g.beat.t0) / 3000; if (p < 1) beat = { text: g.beat.text, col: g.beat.col || theme.deal, a: Math.min(1, p * 10, (1 - p) * 4) }; else g.beat = null; }
   font(beat ? 700 : 600, size * 0.82);
@@ -321,27 +394,46 @@ function drawPanel(g, now, alpha = 1, labelAlpha = 1) {
     ctx.fillText(stat, x + w, m.y + PG + 22);
     ctx.globalAlpha = alpha * labelAlpha;
   }
-  const owned = ownedNow(g.cards), n = g.cards.length;
-  ctx.fillStyle = theme["slot-line"]; ctx.fillRect(x, m.y + PG + 30, w, 2);
-  ctx.fillStyle = owned === n ? "#E2B33C" : g.ink; ctx.fillRect(x, m.y + PG + 30, w * owned / n, 2);
+  drawBar(g, x, m.y + PG + 30, w, 2, now);
   ctx.globalAlpha = 1;
 }
-function drawMosaic(now, alpha = 1, except = null) {
-  // While you pick your sets, the ones you haven't ticked sit back a little once you've ticked one.
+function drawWall(now, alpha = 1, except = null) {
   const pick = picking() && wel.picks.size > 0;
   let settling = false;
+  ART.far = true; // far out: no card asks for its picture here (the Chase lens's tiles are the exception)
   for (const g of groups) {
     const t = pick && g.set && !wel.picks.has(g.set.id) ? 0.42 : 1;
     g.pe ??= 1;
     if (Math.abs(g.pe - t) > 0.01) { g.pe += (t - g.pe) * (reduced ? 1 : 0.16); settling = true; } else g.pe = t;
     if (g === except) continue;
     if (g.m.y - mScroll > vh || g.m.y + g.m.h - mScroll < 0) continue;
+    if (room.on && inCase(g)) continue;
     const a = alpha * g.pe;
     drawPanel(g, now, a);
-    for (const c of g.cards) drawTile(c, c.m.x, c.m.y - mScroll, c.m.w, c.m.h, now, a);
+    if (inCase(g)) continue; // its tiles are in Trophies
+    for (const c of g.cards) { const y = c.m.y - mScroll; if (y > vh || y + c.m.h < 0) continue; drawTile(c, c.m.x, y, c.m.w, c.m.h, now, a); } // off-screen tiles skipped (the Dex is tall)
   }
+  ART.far = false;
   if (!except && !state.trans) drawNewPanel(now, alpha);
   if (settling) kick();
+}
+function drawMosaic(now, alpha = 1, except = null) {
+  if (bnd.on) { if (tbStep(now)) kick(); if (bnd.on) { tbDraw(now); return; } } // the trade binder is a level of its own
+  if (!room.on) { drawWall(now, alpha, except); return; }
+  if (stepRoomAnim(now)) kick();
+  if (!room.on) { drawWall(now, alpha, except); return; } // the close just finished
+  const q = room.q;
+  if (q >= 1) { drawRoom(now, alpha, except); return; }
+  // Opening or closing: the wall slides off to the left and dims as the room slides in from the right.
+  const keep = mScroll; mScroll = room.wallScroll;
+  ctx.save(); ctx.translate(-vw * 0.3 * q, 0); drawWall(now, alpha, null); ctx.restore();
+  mScroll = keep;
+  ctx.fillStyle = `rgb(0 0 0 / ${(0.45 * q).toFixed(3)})`; ctx.fillRect(0, 0, vw, vh);
+  ctx.save(); ctx.translate(vw * (1 - q), 0);
+  ctx.shadowColor = "rgb(0 0 0 / .5)"; ctx.shadowBlur = 30; ctx.fillStyle = theme["room-bg"]; ctx.fillRect(0, 0, vw, vh); ctx.shadowBlur = 0; ctx.shadowColor = "transparent";
+  drawRoom(now, alpha, except);
+  ctx.restore();
+  kick();
 }
 // One group's binder through a camera, offset sideways (for the slide between sets).
 const binderRect = (c, C, ox = 0) => ({ x: (c.x - C.x) * C.s + ox, y: (c.y - C.y) * C.s, w: TW * c.sz * C.s, h: TH * c.sz * C.s });
@@ -386,6 +478,7 @@ const ease = (p) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
 let frameFoil = false;
 function frame(now) {
   raf = 0; frameFoil = false;
+  if (roomsFrame(now)) return; // the map, a move between rooms or up to the map, or a room that is a page (90-rooms.js)
   if (tbl.on && tbl.q >= 1 && !tbl.anim) { drawTable(now); return; } // the table is its own level: nothing of the wall shows
   const dt = Math.min(48, now - (lastFrame || now)); lastFrame = now;
   let more = stepFly(now);
@@ -437,7 +530,7 @@ function frame(now) {
     for (const c of state.g.cards) if (c.anim) { more = true; break; }
   }
   // Search hits in the mosaic: a ring around each one so they're easy to spot.
-  if (state.matches && view === "mosaic" && !T) {
+  if (state.matches && view === "mosaic" && !T && !bnd.on) {
     ctx.lineWidth = 1.5; ctx.strokeStyle = theme.ink;
     for (const c of state.matches) { ctx.beginPath(); ctx.arc(c.m.x + c.m.w / 2, c.m.y - mScroll + c.m.h / 2, Math.max(6, c.m.h * 0.7), 0, Math.PI * 2); ctx.stroke(); }
   }
@@ -445,9 +538,10 @@ function frame(now) {
   ctx.globalAlpha = 1;
   for (const c of drawnCards) if (c.anim) { more = true; break; }
   drawMarks(); drawPicks();
+  if (drawRings(now)) more = true; // a set opened from the import's summary: its gaps ringed in gold
+  if (drawMints(now)) more = true; // a medal minting off a set's bar
   if (drawLive(now)) more = true;
   if (drawPop(now)) more = true;
-  drawTraders(now);
   if (drawFlights(now)) more = true;
   if (tbl.on) drawTable(now);
   if (frameFoil) more = true; // foil keeps shimmering while a foil card is on screen

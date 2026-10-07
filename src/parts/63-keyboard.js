@@ -2,7 +2,7 @@
 canvas.addEventListener("keydown", (e) => {
   const k = e.key;
   if (state.focus && (k === "ArrowRight" || k === "ArrowLeft")) { e.preventDefault(); return step(k === "ArrowRight" ? 1 : -1); }
-  if (k === "Escape" || k === "Backspace") { e.preventDefault(); if (state.focus) return unfocus(); return exitToMosaic(); }
+  if (k === "Escape" || k === "Backspace") { e.preventDefault(); if (state.focus) return unfocus(); if (view === "mosaic") return toMap(); return exitToMosaic(); } // the wall's own level: up to the map
   if (view === "mosaic") {
     const i = groups.indexOf(state.kb || groups[0]);
     if (k === "ArrowRight" || k === "ArrowDown") { state.kb = groups[Math.min(groups.length - 1, i + 1)]; toast(state.kb.name); }

@@ -32,16 +32,18 @@ function matchRule(r, c) {
   if (r.rarity && c.tier < r.rarity) return false;
   if (r.type && c.type !== r.type) return false;
   if (r.popular && !c.pop) return false;
-  if (r.kind === "dex" && !c.dex) return false; // the Dex is Pokémon cards only
+  if ((r.kind === "dex" || r.kind === "natdex") && !c.dex) return false; // the Dex is Pokémon cards only
   return true;
 }
-const ruleKey = (r) => `${r.set || ""}|${r.dex || 0}|${r.artist || ""}|${r.rarity || 0}|${r.type || ""}|${r.popular ? 1 : 0}`;
+const ruleKey = (r) => `${r.set || ""}|${r.dex || 0}|${r.artist || ""}|${r.rarity || 0}|${r.type || ""}|${r.popular ? 1 : 0}${r.kind === "natdex" ? "|natdex" : ""}`; // a Complete Dex is its own kind, filters and all
+const isFullDex = (r) => r.kind === "natdex" && !r.rarity && !r.type; // the Complete Dex, unfiltered
 const findRule = (r) => chases.find((x) => ruleKey(x) === ruleKey(r)) || null;
 const possessive = (artist) => { const w = artist.split(" "), n = w[w.length - 1]; return /s$/.test(n) ? `${n}'` : `${n}'s`; };
 const plural = (n) => (/[sxz]$/.test(n) ? n : `${n}s`);
 // "Every Charizard", "Everything by Ken Sugimori", "Full art in 151", "Sugimori's Charizards", "Popular in Base Set",
 // "All of Base Set", "Holo Fire Pokémon in Jungle by Arita".
 function labelOf(r) {
+  if (r.kind === "natdex") return dexLabel(r); // "Complete Dex", "Full art Dex", "Fire Dex" (85-natdex.js)
   const st = r.set ? setById(r.set) : null, sp = r.dex ? SPECIES.get(r.dex) || "Pokémon" : "";
   const rar = r.rarity === FULL ? "Full art" : r.rarity === HOLO ? "Holo" : "", typ = r.type ? (TYPE[r.type] || TYPE.C)[0] : "";
   if (r.popular) return `Popular in ${st ? st.name : "every set"}`;
@@ -61,7 +63,7 @@ const ruleLeft = (r) => ruleCards(r).filter((c) => !c.owned && chasing[c.id] !==
 // cards that just joined the chase list.
 function applyRules() {
   const lit = [];
-  for (const c of cards) { const was = isChase(c); c.chase0 = chases.some((r) => matchRule(r, c)); if (!was && isChase(c)) lit.push(c); }
+  for (const c of cards) { const was = isChase(c); c.chase0 = chases.some((r) => r.kind !== "natdex" && matchRule(r, c)); if (!was && isChase(c)) lit.push(c); } // the Complete Dex adds nothing: Show, Missing is its list
   return lit;
 }
 // A wall that has never had a chase starts with a few, so the shape is there to see: a Pokémon, an artist, a rarity in a set, a set's popular cards.
@@ -83,11 +85,12 @@ const twinsOf = (c) => { const b = c.base || c; return b.twins && mode === "set"
 const CHASE_INKS = ["#C9962B", "#B5533C", "#4D7FC4", "#5B9E66", "#9A5FC9", "#C06A9B"];
 const chaseGroups = new Map(); // id -> its group, kept across arrangements so an open binder stays the same object
 function chaseGroup(r, i) {
+  if (r.kind === "natdex") return natdexGroup(r, i); // one slot per Pokémon (85-natdex.js)
   const list = ruleCards(r).map((b) => twinOf(b, r.id));
   let g = chaseGroups.get(r.id);
   if (!g) { g = { key: `chase:${r.id}`, chase: r }; chaseGroups.set(r.id, g); }
   g.name = r.label; g.ink = CHASE_INKS[i % CHASE_INKS.length]; g.cards = list; g.base = list;
-  g.sub = () => (state.value ? `Your chase. Yours is worth ${money(worthOf(list))}` : state.lens === "need" ? `Your chase. ${list.length - ownedIn(list)} to go` : `Your chase. ${ownedIn(list)} of ${list.length}`);
+  g.sub = () => (state.value ? `Your chase. Yours is worth ${money(worthOf(list))}` : showNow() === "missing" ? `Your chase. ${list.length - ownedIn(list)} to go` : `Your chase. ${ownedIn(list)} of ${list.length}`);
   return g;
 }
 
@@ -125,7 +128,7 @@ function reflow() {
   tick(10); kick();
 }
 function chasesChanged(lit = []) {
-  persistChases(); reflow(); flashLit(lit);
+  persistChases(); reflow(); syncDone({ quiet: true }); flashLit(lit); // a chase you already have every card of is a trophy the moment it's made
   syncBadge(); refreshChips(); updateCount(); drawList(); kick();
 }
 function addChase(r, { quiet = false } = {}) {
@@ -134,7 +137,8 @@ function addChase(r, { quiet = false } = {}) {
   chases.push(r);
   const lit = applyRules();
   tick(8); chasesChanged(lit);
-  if (!quiet) { const left = ruleLeft(r), d = left.filter((c) => c.deal).length; toast(`${r.label} is on your wall. ${left.length ? `${left.length} to find${d ? `, ${d} with a live deal` : ""}.` : "You have them all."}`, () => removeChase(r, { quiet: true })); }
+  if (!quiet && r.kind === "natdex") toast(dexAddedText(r), () => removeChase(r, { quiet: true }));
+  else if (!quiet) { const left = ruleLeft(r), d = left.filter((c) => c.deal).length; toast(`${r.label} is on your wall. ${left.length ? `${left.length} to go${d ? `, ${d} with a live deal` : ""}.` : "You have them all."}`, () => removeChase(r, { quiet: true })); }
   return r;
 }
 function removeChase(r, { quiet = false } = {}) {
@@ -186,7 +190,7 @@ const panelMore = moreLikeEl(panel, ".hint"), popMore = moreLikeEl(offersEl, ".o
 function fillChips(el, c) {
   const list = rulesFor(c), row = el.querySelector(".ml-row"), sl = row.scrollLeft;
   el.list = list; el.hidden = !list.length;
-  row.innerHTML = list.map((x, i) => `<button type="button" class="chip" aria-pressed="${x.on}" data-i="${i}" aria-label="${esc(x.label)}, ${x.n} to find"><b>${esc(x.label)}</b><span>${x.n}</span></button>`).join("");
+  row.innerHTML = list.map((x, i) => `<button type="button" class="chip" aria-pressed="${x.on}" data-i="${i}" aria-label="${esc(x.label)}, ${x.n} to go"><b>${esc(x.label)}</b><span>${x.n}</span></button>`).join("");
   row.scrollLeft = sl;
 }
 function refreshChips() { if (state.focus) fillPanel(state.focus, 0); if (pop.c) fillOffers(pop.c); }
@@ -194,18 +198,20 @@ function refreshChips() { if (state.focus) fillPanel(state.focus, 0); if (pop.c)
 // ----- New chase: one plain form, along the bottom, with a live count; the wall under it dims to the match -----
 const sheetEl = document.getElementById("chase-sheet");
 const csQ = sheetEl.querySelector("#cs-q"), csN = sheetEl.querySelector("#cs-n"), csLine = sheetEl.querySelector("#cs-line"), csSave = sheetEl.querySelector("#cs-save");
-const draft = { set: null, dex: null, artist: null, rarity: 0, type: null };
+const draft = { set: null, dex: null, artist: null, rarity: 0, type: null, natdex: false, edit: null }; // natdex: the Complete Dex; edit: the Dex whose settings these are
 let preview = null; // while the form is up, the wall shows what the rule would match
 const building = () => !sheetEl.inert;
 function draftRule() {
+  if (draft.natdex) { const d = { kind: "natdex" }; if (draft.rarity) d.rarity = draft.rarity; if (draft.type) d.type = draft.type; return d; }
   const r = { kind: "custom" };
   if (draft.set) r.set = draft.set; if (draft.dex) r.dex = draft.dex; if (draft.artist) r.artist = draft.artist; if (draft.rarity) r.rarity = draft.rarity; if (draft.type) r.type = draft.type;
   if (!r.set && !r.dex && !r.artist && (r.rarity || r.type)) r.kind = "dex";
   return r;
 }
-const draftReady = () => Boolean(draft.set || draft.dex || draft.artist || draft.rarity || draft.type);
+const draftReady = () => Boolean(draft.natdex || draft.set || draft.dex || draft.artist || draft.rarity || draft.type);
 const chipHTML = (v, text, on, sub = "") => `<button type="button" class="cs-chip" data-v="${esc(v)}" aria-pressed="${on}">${esc(text)}${sub ? `<small>${esc(sub)}</small>` : ""}</button>`;
 function renderSheet() {
+  dexSheetSync(); // the Complete Dex choice, and the Dex's own settings (85-natdex.js)
   sheetEl.querySelector("#cs-sets").innerHTML = sets.map((st) => chipHTML(st.id, st.name, draft.set === st.id, String(st.year))).join("");
   sheetEl.querySelector("#cs-artists").innerHTML = ARTISTS.map((a) => chipHTML(a, a, draft.artist === a)).join("");
   sheetEl.querySelectorAll("[data-rar]").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.rar) === draft.rarity)));
@@ -223,6 +229,7 @@ function renderSuggestions() {
   sheetEl.querySelector("#cs-sugg").innerHTML = list.slice(0, 8).map((s) => chipHTML(String(s.dex), s.name, draft.dex === s.dex, `${s.n} card${s.n === 1 ? "" : "s"}`)).join("") || (q ? `<span class="cs-none">No Pokémon called "${esc(csQ.value.trim())}" here.</span>` : "");
 }
 function renderCount() {
+  if (draft.natdex) { dexSheetCount(); return; }
   const r = draftRule(), ready = draftReady();
   const m = ready ? ruleCards(r) : [], n = m.filter((c) => !c.owned && chasing[c.id] !== false).length;
   csN.textContent = String(n); csN.classList.toggle("zero", !n);
@@ -233,8 +240,8 @@ function renderCount() {
 }
 function openSheet(pre = {}) {
   if (tbl.on || wel.on) return;
-  if (view === "set") { exitToMosaic(); }
-  Object.assign(draft, { set: null, dex: null, artist: null, rarity: 0, type: null }, pre);
+  if (view === "set" && !pre.edit) { exitToMosaic(); } // the Dex's settings open over its binder
+  Object.assign(draft, { set: null, dex: null, artist: null, rarity: 0, type: null, natdex: false, edit: null }, pre);
   csQ.value = pre.dex ? SPECIES.get(pre.dex) || "" : "";
   sheetEl.inert = false; document.body.classList.add("building");
   renderSheet(); tick(4);
@@ -247,6 +254,7 @@ function closeSheet() {
 }
 sheetEl.addEventListener("click", (e) => {
   const rar = e.target.closest("[data-rar]"), ch = e.target.closest(".cs-chip");
+  if (e.target.closest("#cs-dex")) { draft.natdex = !draft.natdex; tick(3); renderSheet(); return; }
   if (rar) { draft.rarity = Number(rar.dataset.rar); tick(3); renderSheet(); return; }
   if (!ch) return;
   const box = ch.parentElement.id, v = ch.dataset.v; tick(3);
@@ -266,8 +274,9 @@ sheetEl.querySelector("#cs-close").onclick = () => closeSheet();
 csSave.onclick = () => {
   if (!draftReady()) return;
   const r = draftRule(); r.label = labelOf(r);
+  const edit = draft.edit;
   closeSheet(); tick(8);
-  addChase(r);
+  if (edit) setDexFilter(edit, r); else addChase(r);
 };
 addEventListener("keydown", (e) => { if (e.key === "Escape" && building() && !paying() && !pop.c) { e.preventDefault(); closeSheet(); } });
 document.getElementById("list").addEventListener("click", (e) => { const n = e.target.closest("[data-lnew]"); if (n) { setListMode(false); setTimeout(() => openSheet(), 60); } });
@@ -277,23 +286,29 @@ document.getElementById("list").addEventListener("click", (e) => { const n = e.t
 const POP_CHIP = 24, POP_GAP = 6, POP_ROWS = 3, SEG_W = 72, SEG_H = 26;
 const SCOPES = [["set", "Set"], ["master", "Master set"], ["grand", "Grand set"]];
 function popLayout(g) {
-  const st = g.set, W = vw - 24, chips = [];
-  // line one: the view (Set, Master set, Grand set) and Chase these; then People chase and its chips
+  const st = g.set, W = frameW(), chips = [];
+  // line one: the view (Set, Master set, Grand set) and Chase these; then People chase and its chips (portrait)
   g.seg = st.master.length || st.grand.length ? SCOPES.map(([key, label], i) => ({ key, label, x: i * (SEG_W + 2), y: 2, w: SEG_W, h: SEG_H })) : null;
   g.hdrBtn = { x: W - 112, y: 4, w: 112, h: 22, pop: true };
-  const top = g.seg ? 46 : 0;
-  g.hdrBtn2 = { x: W - 96, y: top + 2, w: 96, h: 22, remove: true }; // Remove set, on the People chase line
-  let x = 0, row = 0, more = 0;
+  // A phone on its side has width to spare and no height (round 22 polish): Remove set and Chase these sit at the right
+  // of the title's line, and the view switch, People chase and its chips share one line under the bar (the chips
+  // that don't fit are "and 3 more"; Chase these takes them all).
+  const flat = landPhone(), top = flat ? 0 : g.seg ? 46 : 0, maxRows = flat ? 1 : POP_ROWS;
+  if (flat) { g.hdrBtn.y = 10 - headH(); if (g.seg) for (const sg of g.seg) sg.y = 2; }
+  g.hdrBtn2 = flat ? { x: W - 112 - 8 - 96, y: g.hdrBtn.y, w: 96, h: 22, remove: true } : { x: W - 96, y: top + 2, w: 96, h: 22, remove: true }; // Remove set, on the People chase line (Ryan: every set removable, both buttons kept)
+  g.popLabelX = flat && g.seg ? 3 * (SEG_W + 2) + 10 : 0;
+  const x0 = flat ? g.popLabelX + 76 : 0;
+  let x = x0, row = 0, more = 0;
   for (const c of st.pop) {
-    const price = short(c.price), w = Math.min(W, Math.round(c.name.length * 6.1 + price.length * 6.4 + 26));
-    if (x + w > W && x > 0) { row++; x = 0; }
-    if (row >= POP_ROWS) { more++; continue; }
-    chips.push({ c, x, y: top + 30 + row * (POP_CHIP + POP_GAP), w, h: POP_CHIP, price });
+    const price = short(c.price), w = Math.min(W - x0, Math.round(c.name.length * 6.1 + price.length * 6.4 + 26));
+    if (x + w > W - (flat ? 70 : 0) && x > x0) { row++; x = x0; } // on one line, room is kept for "and 3 more"
+    if (row >= maxRows) { more++; continue; }
+    chips.push({ c, x, y: flat ? 3 : top + 30 + row * (POP_CHIP + POP_GAP), w, h: POP_CHIP, price });
     x += w + POP_GAP;
   }
-  const rows = chips.length ? Math.min(POP_ROWS, row + 1) : 0;
-  g.popChips = chips; g.popMore = more; g.popTop = top;
-  g.popH = top + 32 + rows * (POP_CHIP + POP_GAP) + 2;
+  const rows = chips.length ? Math.min(maxRows, row + 1) : 0;
+  g.popChips = chips; g.popMore = more; g.popTop = flat ? 3 : top;
+  g.popH = flat ? 34 : top + 32 + rows * (POP_CHIP + POP_GAP) + 2;
 }
 // The set, its master set (every printing), or its grand set (the reprints too): the binder reshuffles, the new
 // printings springing out of the cards they print.
@@ -333,22 +348,24 @@ function removeSet(st) {
 }
 // The chip or the button under a point in a binder's header, in framed pixels.
 function headAt(g, sx, sy) {
-  const p = toWorld(sx, sy), k = (vw - 24) / g.w, fx = (p.x - g.x) * k, fy = (p.y - g.y) * k;
-  for (const b of [g.hdrBtn, g.hdrBtn2]) if (b) { const by = 132 + b.y; if (fx >= b.x - 6 && fx <= b.x + b.w + 6 && fy >= by - 4 && fy <= by + b.h + 4) return { btn: b }; }
+  const p = toWorld(sx, sy), k = frameW() / g.w, fx = (p.x - g.x) * k, fy = (p.y - g.y) * k, H = headH();
+  if (headChrome(cam.s / k) < 0.5) return null; // zoomed in, the header's chrome has faded (40-render)
+  for (const b of [g.hdrBtn, g.hdrBtn2]) if (b) { const by = H + b.y; if (fx >= b.x - 6 && fx <= b.x + b.w + 6 && fy >= by - 4 && fy <= by + b.h + 4) return { btn: b }; }
+  if (g.natdex && !finishOf(g)?.put) return dexHeadAt(g, fx, fy - H); // the Dex's prints, type and regions
   if (!g.popChips) return null;
-  const py = fy - 132; if (py < 0 || py > g.popH) return null;
+  const py = fy - H; if (py < 0 || py > g.popH) return null;
   if (g.seg) for (const s of g.seg) if (fx >= s.x && fx <= s.x + s.w && py >= s.y - 3 && py <= s.y + s.h + 3) return { seg: s.key };
   for (const ch of g.popChips) if (fx >= ch.x && fx <= ch.x + ch.w && py >= ch.y - 3 && py <= ch.y + ch.h + 3) return { c: ch.c };
   return null;
 }
 function drawHdrBtn(g, b, sx, by, k, alpha) {
-  const on = b.pop && Boolean(popularRule(g.set)), bx = sx + b.x * k, bw = b.w * k, bh = b.h * k;
+  const on = b.shelf || b.away || (b.pop && Boolean(popularRule(g.set))), bx = sx + b.x * k, bw = b.w * k, bh = b.h * k;
   rr(bx, by, bw, bh, 6 * k);
   if (on) { ctx.fillStyle = theme.gold; ctx.globalAlpha = alpha * 0.18; ctx.fill(); ctx.globalAlpha = alpha; ctx.lineWidth = Math.max(1, k); ctx.strokeStyle = theme.gold; ctx.stroke(); }
   else if (b.pop) { ctx.fillStyle = theme.ink; ctx.fill(); }
   else { ctx.lineWidth = Math.max(1, k); ctx.strokeStyle = theme["slot-line"]; ctx.stroke(); }
   ctx.fillStyle = on || !b.pop ? theme.ink : theme.bg; font(700, 11 * k); ctx.textAlign = "center";
-  ctx.fillText(b.pop ? (on ? "Chasing these ✓" : "Chase these") : b.remove ? "Remove set" : "Remove chase", bx + bw / 2, by + bh * 0.68);
+  ctx.fillText(b.away ? "To the case now" : b.shelf ? (finishOf(g)?.put ? "Back to the wall" : "Put on the shelf") : b.pop ? (on ? "Chasing these ✓" : "Chase these") : b.remove ? "Remove set" : "Remove chase", bx + bw / 2, by + bh * 0.68);
   ctx.textAlign = "left";
 }
 function drawPopRow(g, sx, y0, k, alpha) {
@@ -364,7 +381,7 @@ function drawPopRow(g, sx, y0, k, alpha) {
     }
     ctx.textAlign = "left";
   }
-  ctx.fillStyle = theme.muted; font(600, 11 * k); ctx.fillText("People chase", sx, y0 + (g.popTop + 16) * k);
+  ctx.fillStyle = theme.muted; font(600, 11 * k); ctx.fillText("People chase", sx + (g.popLabelX || 0) * k, y0 + (g.popTop + 16) * k);
   drawHdrBtn(g, g.hdrBtn, sx, y0 + g.hdrBtn.y * k, k, alpha);
   if (g.hdrBtn2) drawHdrBtn(g, g.hdrBtn2, sx, y0 + g.hdrBtn2.y * k, k, alpha);
   for (const ch of g.popChips) {
@@ -380,7 +397,7 @@ function drawPopRow(g, sx, y0, k, alpha) {
   if (g.popMore) {
     const last = g.popChips[g.popChips.length - 1], x = sx + (last.x + last.w + POP_GAP) * k, y = y0 + last.y * k;
     ctx.fillStyle = theme.muted; font(600, 10.5 * k);
-    if (x + textW(`and ${g.popMore} more`) <= sx + (vw - 24) * k) ctx.fillText(`and ${g.popMore} more`, x, y + last.h * k * 0.68);
+    if (x + textW(`and ${g.popMore} more`) <= sx + frameW() * k) ctx.fillText(`and ${g.popMore} more`, x, y + last.h * k * 0.68);
   }
 }
 // The New chase panel at the end of the wall (laid out in 30-layout, drawn in 40-render).

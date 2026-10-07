@@ -1,0 +1,31 @@
+/* Round 21, radical: the app as rooms, one level above the wall. */
+
+/* The rooms button: up a level, where Back sits inside a set. A small map of the five rooms. */
+#rooms svg { width: 20px; height: 20px; stroke: none; fill: currentColor; }
+#rooms svg rect:nth-child(1) { fill: var(--c-blue); }
+#rooms svg rect:nth-child(2) { fill: var(--c-red); }
+#rooms svg rect:nth-child(3) { fill: var(--c-green); }
+#rooms svg rect:nth-child(4) { fill: var(--c-yellow); }
+#rooms svg rect:nth-child(5) { fill: var(--c-blue); }
+#rooms.tipglow { background: var(--line); box-shadow: 0 0 0 2px var(--c-blue); }
+
+/* The first-time tip, under the rooms button. */
+.maptip { position: fixed; z-index: 4; left: 12px; top: calc(env(safe-area-inset-top, 0px) + 68px); max-width: min(300px, calc(100vw - 24px)); padding: 11px 14px 12px; border-radius: 12px;
+  display: grid; gap: 3px; font-size: 13.5px; line-height: 1.35; color: var(--ink); opacity: 0; transform: translateY(-6px); pointer-events: none; transition: opacity .25s, transform .25s; }
+.maptip b { font-weight: 800; font-size: 14.5px; font-stretch: 87%; }
+.maptip span { color: var(--muted); }
+.maptip::before { content: ""; position: absolute; left: 18px; top: -6px; width: 10px; height: 10px; background: inherit; border-left: 1px solid var(--line); border-top: 1px solid var(--line); transform: rotate(45deg); }
+.maptip.show { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) { .maptip { transition: none; transform: none; } }
+
+/* On the map, in the Feed or the Source, and while moving between them: the wall's own chrome steps away.
+   The lens bar belongs to Chase. */
+body.onmap .lens, body.inplace .lens, body.maptrans .lens,
+body.onmap .timebar, body.inplace .timebar, body.maptrans .timebar { transform: translate(-50%, 160%); opacity: 0; pointer-events: none; }
+body.onmap .dealbar, body.inplace .dealbar, body.maptrans .dealbar,
+body.onmap .caption, body.inplace .caption, body.maptrans .caption,
+body.onmap .bbar, body.maptrans .bbar { display: none; }
+body.maptrans .maptip { opacity: 0; }
+/* Not while the welcome, the import's story or its summary is up: the map waits for a settled wall. */
+body.welcoming #rooms, body.storying #rooms, body.arriving #rooms, body.listmode #rooms { display: none; }
+body:is(.welcoming, .storying, .arriving, .listmode) .top #rooms + #back[hidden] + #mark[hidden] + .search { border-left: 0; }

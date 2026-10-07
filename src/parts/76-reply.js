@@ -6,7 +6,7 @@
 // With the table up on that trader the reply plays on the table itself (75-trade.js): a counter moves the card, an
 // acceptance crosses the cards and hands them over, a decline pushes them home with the line. With the table down the
 // reply arrives the way a deal does: the cards flash gold where they sit, the panel header beats "Maya countered",
-// and a toast carries the line with Open (the Trade lens, then the table from her chip). An acceptance off the table
+// and a toast carries the line with Open (the Trade room, then the table). An acceptance off the table
 // crosses the cards in the wall itself: yours lift out through the top edge and leave your collection, hers fly in
 // from it and land in their pockets with the marking flood, one relayout at the end, and a toast says what changed
 // hands. Accept, Decline and Counter from the thread; Take back while the offer is out.
@@ -85,14 +85,17 @@ function accept(rec, t, by) {
 // The bookkeeping of a done trade: the cards you gave leave your collection and stop being spares; the ones you got
 // arrive, dated now, and leave your chase list. landAt times the marking flood to a flight that is still in the air.
 function completeTrade(rec, t, landAt = 0) {
-  const give = toCards(rec.give), get = toCards(rec.get);
+  const give = toCards(rec.give), get = toCards(rec.get), still = [];
   quietLayout = true;
-  for (const c of give) { delete spares[c.id]; if (c.owned) setOwned(c, false, { quiet: true }); if (landAt) { if (c.anim) c.anim.t0 = landAt; if (groups[c.g].ripple) groups[c.g].ripple.t0 = landAt; } }
-  for (const c of get) { delete chasing[c.id]; if (!c.owned) setOwned(c, true, { quiet: true }); if (landAt) { if (c.anim) c.anim.t0 = landAt; if (groups[c.g].ripple) groups[c.g].ripple.t0 = landAt; } }
+  for (const c of give) {
+    if (nOf(c) > 1) { setN(c, nOf(c) - 1); still.push(c); } else if (c.owned) setOwned(c, false, { quiet: true });
+    if (landAt) { if (c.anim) c.anim.t0 = landAt; if (groups[c.g].ripple) groups[c.g].ripple.t0 = landAt; }
+  }
+  for (const c of get) { delete chasing[c.id]; if (!c.owned) setOwned(c, true, { quiet: true }); else setN(c, nOf(c) + 1); if (landAt) { if (c.anim) c.anim.t0 = landAt; if (groups[c.g].ripple) groups[c.g].ripple.t0 = landAt; } }
   quietLayout = false;
-  persistSpares(); persistChase(); syncBadge(); updateCount();
+  persistCopies(); persistChase(); syncBadge(); updateCount();
   rec.state = "done"; rec.doneAt = Date.now(); persistTrades(); drawList();
-  toast(`${rec.by === "them" ? `${t.name} accepted. ` : ""}${tradedText(get, give, t)}`);
+  toast(`${rec.by === "them" ? `${t.name} accepted. ` : ""}${copyTradedText(get, give, still, t)}`);
 }
 const tradedText = (get, give, t) => `${names(get)} ${get.length === 1 ? "is" : "are"} yours. ${names(give)} went to ${t.name}.`;
 
@@ -101,23 +104,27 @@ let crossing = null; // { rec, t, give, get, n }
 const flights = []; // { c, out, edge, slot, last, t0, dur, then }
 function crossOnWall(rec, t) {
   const give = toCards(rec.give).filter((c) => c.owned), get = toCards(rec.get).filter((c) => !c.owned);
-  if (reduced || document.body.classList.contains("listmode") || crossing) { completeTrade(rec, t); if (lifted) liftLayout(true); kick(); return; }
-  crossing = { rec, t, give, get, n: give.length + get.length };
+  if (reduced || document.body.classList.contains("listmode") || crossing || bnd.on) { completeTrade(rec, t); if (lifted) liftLayout(true); kick(); return; }
+  crossing = { rec, t, give, get, still: [], n: give.length + get.length };
   const now = performance.now(), step = () => { if (crossing && --crossing.n <= 0) finishCross(); };
   quietLayout = true;
-  give.forEach((c, i) => { delete spares[c.id]; setOwned(c, false, { quiet: true }); if (lifted) c.away = true; flyCard(c, true, now + i * 80, 720, step); });
-  quietLayout = false; persistSpares();
+  give.forEach((c, i) => {
+    if (nOf(c) > 1) { setN(c, nOf(c) - 1); crossing.still.push(c); } // a copy leaves; the card stays on the wall
+    else { setOwned(c, false, { quiet: true }); if (lifted) c.away = true; }
+    flyCard(c, true, now + i * 80, 720, step);
+  });
+  quietLayout = false; persistCopies();
   get.forEach((c, i) => flyCard(c, false, now + 260 + i * 80, 780, () => { quietLayout = true; setOwned(c, true, { quiet: true }); quietLayout = false; delete chasing[c.id]; persistChase(); step(); }));
   if (!crossing.n) finishCross();
 }
 function finishCross() {
-  const { rec, t, give, get } = crossing; crossing = null;
+  const { rec, t, give, get, still } = crossing; crossing = null;
   for (const c of give) c.away = false;
   rec.state = "done"; rec.doneAt = Date.now(); persistTrades();
   syncBadge(); updateCount(); drawList();
   if (lifted) liftLayout(true);
   tick(14); kick();
-  toast(`${rec.by === "them" ? `${t.name} accepted. ` : ""}${tradedText(get, give, t)}`);
+  toast(`${rec.by === "them" ? `${t.name} accepted. ` : ""}${copyTradedText(get, give, still || [], t)}`);
 }
 // Where the card's tile is on screen right now, or null if it isn't drawn (another set open).
 function tileRectOf(c) {
@@ -186,21 +193,12 @@ function takeBack(rec) {
   }
   tick(4); drawList(); kick();
 }
-// Open from a toast: the Trade lens first if it isn't up (the table opens from the chip once the lens has flown).
+// Open from a toast: the Trade room (the table's home), then the table.
 function showThread(t) {
   if (tbl.on && tbl.t === t) return;
   if (tbl.on) closeTable(true);
   if (document.body.classList.contains("listmode") || wel.on) return;
-  closePop(true); if (state.focus) unfocus();
-  let tries = 0, step = 0; // out of the set, then into the Trade lens, then the table, each once the wall is still
-  const go = () => {
-    if (tbl.on || tries++ > 60) return;
-    if (state.trans || shuffle || fly) { setTimeout(go, 120); return; }
-    if (step === 0) { step = 1; if (view === "set") { exitToMosaic(); setTimeout(go, 120); return; } }
-    if (step === 1) { step = 2; if (state.lens !== "trade") { setLens("trade"); setTimeout(go, 120); return; } }
-    if (view === "mosaic") openTable(t, strip?.chips.find((x) => x.t === t) || null);
-  };
-  go();
+  goRoom("trade", { then: () => openTable(t, null) });
 }
 // The list's buttons.
 listEl.addEventListener("click", (e) => {
