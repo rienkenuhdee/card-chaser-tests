@@ -216,6 +216,109 @@ for (const dpr of [1, 2]) {
   const uneven = await tc();
   R.push([`the trade checker says Fair, then Uneven with cash added (${fair}; ${uneven})`, fair === "Fair trade" && uneven === "Uneven, in their favor"]);
   await p.click("#tc [data-clear]"); await wait(200);
+  // The lenses and Filters (the polish after round 21): the bar is Collection and Chase; Need is Show: Missing in
+  // Filters. Every choice applies, is named in the chip beside the lenses while it's on, clears with the chip's X, and
+  // is kept on the device. Group by flies every card to its new place; the order in a binder reshuffles the binder; the
+  // Chase lens and the Feed sort.
+  await p.evaluate(() => {
+    const at = Date.now() - 30 * 86400e3, owned = {}, chase = {};
+    for (const c of __w.cards) { if (c.own0) owned[c.id] = { on: true, at }; else if (c.i % 2 === 0) chase[c.id] = true; }
+    localStorage.clear();
+    localStorage.setItem("wall-owned", JSON.stringify(owned)); localStorage.setItem("wall-chase", JSON.stringify(chase));
+    localStorage.setItem("wall-imported", "TCGplayer"); localStorage.setItem("wall-welcomed", "1"); localStorage.setItem("wall-map-seen", "1");
+    localStorage.setItem("wall-lens", "need"); // as the old Need lens left it
+  });
+  await p.reload({ waitUntil: "load" }); await wait(1200);
+  const fl = () => p.evaluate(() => ({ lens: __w.state.lens, show: __w.state.show, value: __w.state.value, time: __w.state.time, mode: __w.mode, order: __w.state.order, corder: __w.state.corder, on: __w.filtersOn(), chip: document.getElementById("fchip").hidden ? null : document.getElementById("fchip-open").textContent, lit: document.getElementById("filter").getAttribute("aria-pressed") === "true", trans: __w.state.trans?.kind || null, view: __w.view, sheet: !document.getElementById("filter-menu").hidden, toast: document.getElementById("toast").textContent }));
+  const sheet = async (sel) => { if (!(await fl()).sheet) { await p.click("#filter"); await wait(150); } await p.click(sel); await wait(120); };
+  const done = async () => { if ((await fl()).sheet) { await p.click("#f-done"); await wait(150); } };
+  const bar = await p.evaluate(() => [...document.querySelectorAll(".lens [data-lens]")].map((b) => `${b.dataset.lens}:${b.textContent}`).join(","));
+  let s = await fl();
+  R.push([`the bar is Collection and Chase, and the old Need lens comes back as Show: Missing (${bar})`, bar === "have:Collection,chase:Chase" && s.lens === "have" && s.show === "missing" && s.chip === "Missing" && s.lit]);
+  // Show: Missing dims what you have and says what's left; the list follows; the chip's X clears it.
+  await wait(500);
+  const dim = () => p.evaluate(() => { const g = __w.groupsNow.find((x) => x.set && x.base.some((c) => c.owned) && x.base.some((c) => !c.owned)), o = g.base.find((c) => c.owned), m = g.base.find((c) => !c.owned); return { o: +o.e.toFixed(2), m: +m.e.toFixed(2), stat: __w.panelStat(g), left: g.base.filter((c) => !c.owned).length }; });
+  let d = await dim();
+  R.push([`Show: Missing dims what you have and the panel counts what's left (${d.stat})`, d.o <= 0.15 && d.m === 1 && d.stat === `${d.left} to go`]);
+  await p.evaluate(() => { __w.setLens("chase"); }); await wait(1500);
+  s = await fl(); R.push(["Show isn't named in Chase, where it doesn't apply", s.lens === "chase" && s.chip === null && !s.lit && s.show === "missing"]);
+  await p.click('[data-lens="have"]'); await wait(1500);
+  s = await fl(); R.push(["back in Collection the chip names it again, and the toast says so", s.chip === "Missing" && /Showing what's missing/.test(s.toast)]);
+  await p.click("#fchip-clear"); await wait(600);
+  s = await fl(); d = await dim();
+  R.push(["the chip's X clears it: every card back, no chip, the button unlit", s.show === "all" && s.chip === null && !s.lit && d.o === 1 && d.m === 1 && /^\d+\/\d+$/.test(d.stat)]);
+  // Each choice applies and clears: Have, Value, Time; two at once read "2 filters"; Clear filters in the sheet clears all.
+  await sheet('[data-show="have"]'); await wait(500); d = await dim();
+  R.push(["Show: Have dims what you're missing", d.o === 1 && d.m <= 0.15 && (await fl()).chip === "Have"]);
+  await sheet('[data-color="value"]'); s = await fl();
+  R.push(["Color by value turns Value on, and two filters read as two", s.value && s.chip === "2 filters" && s.on.join() === "Have,Value"]);
+  await done(); s = await fl();
+  R.push(["closing the sheet says the last change", /Your collection: about \$/.test(s.toast)]);
+  await sheet('[data-filter="time"]'); await wait(300); s = await fl();
+  R.push(["Time is a switch in the sheet; it plays and the chip counts it", s.time && !s.sheet && s.chip === "3 filters" && (await p.evaluate(() => document.body.classList.contains("timing")))]);
+  await sheet("#f-clear"); await wait(600); s = await fl();
+  R.push(["Clear filters in the sheet clears Show, Value and Time at once", !s.time && !s.value && s.show === "all" && s.chip === null && !s.sheet && s.toast === "Filters cleared"]);
+  // Group by: every card flies to its new place and lands there.
+  const landed = () => p.evaluate(() => { const gs = __w.groupsNow.filter((g) => !g.done && g.m), ids = new Set(); let inside = true; for (const g of gs) for (const c of g.cards) { ids.add(c.id); const m = c.m; if (!m || m.x < g.m.x - 1 || m.y < g.m.y - 1 || m.x + m.w > g.m.x + g.m.w + 1 || m.y + m.h > g.m.y + g.m.h + 1) inside = false; } return { names: gs.map((g) => g.name), n: ids.size, inside, trans: __w.state.trans?.kind || null }; });
+  for (const [m, first, n] of [["rarity", "Special illustration rare", 7], ["type", "Fire", 13], ["value", "$100 and up", 5]]) {
+    await sheet(`[data-group="${m}"]`); await wait(250);
+    const mid = (await fl()).trans; await wait(1600);
+    const L = await landed();
+    R.push([`Group by ${m}: the cards fly (${mid}) and land in their new panels (${L.names.length}, ${L.names[0]})`, mid === "morph" && !L.trans && L.names[0] === first && L.names.length <= n && L.n === 1327 && L.inside && (await fl()).chip === `By ${m === "value" ? "price" : m}`]);
+  }
+  await sheet('[data-group="type"]'); await wait(200); await sheet('[data-group="rarity"]'); await wait(1800);
+  let L = await landed(); R.push(["a second grouping mid-flight flies on from where the cards are and lands", !L.trans && L.names[0] === "Special illustration rare" && L.inside && L.n === 1327]);
+  await sheet('[data-group="set"]'); await wait(1800); await done();
+  L = await landed(); R.push(["Group by set flies them home: the sets, then your chases", !L.trans && L.names[0] === "Base Set" && L.inside && (await fl()).chip === null]);
+  // The order in a binder: open a set, sort by price, name, rarity, and back to number.
+  const g1 = await p.evaluate(() => { const g = __w.groupsNow.find((x) => x.set && x.base.length < 120); const m = g.m; return { name: g.name, x: m.x + m.w / 2, y: m.y + m.h / 2 - __w.mScroll }; });
+  await p.evaluate((n) => __w.enterGroup(__w.groupsNow.find((x) => x.name === n)), g1.name); await wait(1300);
+  const ord = () => p.evaluate(() => { const g = __w.state.g, L = g.cards; return { set: g.name, ks: L.every((c, k) => c.k === k), rows: L.every((c, k) => !k || c.y > L[k - 1].y || (c.y === L[k - 1].y && c.x > L[k - 1].x)), price: L.every((c, k) => !k || L[k - 1].price >= c.price), name: L.every((c, k) => !k || L[k - 1].name.localeCompare(c.name) <= 0), tier: L.every((c, k) => !k || L[k - 1].tier >= c.tier), num: L.every((c, k) => !k || L[k - 1].n0 < c.n0), shuffle: Boolean(__w.shuffle && __w.shuffle.g === g) }; });
+  for (const [o, key] of [["price", "price"], ["name", "name"], ["rarity", "tier"], ["number", "num"]]) {
+    await sheet(`[data-order="${o}"]`); await wait(120);
+    const fly = (await ord()).shuffle; await wait(1000);
+    const O = await ord();
+    R.push([`a binder sorted by ${o}: its cards travel to their new pockets in that order`, (await fl()).view === "set" && O.set === g1.name && fly && O.ks && O.rows && O[key]]);
+  }
+  await done();
+  await p.evaluate(() => __w.setOrder("price")); await wait(900);
+  R.push(["a binder sorted by price says so in its header, and every binder follows", await p.evaluate(() => __w.orderNote(__w.state.g) === ". Dearest first" && __w.groupsNow.every((g) => g.natdex || g.cards.every((c, k) => !k || g.cards[k - 1].price >= c.price)))]);
+  await p.click("#back"); await wait(1000);
+  // The Chase lens sorts: best deal, dearest, cheapest to get now.
+  await p.click('[data-lens="chase"]'); await wait(1600);
+  const leads = () => p.evaluate(() => __w.groupsNow.filter((g) => !g.done && g.lead?.length > 1).map((g) => g.lead));
+  const sorted = (o) => p.evaluate((o) => __w.groupsNow.filter((g) => !g.done && g.lead?.length > 1).every((g) => g.lead.every((c, k) => !k || (o === "dear" ? g.lead[k - 1].price >= c.price : o === "cheap" ? __w.nowPrice(g.lead[k - 1]) <= __w.nowPrice(c) : (g.lead[k - 1].deal ? 1 : 0) >= (c.deal ? 1 : 0)))), o);
+  let okDeal = await sorted("deal");
+  await sheet('[data-corder="cheap"]'); const cf = (await fl()).trans; await wait(1700);
+  const okCheap = await sorted("cheap");
+  await sheet('[data-corder="dear"]'); await wait(1700); await done();
+  const okDear = await sorted("dear");
+  R.push([`the Chase lens sorts its tiles: best deal, cheapest, dearest (the change flies: ${cf})`, (await leads()).length > 2 && okDeal && okCheap && okDear && cf === "morph" && (await fl()).corder === "dear" && /dearest first/.test((await fl()).toast)]);
+  // Everything is kept on the device.
+  await p.evaluate(() => { __w.setLens("have"); __w.setShow("missing"); __w.rearrange("rarity"); }); await wait(1800);
+  await p.reload({ waitUntil: "load" }); await wait(1200);
+  s = await fl();
+  R.push(["every choice is kept on the device", s.show === "missing" && s.mode === "rarity" && s.order === "price" && s.corder === "dear" && s.chip === "2 filters"]);
+  await p.evaluate(() => __w.clearFilters()); await wait(1800);
+  // The Feed: sorted four ways; condition and damaged copies filtered as production does, everywhere it's counted.
+  await p.evaluate(() => __w.goRoom("feed")); await wait(1000);
+  const feedRows = () => p.evaluate(() => { const ids = [...document.querySelectorAll("#pf-list [data-l]")].map((b) => b.dataset.l), all = __w.cards.flatMap((c) => __w.listingsOf(c)), byId = new Map(all.map((L) => [L.id, L])); return { rows: ids.map((id) => { const L = byId.get(id); return { score: __w.scoreOf(L).score, price: L.price, pct: __w.pctOf(L), seen: L.seen, cond: L.cond }; }), hidden: document.getElementById("pf-hidden").hidden ? "" : document.getElementById("pf-hidden").textContent, all: all.filter((L) => !__w.srcState.off.has(L.src)).length, list: __w.feedList().length }; });
+  let F = await feedRows();
+  const inOrder = (rows, f) => rows.every((r, k) => !k || f(rows[k - 1], r));
+  R.push([`the Feed starts newest first, damaged copies hidden as in production (${F.rows.length} of ${F.all})`, F.rows.length > 10 && inOrder(F.rows, (a, b) => a.seen >= b.seen) && F.rows.every((r) => r.cond !== "HP") && F.rows.length === F.list && (F.all === F.rows.length || /hidden/.test(F.hidden))]);
+  for (const [v, f] of [["best", (a, b) => a.score >= b.score], ["price", (a, b) => a.price <= b.price], ["pct", (a, b) => a.pct >= b.pct]]) {
+    await p.select("#pf-sort", v); await wait(250); F = await feedRows();
+    R.push([`the Feed sorts by ${v}`, F.rows.length > 10 && inOrder(F.rows, f)]);
+  }
+  await p.select("#pf-cond", "NM"); await wait(250); F = await feedRows();
+  const nm = F;
+  await p.click("#pf-dmg"); await wait(250); await p.select("#pf-cond", ""); await wait(250); F = await feedRows();
+  R.push([`Near Mint keeps only NM and unstated titles (${nm.rows.length}); Show damaged brings every listing back (${F.rows.length})`, nm.rows.length < F.rows.length && nm.rows.every((r) => !r.cond || r.cond === "NM") && /hidden by the condition you picked/.test(nm.hidden) && F.rows.length === F.all && !F.hidden && F.list === F.rows.length]);
+  await p.select("#pf-cond", "LP"); await wait(200);
+  await p.reload({ waitUntil: "load" }); await wait(1200); await p.evaluate(() => __w.goRoom("feed")); await wait(1000);
+  const fv = await p.evaluate(() => ({ ...__w.feedView, sel: document.getElementById("pf-sort").value }));
+  R.push(["the Feed's sort and filters are kept on the device", fv.sort === "pct" && fv.cond === "LP" && fv.damaged && fv.sel === "pct"]);
+  await p.evaluate(() => { __w.setFeedView({ sort: "newest", cond: "", damaged: false }); __w.goRoom("chase"); }); await wait(900);
   // The Complete Dex: added from the New chase sheet, a panel on the wall with one slot for each of the 1,025 Pokémon.
   await p.evaluate(() => {
     const at = Date.now() - 30 * 86400e3, owned = {};

@@ -193,4 +193,4 @@ filterMenu.addEventListener("click", (e) => {
 fchipOpen.onclick = (e) => { e.stopPropagation(); setFilterMenu(filterMenu.hidden); };
 document.getElementById("fchip-clear").onclick = () => clearFilters();
 // Debug builds only: the tests' hook sees the filters.
-setTimeout(() => { if (window.__w) Object.defineProperties(window.__w, { setShow: { value: setShow }, setOrder: { value: setOrder }, setChaseOrder: { value: setChaseOrder }, rearrange: { value: rearrange }, clearFilters: { value: clearFilters }, filtersOn: { value: filtersOn }, shuffle: { get: () => shuffle } }); }, 0);
+setTimeout(() => { if (window.__w) Object.defineProperties(window.__w, { setShow: { value: setShow }, setOrder: { value: setOrder }, setChaseOrder: { value: setChaseOrder }, rearrange: { value: rearrange }, clearFilters: { value: clearFilters }, filtersOn: { value: filtersOn }, shuffle: { get: () => shuffle }, panelStat: { value: panelStat }, emphasis: { value: emphasis }, nowPrice: { value: nowPrice }, orderNote: { value: orderNote } }); }, 0);
