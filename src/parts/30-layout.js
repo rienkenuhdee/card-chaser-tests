@@ -11,7 +11,7 @@ function binderLayout(g) {
   g.w = g.cols * stepX(g) - (tight(g) ? 0 : GAP * g.sz);
   // The title block is a fixed height on screen, whatever the card size: 132px at the framed zoom (less on a phone on
   // its side, where height is what's short).
-  if (g.set) popLayout(g); else if (g.natdex) dexLayout(g); else { g.popChips = null; g.popH = g.chase ? 30 : 0; g.hdrBtn = g.chase ? { x: frameW() - 118, y: 2, w: 118, h: 22 } : null; g.hdrBtn2 = null; } // a chase's header: a row with Remove chase
+  if (g.set) popLayout(g); else if (g.natdex) dexLayout(g); else { g.popChips = null; g.popH = g.chase ? (landPhone() ? 36 : 30) : 0; g.hdrBtn = g.chase ? { x: frameW() - 118, y: landPhone() ? 8 : 2, w: 118, h: 22 } : null; g.hdrBtn2 = null; } // a chase's header: a row with Remove chase
   albumHeader(g); // a finished group's header: Back to the wall, or Put on the shelf
   g.head = (headH() + (g.popH || 0)) / (frameW() / g.w); // the title block, plus the People chase row in a set
   g.h = g.head + Math.ceil(g.cards.length / g.cols) * stepY(g) - (tight(g) ? 0 : GAP * g.sz);
@@ -33,7 +33,7 @@ function readSafe() {
   SAFE.left = Math.max(0, r.left || 0); SAFE.right = Math.max(0, vw - (r.right || vw));
 }
 const frameW = () => vw - 24 - SAFE.left - SAFE.right; // a framed binder's width on screen, clear of the notch
-const headH = () => (landPhone() ? 100 : 132); // a binder's title block at the framed zoom
+const headH = () => (landPhone() ? 86 : 132); // a binder's title block at the framed zoom (on a phone on its side, as tight as the next medal under the bar allows)
 const topPad = () => (landPhone() ? SAFE.top + 62 : 70);
 const botPad = () => { const b = document.body.classList; return landPhone() ? SAFE.bottom + (b.contains("timing") ? 104 : b.contains("marking") ? 74 : 18) : b.contains("timing") ? 160 : 72; };
 const LABEL = 40, PG = 6;
@@ -97,7 +97,7 @@ function mosaicLayout() {
     let y = R.y + R.h;
     for (const g of rest) { g.m = { x: R.x, y, w: R.w, h: W_FOLD }; y += W_FOLD; }
     if (newH) { newPanel = { x: R.x, y, w: R.w, h: newH }; y += newH; }
-    y += caseLayout(R0, y); // the trophies past their day: in the Medal room, a place of no size here
+    y += caseLayout(R0, y); // the trophies past their day: in Trophies, a place of no size here
     mMax = Math.max(0, y + botPad() - vh);
     mScroll = clamp(mScroll, 0, mMax);
     for (const g of mine) packPanel(g);
@@ -185,7 +185,7 @@ function layoutAll() {
   groups.forEach(binderLayout);
   const keep = mScroll;
   if (lifted) { newPanel = null; liftedLayout(); } else mosaicLayout();
-  if (room.on) { if (room.fan && !inCase(room.fan)) room.fan = null; mScroll = keep; roomLayout(); } // the Medal room opens empty too: it says how a trophy comes
+  if (room.on) { if (room.fan && !inCase(room.fan)) room.fan = null; mScroll = keep; roomLayout(); } // Trophies opens empty too: it says how a trophy comes
   if (bnd.on) { // the binder fits the new screen, open at the same page (one page at a time, or two facing)
     const was = bnd.L?.spread || 1; bnd.L = tbGeom(bnd.show); tbSides(bnd.L);
     if (bnd.L.spread !== was) { bnd.vi = Math.floor((bnd.vi * was) / bnd.L.spread); bnd.turn = 0; bnd.tAnim = null; }

@@ -108,9 +108,9 @@ function packRoomPlaque(g) {
 }
 
 // ----- opening and closing -----
-// The Medal room, from wherever you are (a toast, the import's summary, the celebration card).
+// Trophies, from wherever you are (a toast, the import's summary, the celebration card).
 function openRoom() { goRoom("medal"); }
-// The room up at once, with no slide of its own: it is about to come in as the Medal room (from its card on the map,
+// The room up at once, with no slide of its own: it is about to come in as Trophies (from its card on the map,
 // or sideways from the next room).
 function roomOn() {
   if (room.on) return;
@@ -217,8 +217,8 @@ const upCol = (d) => (d >= 0 ? theme["room-up"] : theme["room-down"]);
 function headerImage(w, h) {
   const L = medalList(), dn = caseList(), s = dn.length ? room.sum || caseSeries() : null;
   const sum = `${L.earned.length} of ${L.list.length} earned${L.hiddenLeft ? ` · ${L.hiddenLeft} hidden` : ""}`;
-  return cachedImage(room, `${Math.round(w)}|${h}|${sum}|${s ? s.key : ""}|${look()}`, w, h, (x) => {
-    x.textBaseline = "alphabetic"; x.textAlign = "left"; x.fillStyle = theme["room-ink"]; fontOn(x, 800, 28, true);
+  return cachedImage(room, `${Math.round(w)}|${h}|${landPhone() ? 1 : 0}|${sum}|${s ? s.key : ""}|${look()}`, w, h, (x) => {
+    x.textBaseline = "alphabetic"; x.textAlign = "left"; x.fillStyle = theme["room-ink"]; fontOn(x, 800, landPhone() ? 28 : 32, true); // the size of the other rooms' titles
     x.fillText("Trophies", 4, 32);
     fontOn(x, 600, 13.5); x.fillStyle = theme["room-muted"]; x.fillText(sum, 4, 52);
     if (!s) return;

@@ -27,7 +27,6 @@ function updateFlag(c) {
     flagBtn.textContent = on ? "Chasing ✓" : "Chase it"; flagBtn.classList.toggle("on", on); flagBtn.setAttribute("aria-pressed", String(on));
     spareEl.hidden = true; return;
   }
-  const meta = document.getElementById("p-meta"); meta.textContent = meta.textContent.replace(" You have a spare.", "");
   const b = c.base || c, n = nOf(b), s = sparesOf(b), who = wantedBy(b);
   pN.textContent = `You have ${n}`; pLess.disabled = n <= 1; pMore.disabled = n >= 99;
   stepEl.classList.toggle("spare", s > 0);
@@ -57,7 +56,7 @@ function renderPay() { payAmt.textContent = pay.str ? `$${pay.str}` : "$0"; }
 function openPay(c) {
   pay.c = c; pay.fresh = true; pay.str = (c.deal || capOf(c)).toFixed(2);
   paySub.textContent = `${c.name}, ${sets[c.si].code} ${c.num}/${sets[c.si].printed}. Market ${money(c.price)}.`;
-  renderPay(); payEl.inert = false; document.body.classList.add("paying"); payDone.focus({ preventScroll: true });
+  renderPay(); payEl.inert = false; document.body.classList.add("paying"); focusFor(payDone, payEl);
 }
 function closePay() { pay.c = null; payEl.inert = true; document.body.classList.remove("paying"); }
 function payKey(k) {
@@ -130,10 +129,10 @@ const pop = { c: null, from: null, t0: 0, closing: false };
 function fillOffers(c) {
   const st = sets[c.si], list = offersFor(c, oKind);
   oName.textContent = c.name;
-  oMeta.textContent = `${st.name}, ${st.code} ${c.num}/${st.printed}. Market ${money(c.price)}, you'd pay up to ${money(capOf(c))}.`;
-  oSub.textContent = oKind === "single" ? `${list.length} copies online, cheapest first. Swipe through them.` : oKind === "pack" ? `${packOdds(c) > 36 ? "A long shot in a pack" : "A fair pull from a pack"}: ${list[0].odds.toLowerCase()}.` : `Sealed, with the odds of this card inside.`;
+  oMeta.textContent = `${st.name} ${c.num}/${st.printed} · Market ${money(c.price)} · Pay up to ${money(capOf(c))}`;
+  oSub.textContent = oKind === "single" ? `${list.length} copies online, cheapest first` : oKind === "pack" ? `${packOdds(c) > 36 ? "A long shot in a pack" : "A fair pull from a pack"}: ${list[0].odds.toLowerCase()}.` : `Sealed, with the odds of this card inside.`;
   offersEl.querySelectorAll("[data-kind]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.kind === oKind)));
-  oRow.innerHTML = list.map((o) => `<article class="offer${o.live ? " live" : ""}"><b>${money(o.price)}</b><span class="osrc">${o.src}${o.live ? ", the live deal" : ""}</span><span class="ocond">${o.title}</span><span class="ocond">${o.cond}${o.ship ? `, ${money(o.ship)} shipping` : ", free shipping"}${o.odds ? `. ${o.odds}` : ""}</span><button type="button" class="mbtn obuy" data-q="${o.q.replace(/"/g, "&quot;")}">Open on ${o.src}</button></article>`).join("");
+  oRow.innerHTML = list.map((o) => `<article class="offer${o.live ? " live" : ""}"><b>${money(o.price)}</b><span class="osrc">${o.src}${o.live ? ", the live deal" : ""}</span>${oKind === "single" ? "" : `<span class="ocond">${o.title}</span>`}<span class="ocond">${o.cond}${o.ship ? `, ${money(o.ship)} shipping` : ", free shipping"}${o.odds ? `. ${o.odds}` : ""}</span><button type="button" class="mbtn obuy" data-q="${o.q.replace(/"/g, "&quot;")}">Open on ${o.src}</button></article>`).join("");
   oRow.scrollLeft = 0;
   oFlag.textContent = isChase(c) ? "Chasing ✓" : "Chase it";
   fillChips(popMore, c);
@@ -151,7 +150,7 @@ oFlag.onclick = () => {
 // The card pops up out of its tile, over the dimmed wall, with the offers sheet under it.
 function popCard(c, from) {
   if (pop.c) return;
-  hideCaption(); cancelPress();
+  hideCaption(); cancelPress(); toastEl.classList.remove("show"); // the lens's line is said: the card comes up clear of it
   pop.c = c; pop.from = from; pop.t0 = performance.now(); pop.closing = false;
   oKind = "single"; fillOffers(c);
   offersEl.inert = false; document.body.classList.add("offering");
@@ -233,7 +232,7 @@ function drawFeedTile(c, x, y, w, h, a, now = performance.now()) {
     const old = short(c.dealWas), ow = textW(old), ox = tx + pw + 6 * s;
     if (ox + ow <= tx + tw) { ctx.fillStyle = theme.muted; ctx.fillText(old, ox, y + pad + 17 * s); ctx.fillRect(ox, y + pad + 12.5 * s, ow, Math.max(1, s)); }
   }
-  ctx.fillStyle = theme.muted; font(500, 11 * s); ctx.fillText(fitText(deal ? `was ${short(c.price)}` : "the most you'd pay", tw), tx, y + pad + 31 * s);
+  ctx.fillStyle = theme.muted; font(500, 11 * s); ctx.fillText(deal ? fitText(`was ${short(c.price)}`, tw) : textW("Most you'd pay") <= tw ? "Most you'd pay" : fitText("Your max", tw), tx, y + pad + 31 * s); // the price above it is the most you'd pay
   if (deal) { ctx.fillStyle = theme.deal; font(800, 13 * s); ctx.fillText(fitText(`${dealPct(c)}% under market`, tw), tx, y + pad + 47 * s); }
   else { ctx.fillStyle = theme.muted; font(600, 11 * s); ctx.fillText(fitText(`Market ${short(c.price)}`, tw), tx, y + pad + 47 * s); }
   if (arrived) { // when it landed, green until you've looked; a tile that sits on screen counts as looked at

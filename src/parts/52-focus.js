@@ -45,15 +45,16 @@ function fillPanel(c, dir) {
   const swap = document.getElementById("swap");
   const put = () => {
     document.getElementById("p-name").textContent = c.name;
-    document.getElementById("p-meta").textContent = `${st.name}, ${st.code} ${c.num}/${st.printed}. ${c.variant ? `${c.variant}. ` : ""}${c.rname}.${c.owned && c.got ? ` Yours since ${new Date(c.got).toLocaleDateString("en-US", { month: "short", year: "numeric" })}.` : ""}${!c.owned && isChase(c) ? ` Pay up to ${money(capOf(c))}.` : c.owned && isSpare(c) ? " You have a spare." : ""}`;
+    document.getElementById("p-meta").textContent = [`${st.name} ${c.num}/${st.printed}`, c.variant, c.rname, c.owned && c.got ? `Yours since ${new Date(c.got).toLocaleDateString("en-US", { month: "short", year: "numeric" })}` : "", !c.owned && isChase(c) ? `Pay up to ${money(capOf(c))}` : ""].filter(Boolean).join(" · ");
     document.getElementById("p-price").innerHTML = `${money(c.price)}<small>market</small>`;
     const dl = document.getElementById("p-deal");
-    if (!c.owned && c.deal && isChase(c)) { dl.hidden = false; dl.textContent = `A copy on eBay for ${money(c.deal)} right now, ${Math.round((1 - c.deal / c.price) * 100)}% under.`; } else dl.hidden = true;
+    if (!c.owned && c.deal && isChase(c)) { dl.hidden = false; dl.textContent = `Live on eBay, ${Math.round((1 - c.deal / c.price) * 100)}% under market`; } else dl.hidden = true;
     const own = document.getElementById("p-own"), buy = document.getElementById("p-buy");
     own.textContent = c.owned ? "In your collection ✓" : "I have it";
     own.className = `act ${c.owned ? "owned" : "primary"}`;
     own.setAttribute("aria-pressed", String(c.owned));
-    buy.textContent = c.owned ? "Back to the set" : c.deal && isChase(c) ? `Buy for ${money(c.deal)}` : "Find a copy";
+    buy.hidden = c.owned; // a card you have: the wall behind it is the way back
+    buy.textContent = c.deal && isChase(c) ? `Buy for ${money(c.deal)}` : "Find a copy";
     updateFlag(c);
     artPanel(c); // a vintage scan's note (41-art.js)
     fillChips(panelMore, c);

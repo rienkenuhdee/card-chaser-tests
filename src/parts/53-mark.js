@@ -22,7 +22,7 @@ function tally() {
 function updateBar() {
   const t = tally();
   mHead.textContent = t.n ? t.head : "Mark cards";
-  mSub.textContent = t.n ? t.sub : "Tap to mark. Hold one you have to add a copy";
+  mSub.textContent = t.n ? t.sub : "Tap, or drag along a row";
   mUndo.disabled = !t.n;
 }
 function enterMark() {

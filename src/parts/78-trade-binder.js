@@ -106,10 +106,14 @@ function tbPaint(i, G) {
     const pw = price ? textW(price) + 6 : 0;
     if (price) ctx.fillText(price, r.x + r.w, ly);
     ctx.textAlign = "left";
-    if (show) { ctx.fillStyle = "#FFFFFF"; font(700, small ? 12 : 13.5, true); ctx.fillText(fitText(c.name, r.w - pw), r.x, ly); }
+    if (show) { ctx.fillStyle = "#FFFFFF"; font(700, small ? 12 : 13.5, true); if (r.w >= 100) ctx.fillText(fitText(c.name, r.w - pw), r.x, ly); } // narrow pockets (two pages side by side) leave the name to the card itself
     else {
       const who = wantedBy(c);
-      if (who.length) { ctx.fillStyle = theme.gold; font(700, small ? 11.5 : 12.5, true); ctx.fillText(fitText(who.map((t) => t.name).join(", "), r.w - pw), r.x, ly); }
+      if (who.length) { // who chases it: every name when they fit, else the first and how many more
+        ctx.fillStyle = theme.gold; font(700, small ? 11.5 : 12.5, true);
+        const all = who.map((t) => t.name).join(", "), more = `${who[0].name} +${who.length - 1}`, room = r.w - pw;
+        ctx.fillText(textW(all) <= room ? all : who.length > 1 && textW(more) <= room ? more : fitText(who[0].name, room), r.x, ly);
+      }
       else { ctx.fillStyle = muted; font(500, small ? 10.5 : 11.5); ctx.fillText(fitText("No takers yet", r.w - pw), r.x, ly); }
     }
   }
@@ -132,11 +136,10 @@ function tbCoverPaint(G) {
   ctx.fillStyle = sh; ctx.fillRect(0, 0, w, h);
   ctx.restore(); curFont = "";
   ctx.lineWidth = 1; ctx.strokeStyle = "rgb(0 0 0 / .25)"; rr(0.5, 0.5, w - 1, h - 1, 10); ctx.stroke();
-  const n = tbList().length, cx = spine + (w - spine) / 2, gold = theme.dark ? "#E8BE55" : "#F1CF72";
+  const cx = spine + (w - spine) / 2, gold = theme.dark ? "#E8BE55" : "#F1CF72";
   rr(spine + 14, h * 0.3, w - spine - 28, h * 0.26, 6); ctx.lineWidth = 1.2; ctx.strokeStyle = "rgb(241 207 114 / .55)"; ctx.stroke(); // the label's frame, foil
   ctx.textAlign = "center"; ctx.textBaseline = "alphabetic"; ctx.fillStyle = gold;
-  font(800, clamp(w * 0.105, 13, 26), true); ctx.fillText(fitText("Trade binder", w - spine - 36), cx, h * 0.3 + h * 0.13 + 2);
-  font(600, clamp(w * 0.055, 9.5, 14)); ctx.fillStyle = "rgb(241 207 114 / .8)"; ctx.fillText(fitText(`${plural1(n, "card")}`, w - spine - 36), cx, h * 0.3 + h * 0.21 + 2);
+  const fs = clamp(w * 0.105, 13, 26); font(800, fs, true); ctx.fillText(fitText("Trade binder", w - spine - 36), cx, h * 0.43 + fs * 0.36); // the title alone in its frame (the count is beside it, on the page)
 }
 function tbEnsure(i, G) {
   if (i < -1) return;
@@ -206,7 +209,7 @@ function tbHeader(G, a, sq) {
     ctx.globalAlpha = a; ctx.fillStyle = sq > 0.5 ? "#FFFFFF" : theme.ink; font(800, 19, true);
     for (const l of wrapLines("Trade binder", mw, 2)) { ctx.fillText(l, mx, y); y += 21; }
     ctx.fillStyle = sq > 0.5 ? SHOW_MUTED : theme.muted; font(500, 12.5); y += 2;
-    const text = sq > 0.5 ? `${which} of ${pages}.` : n ? `${plural1(n, "card")} on ${plural1(pages, "page")}. ${tbMemo.wanted ? `${tbMemo.wanted} someone wants.` : "Nobody has asked for one yet."}` : "Empty for now. On a card you have, + adds a spare.";
+    const text = sq > 0.5 ? `${which} of ${pages}` : n ? `${plural1(n, "card")} · ${tbMemo.wanted ? `${tbMemo.wanted} wanted` : "no takers yet"}` : "Empty for now. On a card you have, + adds a spare.";
     for (const l of wrapLines(text, mw, 5)) { ctx.fillText(l, mx, y); y += 16; }
     ctx.globalAlpha = 1; return;
   }
@@ -215,14 +218,14 @@ function tbHeader(G, a, sq) {
     const y = topPad() + 26;
     ctx.fillStyle = theme.ink; font(800, 25, true); ctx.fillText("Trade binder", x, y);
     ctx.fillStyle = theme.muted; font(500, 13);
-    ctx.fillText(fitText(n ? `${plural1(n, "card")} on ${plural1(pages, "page")}. ${tbMemo.wanted ? `${tbMemo.wanted} someone wants.` : "Nobody has asked for one yet."}` : "Empty for now. On a card you have, + adds a spare.", vw - x - 12), x, y + 21);
+    ctx.fillText(fitText(n ? `${plural1(n, "card")} · ${tbMemo.wanted ? `${tbMemo.wanted} wanted` : "no takers yet"}` : "Empty for now. On a card you have, + adds a spare.", vw - x - 12), x, y + 21);
   }
   if (sq > 0.001) {
     ctx.globalAlpha = a * sq;
     const y = SAFE.top + 40;
     ctx.fillStyle = "#FFFFFF"; font(800, 25, true); ctx.fillText("Trade binder", x, y);
     ctx.fillStyle = SHOW_MUTED; font(500, 13.5);
-    ctx.fillText(fitText(`${which} of ${pages}. Tap the cards you'd like.`, vw - x - 140), x, y + 21);
+    ctx.fillText(fitText(`${which} of ${pages}`, vw - x - 140), x, y + 21); // what to do is in the bar at the bottom
   }
   ctx.globalAlpha = 1;
 }
@@ -483,7 +486,7 @@ function showWho(head, rows, pick) {
   whoEl.innerHTML = `<p class="th-head">${esc(head)}</p>${rows.map((r, i) => `<button role="menuitem" data-w="${i}"><span><b>${esc(r.title)}</b><small>${esc(r.sub)}</small></span><span class="tick" aria-hidden="true">${r.go ? "›" : ""}</span></button>`).join("")}`;
   whoPick = (i) => pick(rows[i]);
   whoEl.hidden = false; tick(4);
-  whoEl.querySelector("button")?.focus({ preventScroll: true });
+  focusFor(whoEl.querySelector("button"), whoEl);
 }
 function hideWho() { if (whoEl.hidden) return; whoEl.hidden = true; whoPick = null; }
 whoEl.addEventListener("click", (e) => { const b = e.target.closest("[data-w]"); if (!b) return; const f = whoPick; hideWho(); f?.(Number(b.dataset.w)); });

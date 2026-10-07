@@ -294,7 +294,7 @@ function popLayout(g) {
   // chips on the next (two rows at most).
   const flat = landPhone(), top = flat ? 40 : g.seg ? 46 : 0, maxRows = flat ? 2 : POP_ROWS, x0 = flat ? 86 : 0;
   if (flat) { g.hdrBtn.y = 10; if (g.seg) for (const sg of g.seg) sg.y = 8; } // clear of the next medal hanging under the bar
-  g.hdrBtn2 = flat ? { x: W - 112 - 8 - 96, y: 10, w: 96, h: 22, remove: true } : { x: W - 96, y: top + 2, w: 96, h: 22, remove: true }; // Remove set, on the People chase line
+  g.hdrBtn2 = flat ? { x: W - 112 - 8 - 96, y: 10, w: 96, h: 22, remove: true } : { x: W - 96, y: top + 2, w: 96, h: 22, remove: true }; // Remove set, on the People chase line (Ryan: every set removable, both buttons kept)
   let x = x0, row = 0, more = 0;
   for (const c of st.pop) {
     const price = short(c.price), w = Math.min(W - x0, Math.round(c.name.length * 6.1 + price.length * 6.4 + 26));

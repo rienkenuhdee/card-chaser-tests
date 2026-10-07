@@ -251,7 +251,7 @@ function checkMedals(quiet) {
   if (!fresh.length) return [];
   mdPersist(); mdVer++;
   const L = medalList(), got = fresh.map((id) => L.byId.get(id)).filter(Boolean);
-  if (room.on || !had) layoutAll(); // the first medal changes the Medal room
+  if (room.on || !had) layoutAll(); // the first medal changes Trophies
   if (!quiet) mdAnnounce(got, viaImport);
   drawList(); kick();
   return got;
@@ -444,7 +444,7 @@ function mdShelfLayout(s, X, W, y, items, hits, plaques) {
   box.h = cy + 4 - y;
   return cy + 4 + ROOM_GAP;
 }
-const MD_HOW = "Each set and chase earns trophies as it fills. A crown marks a signature trophy, one only that set or chase offers. Hidden ones show once you earn them. Luck is rolled once, when a trophy is earned: about 1 in 10 come up Critical, 1 in 100 Shiny.";
+const MD_HOW = "A crown marks a signature trophy, one only that set or chase has. Hidden ones show once earned. About 1 in 10 come up Critical, 1 in 100 Shiny.";
 // The room from the top: the summary, Showcase, Next up, the filters, then the shelves (in two columns when wide).
 // Returns where it ends.
 function mdRoomLayout(R, y0, items, hits, plaques, rails) {
@@ -533,7 +533,7 @@ function mdLabel(x, t, cx, y, w, big) {
   x.textAlign = "center"; x.textBaseline = "alphabetic";
   fontOn(x, t.earned ? 700 : 500, big ? 13 : 12.5, true); x.fillStyle = t.earned ? theme["room-ink"] : theme["room-muted"];
   for (const ln of wrapOn(x, t.name, w, 2)) { x.fillText(ln, cx, y); y += 14; }
-  if (mdLucky(t)) { const p = mdPill(t.rank); x.drawImage(p.cv, cx - p.w / 2, y - 10, p.w, p.h); }
+  if (mdLucky(t) && !big) { const p = mdPill(t.rank); x.drawImage(p.cv, cx - p.w / 2, y - 10, p.w, p.h); } // in the Showcase nearly every one is lucky: its art says so, and the line under it is its date
   else if (big || !t.earned) { fontOn(x, 500, 11.5); x.fillStyle = theme["room-muted"]; x.fillText(mdStatus(t), cx, y + 1); } // on a shelf an earned one's date waits in its sheet
   x.textAlign = "left";
 }
@@ -567,7 +567,9 @@ function mdDrawItem(it, y, pressed) {
     if (it.dot) { ctx.beginPath(); ctx.arc(x + 4, y + it.h / 2 + 1, 4, 0, Math.PI * 2); ctx.fillStyle = theme[`c-${it.dot}`] || theme["c-blue"]; ctx.fill(); x += 14; }
     font(600, 12.5); const rw = it.right ? textW(it.right) + 12 : 0, by = y + it.h / 2 + 6;
     ctx.textAlign = "right"; ctx.fillStyle = theme["room-muted"]; if (it.right) ctx.fillText(it.right, it.x + it.w - (it.inset || 0), by);
-    ctx.textAlign = "left"; ctx.fillStyle = theme["room-ink"]; font(800, it.inset ? 16 : 18, true); ctx.fillText(fitText(it.text, it.w - rw - (x - it.x) - (it.inset || 0)), x, by);
+    ctx.textAlign = "left";
+    if (it.inset) { ctx.fillStyle = theme["room-ink"]; font(800, 16, true); ctx.fillText(fitText(it.text, it.w - rw - (x - it.x) - (it.inset || 0)), x, by); } // a shelf's name
+    else { ctx.fillStyle = theme["room-muted"]; font(800, 13); ctx.fillText(fitText(it.text.toUpperCase(), it.w - rw), x + 2, by); } // a section, labelled as the pages label theirs (Trade with, Marketplaces)
   } else if (it.type === "nu") {
     const t = it.t;
     if (pressed) { rr(it.x + 1, y + 1, it.w - 2, it.h - 2, 11); ctx.fillStyle = theme.slot; ctx.fill(); }
@@ -787,7 +789,7 @@ function openMedal(id) {
     </div>
     <div class="ms-foot">${openable ? `<button type="button" class="mbtn" data-ms-open>Open the binder</button>` : ""}<button type="button" class="mbtn primary" data-ms-close>Close</button></div>`;
   mdSheet.inert = false; document.body.classList.add("medaling");
-  requestAnimationFrame(() => mdSheet.querySelector("[data-ms-close]")?.focus({ preventScroll: true, focusVisible: false })); // focus for the keyboard, without a ring for a tap
+  requestAnimationFrame(() => focusFor(mdSheet.querySelector("[data-ms-close]"), mdSheet)); // focus for the keyboard, without a ring for a tap
 }
 function closeMedal() {
   if (mdSheet.inert) return;

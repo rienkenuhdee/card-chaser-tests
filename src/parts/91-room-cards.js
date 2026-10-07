@@ -76,7 +76,8 @@ const PAINT = {
     const list = tbList(), cl = countLine("trade");
     cardTitle("trade", w, cl.t, { col: cl.col });
     // the binder's first page, small: what grows into the binder when you open it from the room
-    const G = tbGeom(false, 1), gh = clamp(h - CARD_HEAD - 44, 44, 150), gw = gh * G.pw / G.ph, gx = Math.round((w - gw) / 2), gy = CARD_HEAD + 4, k = gw / G.pw;
+    const open = trades.filter((r) => r.state === "proposed" || r.state === "countered").length;
+    const G = tbGeom(false, 1), gh = clamp(h - CARD_HEAD - (open ? 44 : 16), 44, 150), gw = gh * G.pw / G.ph, gx = Math.round((w - gw) / 2), gy = CARD_HEAD + 4, k = gw / G.pw; // the page takes the card, less a line for trades waiting
     rr(gx, gy, gw, gh, 5); ctx.fillStyle = theme.slot; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = theme["slot-line"]; ctx.stroke();
     ctx.fillStyle = theme.gold; rr(gx + 3, gy + 8, 2.5, gh - 16, 1.2); ctx.fill(); // the spine
     for (let i = 0; i < 9; i++) {
@@ -87,9 +88,8 @@ const PAINT = {
       ctx.fillStyle = lighter(col); ctx.fillRect(px + 1, py + 1, pw - 2, ph * 0.22);
       ctx.fillStyle = theme.paper; ctx.fillRect(px + 1, py + ph * 0.76, pw - 2, ph * 0.2);
     }
-    const open = trades.filter((r) => r.state === "proposed" || r.state === "countered").length;
     ctx.textAlign = "left"; ctx.fillStyle = open ? theme[ROOM_COL.trade] : theme.muted; font(open ? 700 : 500, 12.5);
-    ctx.fillText(fitText(open ? `${plural1(open, "trade")} waiting` : list.length ? "Binder, checker, table" : "The trade checker is here", w - 28), 14, h - 14);
+    if (open) ctx.fillText(fitText(`${plural1(open, "trade")} waiting`, w - 28), 14, h - 14);
   },
   medal(w, h) { // Trophies: the rarest you've earned standing on a hairline, then what's next
     cardFrame("medal", w, h);
@@ -104,7 +104,8 @@ const PAINT = {
     let y = sy + 22;
     if (y > h - 8) return;
     ctx.fillStyle = theme.ink; font(700, 13.5, true);
-    ctx.fillText(fitText(E.length ? `${E[0].name}${MD_RANK[E[0].rank] ? `, ${MD_RANK[E[0].rank]}` : ""}` : "Fill a set to earn one", w - 28), 14, y);
+    const best = E.length ? `${E[0].name}${MD_RANK[E[0].rank] ? `, ${MD_RANK[E[0].rank]}` : ""}` : "Fill a set to earn one";
+    ctx.fillText(textW(best) <= w - 28 || !E.length ? fitText(best, w - 28) : fitText(E[0].name, w - 28), 14, y); // the luck goes first when the name needs the room
     if (next && y + 34 < h) {
       y += 18; ctx.fillStyle = theme.muted; font(500, 12.5);
       wrapLines(`Next: ${next.t.name}, ${next.left} to go`, w - 28, 2).forEach((l, i) => { if (y + i * 16 < h - 6) ctx.fillText(l, 14, y + i * 16); });
@@ -133,7 +134,8 @@ const PAINT = {
       ctx.fillStyle = theme.muted; ctx.fillText(c.cnt, c.x + 25 + textW(c.label), c.y + 18.5);
     }
     const f = finds[0];
-    if (f && h - (y + 28) > 30) { ctx.fillStyle = theme.ink; font(600, 12.5); ctx.fillText(fitText(`Latest: ${f.L.c.name} ${short(f.L.price)} from ${srcName(f.L.src)}, ${agoText(f.at, Date.now())}`, w - 28), 14, h - 14); }
+    if (f && w < 260 && h - (y + 28) >= 42) { ctx.fillStyle = theme.muted; font(600, 12); ctx.fillText("Latest find", 14, h - 31); ctx.fillStyle = theme.ink; font(700, 13, true); ctx.fillText(fitText(`${f.L.c.name} ${short(f.L.price)}`, w - 28), 14, h - 14); } // a narrow card: two short lines
+    else if (f && w >= 260 && h - (y + 28) > 30) { ctx.fillStyle = theme.ink; font(600, 12.5); ctx.fillText(fitText(`Latest: ${f.L.c.name} ${short(f.L.price)} from ${srcName(f.L.src)}, ${agoText(f.at, Date.now())}`, w - 28), 14, h - 14); }
     return { chips };
   },
 };
@@ -147,13 +149,13 @@ function feedChip(L, x, y, w, h, now) {
   // low: a chip in a stack (the map on a phone on its side), where NEW is a dot in the corner rather than a tag
   const tx = x + 7 + cw + 8, tw = x + w - 8 - tx, low = h < 80, fresh = isNewL(L);
   let nw = 0;
-  if (fresh && low && w < 150) { ctx.beginPath(); ctx.arc(x + w - 9, y + 9, 4, 0, Math.PI * 2); ctx.fillStyle = theme["c-blue"]; ctx.fill(); nw = 8; }
+  if (fresh && w < 190) { ctx.beginPath(); ctx.arc(x + w - 9, y + 9, 4, 0, Math.PI * 2); ctx.fillStyle = theme["c-blue"]; ctx.fill(); nw = 8; } // a narrow chip: NEW is a dot (the count line says how many)
   else if (fresh) nw = pill("NEW", x + w - 6, y + 6, theme["c-blue"], "#fff") + 4;
   ctx.textAlign = "left";
   ctx.fillStyle = theme.deal; font(800, 16.5); ctx.fillText(fitText(short(L.price), tw - nw), tx, y + (low ? 21 : 23));
   font(700, 11.5); ctx.fillText(fitText(`${pctOf(L)}% under`, tw), tx, y + (low ? 36 : 38));
   ctx.fillStyle = theme.ink; font(700, 12.5, true); ctx.fillText(fitText(c.name, tw), tx, y + h - (low ? 19 : 22));
-  ctx.fillStyle = theme.muted; font(500, 10.5); ctx.fillText(fitText(`${srcName(L.src, true)} · ${agoText(L.seen, Date.now())}`, tw), tx, y + h - (low ? 6 : 8));
+  ctx.fillStyle = theme.muted; font(500, 10.5); const src = srcName(L.src, true), full = `${src} · ${agoText(L.seen, Date.now())}`; ctx.fillText(textW(full) <= tw ? full : fitText(src, tw), tx, y + h - (low ? 6 : 8)); // the age goes first when it doesn't fit
 }
 function pill(text, x, y, fill, ink) { // a small rounded tag; x is its right edge
   font(800, 10); const w = textW(text) + 12, px = x - w;
@@ -224,7 +226,7 @@ function drawChaseCard(r, now, a) {
   ctx.globalAlpha = a; rr(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1, 14); ctx.fillStyle = theme["panel-solid"]; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = theme["slot-line"]; ctx.stroke();
   wallThumb(D, now); // the kept picture (drawn live the first time, or when the wall has changed)
   ctx.globalAlpha = a; ctx.lineWidth = 1; ctx.strokeStyle = theme["slot-line"]; rr(D.x, D.y, D.w, D.h, 6); ctx.stroke();
-  chaseChrome(r, now, a);
+  chaseChrome(r, now, a, D);
   // a deal landing on the wall flashes in the picture, where its tile is
   let more = false;
   const P = mapUI.pulse, c = P?.L.c;
@@ -242,14 +244,22 @@ function drawChaseCard(r, now, a) {
   ctx.globalAlpha = 1;
   return more;
 }
-function chaseChrome(R, now, a) {
+// The set closest to done (the one the import's summary leads with): what a tall Chase card says under its lenses.
+let nearMemo = { key: -1, v: null };
+function nearestSet() {
+  if (nearMemo.key === wallVer) return nearMemo.v;
+  let best = null;
+  for (const g of groups) { if (!g.set || g.done || !g.base?.length) continue; const have = ownedIn(g.base), left = g.base.length - have; if (have > 0 && left > 0 && (!best || left < best.left)) best = { g, left }; }
+  nearMemo = { key: wallVer, v: best }; return best;
+}
+function chaseChrome(R, now, a, D = null) {
   ctx.globalAlpha = a;
   ctx.save(); rr(R.x + 0.5, R.y + 0.5, R.w - 1, R.h - 1, 14); ctx.clip(); ctx.fillStyle = theme[ROOM_COL.chase]; ctx.fillRect(R.x, R.y, R.w, 4); ctx.restore(); curFont = "";
   ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
   ctx.fillStyle = theme.ink; font(800, 19, true); ctx.fillText(fitText("Chase", R.w - 28), R.x + 14, R.y + 29);
   ctx.fillStyle = theme.muted; font(600, 12.5); ctx.fillText(fitText(countLine("chase").t, R.w - 28), R.x + 14, R.y + 46);
   // the lens bar, small: the lenses live inside Chase, and this is the one the wall is in
-  const bh = 28, bx = R.x + 12, bw = R.w - 24, by = R.y + R.h - 12 - bh, sw = bw / LENSES.length;
+  const bh = 28, bx = R.x + 12, bw = R.w - 24, by = D ? Math.min(D.y + D.h + 10, R.y + R.h - 12 - bh) : R.y + R.h - 12 - bh, sw = bw / LENSES.length;
   rr(bx, by, bw, bh, 9); ctx.fillStyle = theme.slot; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = theme["slot-line"]; ctx.stroke();
   font(600, 12); ctx.textAlign = "center";
   LENSES.forEach((k, i) => {
@@ -257,5 +267,11 @@ function chaseChrome(R, now, a) {
     if (on) { rr(cx + 2.5, by + 2.5, sw - 5, bh - 5, 7); ctx.fillStyle = theme["panel-solid"]; ctx.fill(); ctx.strokeStyle = theme["slot-line"]; ctx.stroke(); }
     ctx.fillStyle = on ? theme.ink : theme.muted; ctx.fillText(fitText(LENS_NAMES[k], sw - 4), cx + sw / 2, by + 18.5);
   });
-  ctx.textAlign = "left"; ctx.globalAlpha = 1;
+  ctx.textAlign = "left";
+  const near = R.y + R.h - (by + bh) >= 52 ? nearestSet() : null; // a phone on its side leaves room under the lenses
+  if (near) {
+    ctx.fillStyle = theme.muted; font(600, 12); ctx.fillText(fitText("Closest to done", R.w - 28), R.x + 14, by + bh + 24);
+    ctx.fillStyle = theme.ink; font(700, 14, true); ctx.fillText(fitText(`${near.g.name}, ${near.left} to go`, R.w - 28), R.x + 14, by + bh + 42);
+  }
+  ctx.globalAlpha = 1;
 }

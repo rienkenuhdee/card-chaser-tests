@@ -13,11 +13,11 @@ const ptCount = document.getElementById("pt-count"), ptCoverN = document.getElem
 function renderTrade() {
   if (pgTrade.hidden) return;
   const list = tbList(), n = list.length, pages = tbPageCount(), s = spareCount();
-  ptCount.textContent = s ? `${plural1(s, "spare")}${tbMemo.wanted ? `, ${tbMemo.wanted} wanted` : ""}` : "";
+  ptCount.textContent = ""; // the cover says it: how many, how many wanted
   ptCoverN.textContent = n ? `${plural1(n, "card")} on ${plural1(pages, "page")}` : "Empty for now";
-  ptCoverW.textContent = n ? (tbMemo.wanted ? `${tbMemo.wanted} someone wants` : "Nobody has asked yet") : "+ on a card you have adds a spare";
+  ptCoverW.textContent = n ? (tbMemo.wanted ? `${tbMemo.wanted} wanted` : "Nobody has asked yet") : "+ on a card you have adds a spare";
   ptCoverW.className = n && tbMemo.wanted ? "" : "none";
-  ptPage.innerHTML = `<span class="tcb-label"><b>Trade binder</b><small>${plural1(n, "card")}</small></span>`; // the binder, closed
+  ptPage.innerHTML = `<span class="tcb-label"><b>Trade binder</b></span>`; // the binder, closed
   const ts = TRADERS.filter((t) => wantsOf(t).length || offersOf(t).length || threadOf(t).length).sort((a, b) => (activeOf(b) ? 1 : 0) - (activeOf(a) ? 1 : 0) || wantsOf(b).length - wantsOf(a).length || offersOf(b).length - offersOf(a).length);
   ptTraders.innerHTML = ts.length ? ts.map((t) => { const st = chipState(t); return `<li><button type="button" class="trader" data-t="${t.id}"><span class="tav" style="background:${t.ink}" aria-hidden="true">${t.name[0]}</span><span class="tw"><b>${esc(t.name)}</b><small>${esc(t.where)}</small><em class="${st.col === theme.deal ? "deal" : ""}">${esc(st.text)}</em></span><span class="chev" aria-hidden="true">›</span></button></li>`; }).join("")
     : `<li class="rp-note" style="margin:0">Nobody wants your spares yet. On a card you have, + counts a copy; every copy past the first is a spare.</li>`;
@@ -43,13 +43,13 @@ function tcAdd(side, item) {
 }
 // production's verdict
 function tcVerdict(give = tcTotal("give"), get = tcTotal("get"), nGive = TC.give.length, nGet = TC.get.length) {
-  if (!nGive && !nGet) return { tone: "idle", head: "Add cards to each side", detail: "Pick what you'd give and what you'd get." };
-  if (!nGive || !nGet) return { tone: "idle", head: "Add cards to both sides", detail: "A trade needs something on each side." };
-  if (!give || !get) return { tone: "idle", head: "A card needs a price", detail: "Tap a price and enter what it's worth to compare the sides." };
+  if (!nGive && !nGet) return { tone: "idle", head: "Add cards to each side", detail: "" };
+  if (!nGive || !nGet) return { tone: "idle", head: `Now add what you'd ${nGive ? "get" : "give"}`, detail: "" };
+  if (!give || !get) return { tone: "idle", head: "A card needs a price", detail: "Tap its price to set one." };
   const diff = get - give, base = Math.max(give, get), pct = base ? Math.abs(diff) / base : 0, you = diff > 0, gap = money(Math.abs(diff));
-  if (pct <= 0.05) return { tone: "fair", head: "Fair trade", detail: pct === 0 ? "Dead even." : `Within ${Math.max(1, Math.round(pct * 100))}% of each other (${gap} apart).` };
-  if (pct <= 0.15) return { tone: "close", head: you ? "Close, slightly in your favor" : "Close, slightly in their favor", detail: `${gap} apart (${Math.round(pct * 100)}%). ${you ? `You could add about ${gap} to be fair.` : `Ask them to add about ${gap}.`}` };
-  return { tone: "uneven", head: you ? "Uneven, in your favor" : "Uneven, in their favor", detail: `${gap} apart (${Math.round(pct * 100)}%). ${you ? `You'd be getting ${gap} more than you give.` : `Ask them to add about ${gap}, or drop something from your side.`}` };
+  if (pct <= 0.05) return { tone: "fair", head: "Fair trade", detail: pct === 0 ? "Dead even." : `${gap} apart.` };
+  if (pct <= 0.15) return { tone: "close", head: you ? "Close, slightly in your favor" : "Close, slightly in their favor", detail: `${gap} apart. ${you ? `You could add about ${gap}.` : `Ask them to add about ${gap}.`}` };
+  return { tone: "uneven", head: you ? "Uneven, in your favor" : "Uneven, in their favor", detail: `${gap} apart. ${you ? `You'd get ${gap} more than you give.` : `Ask them to add about ${gap}.`}` };
 }
 // What it does to your sets and chases: how many cards closer each gets, and how many it sets back if a card you
 // give is your only copy.
@@ -74,13 +74,13 @@ function tcItemHTML(side, i) {
 let tcEdit = null; // the item whose price is being typed
 function renderChecker() {
   const give = tcTotal("give"), get = tcTotal("get"), v = tcVerdict(give, get), imp = tcImpact(), any = TC.give.length || TC.get.length;
-  const side = (k, title, hint) => `<section class="tside" data-side="${k}"><div class="tside-head"><b>${title}</b><span>${money(tcTotal(k))}</span></div>${TC[k].length ? `<ul class="titems">${TC[k].map((i) => tcItemHTML(k, i)).join("")}</ul>` : `<p>${hint}</p>`}<button type="button" class="mbtn tc-add" data-add="${k}">+ Add card or cash</button></section>`;
-  tcEl.innerHTML = `<div class="verdict ${v.tone}" role="status"><b>${esc(v.head)}</b><span>${esc(v.detail)}</span>${give || get ? `<span class="vsplit"><span>You give <b>${money(give)}</b></span><span>You get <b>${money(get)}</b></span></span>` : ""}</div>
-    ${side("give", "You give", "Cards you'd hand over. Your spares come first.")}
-    ${side("get", "You get", "Cards you'd receive. The ones you chase come first.")}
+  // Each side: its total once it has something, its cards, and Add. Two empty sides sit side by side, a button each.
+  const side = (k, title) => `<section class="tside" data-side="${k}"><div class="tside-head"><b>${title}</b>${TC[k].length ? `<span>${money(tcTotal(k))}</span>` : ""}</div>${TC[k].length ? `<ul class="titems">${TC[k].map((i) => tcItemHTML(k, i)).join("")}</ul>` : ""}<button type="button" class="mbtn tc-add" data-add="${k}" aria-label="${title}: add a card or cash">${any ? "+ Add card or cash" : "+ Add"}</button></section>`;
+  tcEl.innerHTML = `${any ? `<div class="verdict ${v.tone}" role="status"><b>${esc(v.head)}</b>${v.detail ? `<span>${esc(v.detail)}</span>` : ""}</div>` : ""}
+    <div class="tsides${any ? "" : " two"}">${side("give", "You give")}${side("get", "You get")}</div>
     ${imp.length ? `<div class="impact"><b>What it does to your sets and chases</b><ul>${imp.map((x) => `<li><b>${esc(x.name)}</b>: ${x.gain ? `<span class="up">+${x.gain}</span> closer` : ""}${x.gain && x.loss ? ", " : ""}${x.loss ? `<span class="down">−${x.loss}</span>, your only copy` : ""}</li>`).join("")}</ul></div>` : TC.get.some((i) => tcCard(i)) ? `<p class="rp-note" style="margin:0">None of the cards you'd get are missing from your sets or chases.</p>` : ""}
-    ${any ? `<div class="tc-acts"><button type="button" class="mbtn primary" data-done>Trade done</button><button type="button" class="mbtn" data-copy>Copy summary</button><button type="button" class="mbtn" data-clear>Clear</button></div>` : ""}
-    <p class="rp-note" style="margin:0">Prices are market for a Near Mint copy; set a condition to adjust, or tap a price to change it.</p>`;
+    ${any ? `<div class="tc-acts"><button type="button" class="mbtn primary" data-done>Trade done</button><button type="button" class="mbtn" data-copy>Copy summary</button><button type="button" class="mbtn" data-clear>Clear</button></div>
+    <p class="rp-note" style="margin:0">Prices are Near Mint market. Set a condition, or tap a price to change it.</p>` : ""}`;
   const inp = tcEl.querySelector("[data-price-in]"); if (inp) { inp.focus(); inp.select(); }
 }
 const tcItemOf = (el) => { const li = el.closest("[data-k]"); if (!li) return []; const side = li.dataset.side, it = TC[side].find((x) => String(x.k) === li.dataset.k); return it ? [side, it] : []; };

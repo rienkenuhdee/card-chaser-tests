@@ -14,7 +14,7 @@ function font(weight, size, narrow = false) {
 }
 function readTheme() {
   const cs = getComputedStyle(document.documentElement);
-  for (const k of ["bg", "slot", "slot-line", "ink", "muted", "deal", "gold", "panel", "panel-solid", "paper", "paper-ink", "plaque", "plaque-ink", "plaque-hi", "plaque-lo", "door", "door-hi", "door-ink", "door-muted", "room-bg", "room-bg2", "room-wood", "room-wood-hi", "room-ink", "room-muted", "room-plaque", "room-plaque-ink", "room-plaque-lo", "room-up", "room-down", "c-red", "c-yellow", "c-green", "c-blue", "m-surface"]) theme[k] = cs.getPropertyValue(`--${k}`).trim();
+  for (const k of ["bg", "slot", "slot-line", "ink", "muted", "deal", "gold", "panel", "panel-solid", "paper", "paper-ink", "plaque", "plaque-ink", "plaque-hi", "plaque-lo", "room-bg", "room-bg2", "room-wood", "room-wood-hi", "room-ink", "room-muted", "room-plaque", "room-plaque-ink", "room-plaque-lo", "room-up", "room-down", "c-red", "c-yellow", "c-green", "c-blue", "m-surface"]) theme[k] = cs.getPropertyValue(`--${k}`).trim();
   theme.panelFill = cs.getPropertyValue("--panel-fill").trim();
   if (typeof heatCache !== "undefined") heatCache.clear();
   theme.dark = cs.colorScheme === "dark" || matchMedia("(prefers-color-scheme: dark)").matches && document.documentElement.dataset.theme !== "light";
@@ -84,7 +84,7 @@ function fitText(t, max) {
 const state = { lens: "have", value: false, time: false, q: "", matches: null, focus: null, dimAll: 0, introT0: 0, trans: null, press: null, g: null };
 // Where you are: the mosaic of everything, or inside one group (a set, a region, a price band).
 let view = "mosaic";
-try { const l = localStorage.getItem("wall-lens"); if (["have", "need", "chase"].includes(l)) state.lens = l; state.value = localStorage.getItem("wall-value") === "1"; } catch { /* default */ }
+try { const l = localStorage.getItem("wall-lens"); if (["have", "chase"].includes(l)) state.lens = l; state.value = localStorage.getItem("wall-value") === "1"; } catch { /* default */ }
 function emphasis(c) {
   if (c.away) return 0; // out on the trade table: its tile is empty
   if (preview) return preview.has(c.base || c) ? (c.owned ? 0.42 : 1) : 0.1; // the New chase form: what it would match
@@ -176,7 +176,7 @@ function drawTile0(c, sx, sy, w, h, now, mult = 1) {
   }
   if (w < 26) { // binder at arm's length: shapes and colour (kept cheap: this draws a thousand times a frame)
     const r = w * 0.09, round = w >= (foilOff ? 18 : 12); // mid-move (a room shrinking to the map) small tiles stay square: rounding a thousand is the costliest part of the frame, and nobody sees corners in motion
-    const dealOn = !c.owned && c.deal && isChase(c) && state.lens !== "need" && !state.time; // a deal is a property of a chase
+    const dealOn = !c.owned && c.deal && isChase(c) && !state.time; // a deal is a property of a chase
     if (flood < 1) {
       ctx.fillStyle = theme.slot;
       if (round) { rr(sx, sy, w, h, r); ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = dealOn ? theme.deal : theme["slot-line"]; ctx.stroke(); }
@@ -209,7 +209,7 @@ function drawTile0(c, sx, sy, w, h, now, mult = 1) {
 // An empty pocket: a hairline outline, and once you can read it, what it is and what it costs to fill.
 function emptyPocket(c, sx, sy, w, h, value) {
   const r = w * 0.045;
-  const dealOn = c.deal && isChase(c) && state.lens !== "need" && !state.time;
+  const dealOn = c.deal && isChase(c) && !state.time;
   rr(sx, sy, w, h, r); ctx.fillStyle = theme.slot; ctx.fill();
   ctx.lineWidth = Math.max(1, w * 0.008);
   ctx.strokeStyle = value ? heat(c.price) : dealOn ? theme.deal : theme["slot-line"];
@@ -306,20 +306,17 @@ function drawnFace(c, sx, sy, w, h, now, value) {
 // A set's title inside the set view, drawn with whichever camera is in use (they differ mid-transition).
 function drawHeader(st, now, C = cam, ox = 0, alpha = 1) {
   const sx = (st.x - C.x) * C.s + ox, sy = (st.y - C.y) * C.s, sw = st.w * C.s;
-  const k = (st.head * C.s) / (headH() + (st.popH || 0)), hh = headH() * k; // 1 at the framed zoom; the title block is 132 of the header (100 on a phone on its side)
+  const k = (st.head * C.s) / (headH() + (st.popH || 0)), hh = headH() * k; // 1 at the framed zoom; the title block is 132 of the header (86 on a phone on its side)
   const owned = ownedNow(st.cards), n = st.cards.length, f = finishOf(st);
   ctx.globalAlpha = alpha * (state.focus ? 1 - state.dimAll * 0.7 : 1);
   ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
   const title = clamp(34 * k, 16, 64), sub = clamp(14 * k, 10, 24);
   ctx.fillStyle = theme.ink; font(800, title, true);
   ctx.fillText(fitText(f ? trophyName(st) : st.name, sw), sx, sy + hh * 0.5);
-  const pct = `${Math.floor((owned / n) * 100)}%`;
-  font(700, sub); const pw = ctx.measureText(pct).width;
-  ctx.textAlign = "right"; ctx.fillStyle = f ? theme.gold : theme.ink; ctx.fillText(pct, sx + sw, sy + hh * 0.72);
-  ctx.textAlign = "left"; ctx.fillStyle = theme.muted; font(500, sub);
+  ctx.fillStyle = theme.muted; font(500, sub); // the count is in the line, and the bar under it shows how far (no percent besides)
   // Finished: when, and what it's worth. Otherwise the group's own line.
   const line = state.time ? `${owned} of ${n} by ${monthOf(state.t)}` : f ? `Finished ${dayOf(f.at)}, worth ${money(worthOf(st.base || st.cards))}.${f.put ? "" : " On the wall."}` : st.sub() + orderNote(st);
-  ctx.fillText(fitText(line, sw - pw - 12), sx, sy + hh * 0.72);
+  ctx.fillText(fitText(line, sw), sx, sy + hh * 0.72);
   drawBar(st, sx, sy + hh * 0.82, sw, Math.max(1.5, 3 * k), now, k);
   drawNextPin(st, sx, sy + hh * 0.82, sw, Math.max(1.5, 3 * k), now, k); // the next medal to earn, at its point on the bar
   if (st.natdex && !f?.put && k >= 0.3) drawDexRow(st, sx, sy + hh, k, ctx.globalAlpha); // prints, type, regions
@@ -360,7 +357,7 @@ function drawPanel(g, now, alpha = 1, labelAlpha = 1) {
   if (m.y > vh || m.y + m.h < 0) return;
   if (inCase(g)) {
     if (room.on) { drawRoomPlaque(g, m, now, alpha, labelAlpha); return; }
-    if (k < 1 && m.h >= 30) drawPlaque(g, m, now, alpha * (1 - k), 0); // coming down from the shelf: it shrinks away to the Medal room
+    if (k < 1 && m.h >= 30) drawPlaque(g, m, now, alpha * (1 - k), 0); // coming down from the shelf: it shrinks away to Trophies
     return;
   }
   if (g.done || g.minting) { drawPlaque(g, m, now, alpha, labelAlpha); return; }
@@ -400,7 +397,7 @@ function drawWall(now, alpha = 1, except = null) {
     if (room.on && inCase(g)) continue;
     const a = alpha * g.pe;
     drawPanel(g, now, a);
-    if (inCase(g)) continue; // its tiles are in the Medal room
+    if (inCase(g)) continue; // its tiles are in Trophies
     for (const c of g.cards) { const y = c.m.y - mScroll; if (y > vh || y + c.m.h < 0) continue; drawTile(c, c.m.x, y, c.m.w, c.m.h, now, a); } // off-screen tiles skipped (the Dex is tall)
   }
   ART.far = false;

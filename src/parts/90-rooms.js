@@ -70,7 +70,7 @@ function mapAcross(key) {
     medal: { x: tx, y: top + th + gap, w: sw, h: h - th - gap },
     source: { x: sx, y: top, w: sW, h },
   };
-  const thumb = { x: cx + (cw - thW) / 2, y: top + CARD_HEAD + Math.max(0, (h - CARD_HEAD - FOOT - thH) / 2), w: thW, h: thH };
+  const thumb = { x: cx + (cw - thW) / 2, y: top + CARD_HEAD, w: thW, h: thH }; // under its name, the lenses under it, and the set closest to done in what's left
   return { key, r, thumb, hintY: vh - SAFE.bottom - 12 };
 }
 function mapHit(x, y, nearest = false) {
@@ -231,7 +231,7 @@ function drawMapTrans(now, T) {
       ctx.save(); rr(W.x, W.y, W.w, W.h, 6 * e); ctx.clip();
       if (e >= 0.999) wallThumb(W, now); else drawRoomAt("chase", wallBand(), W, now);
       ctx.restore(); curFont = "";
-      if (fa > 0) chaseChrome(R, now, fa);
+      if (fa > 0) chaseChrome(R, now, fa, W);
       return;
     }
     // A room shrinks into its card and the card's face comes up through it.
@@ -247,7 +247,7 @@ function drawMapTrans(now, T) {
 function drawMapHint(a) {
   if (a <= 0.01) return;
   ctx.globalAlpha = a; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic"; ctx.fillStyle = theme.muted; font(500, 12.5);
-  ctx.fillText(fitText(vw < 520 ? "Tap a room to go in. Pinch any room closed to come back." : "Tap a room, or spread two fingers on it, to go in. Pinch any room closed to come back here.", vw - 24), vw / 2, mapLayout().hintY);
+  ctx.fillText(fitText("Pinch any room closed to come back here", vw - 24), vw / 2, mapLayout().hintY);
   ctx.textAlign = "left"; ctx.globalAlpha = 1;
 }
 // The map at rest: five cards, each showing what's going on inside.

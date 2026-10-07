@@ -31,7 +31,7 @@ function collectionToast() {
 function chaseToast() {
   const n = cards.filter(isChase).length, d = cards.filter((c) => isChase(c) && c.deal).length, L = feedList().length;
   if (!n) { toast("Nothing on your chase list yet. Open a card and choose Chase it."); return; }
-  toast(`Your chase list: ${n.toLocaleString()} ${n === 1 ? "card" : "cards"}, each with its best deal${d ? ` (${d} under market)` : ""} or the most you'd pay.${L ? ` Every listing is in the Feed.` : ""}`, L ? () => goRoom("feed") : null, "Feed");
+  toast(`Your chase list: ${n.toLocaleString()} ${n === 1 ? "card" : "cards"}${d ? `, ${d} under market` : ""}`, L ? () => goRoom("feed") : null, "Feed"); // every listing: the Feed
 }
 // force: the chase list changed while it is out (Chase it, Got it, Undo), so the layout flies to its new shape.
 function liftLayout(force = false) {
@@ -92,7 +92,7 @@ let sheetSay = null;
 const say = (t) => { if (filterMenu.hidden) toast(t); else sheetSay = t; };
 function setFilterMenu(open) {
   filterMenu.hidden = !open; filterBtn.setAttribute("aria-expanded", String(open));
-  if (open) { sheetSay = null; toastEl.classList.remove("show"); markFilters(); filterMenu.querySelector('.fs-row:not([hidden]) [aria-pressed="true"]')?.focus({ preventScroll: true }); }
+  if (open) { sheetSay = null; toastEl.classList.remove("show"); markFilters(); focusFor(filterMenu.querySelector('.fs-row:not([hidden]) [aria-pressed="true"]'), filterMenu); }
   else if (sheetSay) { toast(sheetSay); sheetSay = null; }
 }
 filterBtn.onclick = (e) => { e.stopPropagation(); setFilterMenu(filterMenu.hidden); };
@@ -119,7 +119,7 @@ function setShow(s, { quiet = false } = {}) {
   if (s === state.show) return;
   state.show = s; keepPref("wall-show", s, "all"); markFilters(); tick(5);
   if (!quiet) {
-    if (s === "missing") { const n = cards.filter((c) => !c.owned).length, k = cards.filter(isChase).length; say(`${n.toLocaleString()} cards to go${k ? `. The ${k.toLocaleString()} you chase are ringed` : ""}`); }
+    if (s === "missing") { const n = cards.filter((c) => !c.owned).length, k = cards.filter(isChase).length; say(`${n.toLocaleString()} to go${!k ? "" : k >= n ? ", all on your chase list" : `, the ${k.toLocaleString()} you chase ringed in gold`}`); }
     else if (s === "have") { const n = cards.filter((c) => c.owned).length; say(`Just what you have: ${n.toLocaleString()} of ${TOTAL.toLocaleString()}`); }
     else say("Showing every card");
   }
@@ -188,7 +188,7 @@ filterMenu.addEventListener("click", (e) => {
   else if (d.order) setOrder(d.order);
   else if (d.filter === "time") { setFilterMenu(false); setTime(!state.time); }
   else if (b.id === "f-clear") clearFilters();
-  else if (b.id === "f-done") { setFilterMenu(false); filterBtn.focus({ preventScroll: true }); }
+  else if (b.id === "f-done") { setFilterMenu(false); if (keyed) filterBtn.focus({ preventScroll: true }); }
 });
 fchipOpen.onclick = (e) => { e.stopPropagation(); setFilterMenu(filterMenu.hidden); };
 document.getElementById("fchip-clear").onclick = () => clearFilters();

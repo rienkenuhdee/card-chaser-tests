@@ -10,6 +10,17 @@ function toast(t, action = null, label = "Undo") {
   toastEl.classList.toggle("act", Boolean(action));
   toastEl.classList.add("show"); clearTimeout(toast.t); toast.t = setTimeout(() => toastEl.classList.remove("show"), action ? 4500 : 2200);
 }
+// A sheet coming up takes focus for the keyboard without lighting a button for a tap: after a key, its button takes
+// focus (with its ring); after a touch or a click, the sheet itself does (no ring), and Tab still reaches the button.
+let keyed = false;
+addEventListener("keydown", (e) => { if (!e.metaKey && !e.ctrlKey && !e.altKey) keyed = true; }, true);
+for (const t of ["pointerdown", "touchstart"]) addEventListener(t, () => { keyed = false; }, { capture: true, passive: true });
+function focusFor(el, box) {
+  if (!el) return;
+  if (keyed || !box) { el.focus({ preventScroll: true }); return; }
+  if (!box.hasAttribute("tabindex")) box.tabIndex = -1;
+  box.focus({ preventScroll: true });
+}
 const about = document.getElementById("about");
 document.getElementById("info").onclick = () => about.showModal();
 document.getElementById("about-close").onclick = () => about.close();

@@ -143,7 +143,7 @@ addEventListener("pagehide", () => { if (inFeed()) feedLeave(); });
 function scoreOf(L) {
   const ageH = Math.floor((Date.now() - L.at) / 3600e3), key = `${L.price}|${ageH}|${srcOn(L.src)}`;
   if (L.sc?.key === key) return L.sc;
-  const M = marketOf(L.c), pct = pctOf(L), parts = [{ key: "start", label: "Starting point", pts: 40, note: "Every listing starts here. About 40 means it's priced near the market." }];
+  const M = marketOf(L.c), pct = pctOf(L), parts = [{ key: "start", label: "Starting point", pts: 40, note: "Every listing starts here: about the market price." }];
   let score = 40;
   const add = (k, label, pts, note) => { score += pts; parts.push({ key: k, label, pts, note }); };
   const shaky = M.conf === "low", why = [];
@@ -214,6 +214,7 @@ function priceRuler(L) {
 // ----- the words for a listing -----
 const shipText = (L) => (L.ship === "local" ? "Local pickup" : L.ship === 0 ? "Free shipping" : L.ship > 0 ? `Includes ${money(L.ship)} shipping` : L.src === "tcgplayer" ? "Plus shipping" : "Shipping not listed");
 const whereText = (L) => (L.src === "ebay" ? `eBay, ${L.how === "Auction" ? `auction, ${plural1(L.bids, "bid")}` : L.bestOffer ? "Buy It Now or Best Offer" : "Buy It Now"}` : L.src === "tcgplayer" ? "TCGplayer, lowest listing" : L.src === "reddit" ? `Reddit r/${L.sub}` : L.src === "local" ? `Local: ${L.seller}` : `In stock at ${srcName(L.src)}`);
+const howText = (L) => (L.src === "ebay" ? (L.how === "Auction" ? `Auction, ${plural1(L.bids, "bid")}` : L.bestOffer ? "Buy It Now or Best Offer" : "Buy It Now") : L.src === "tcgplayer" ? "Lowest listing" : L.src === "reddit" ? "Trade post" : L.src === "local" ? "Local pickup" : "In stock"); // where is the line above it
 const openOn = (L) => (L.src === "ebay" ? "eBay" : L.src === "tcgplayer" ? "TCGplayer" : L.src === "reddit" ? "Reddit" : L.src === "local" ? L.seller.split(",")[0] : srcName(L.src));
 const cardFaceHTML = (c, extra = "", size = 58) => `<span class="cface${c.tier >= 4 ? " full" : c.tier === 3 ? " holo" : ""}${extra}${artIn(c, size) ? " pic" : ""}" style="--t:${typeColor(c)}" aria-hidden="true">${artImg(c, size)}<b>${esc(c.name)}</b><i>${esc(sets[c.si].code)} ${esc(c.num)}/${sets[c.si].printed}</i></span>`;
 
@@ -232,9 +233,8 @@ function renderFeed(slideId = null) {
   const counts = {}, hid = { n: 0 }, list = feedList(counts, hid), chased = cards.filter(isChase), withAny = new Set(list.map((L) => L.c)), all = Object.values(counts).reduce((a, n) => a + n, 0);
   const fresh = list.filter(isNewL).length, watching = chased.filter((c) => !withAny.has(c)).length;
   pfCount.textContent = fresh ? `${fresh} new` : ""; pfCount.classList.toggle("new", fresh > 0);
-  const order = { newest: "newest first", best: "best deals first", price: "cheapest first", pct: "most under market first" }[feedView.sort];
   pfSub.innerHTML = !chased.length ? "Every listing found for the cards you chase, newest first."
-    : list.length ? `Every listing found for the cards you chase, ${order}: <b>${plural1(list.length, "listing")}</b> for ${plural1(withAny.size, "card")}.` : `Every listing found for the cards you chase lands here, ${order}.`;
+    : list.length ? `<b>${plural1(list.length, "listing")}</b> for ${plural1(withAny.size, "card")} you chase.` : "Every listing found for the cards you chase lands here.";
   syncFeedTools(hid.n);
   const keep = pgFeed.scrollTop > 8 ? pgFeed.scrollHeight - pgFeed.scrollTop : null; // a listing landing on top doesn't push away the one you're reading
   if (!chased.length) pfList.innerHTML = `<li class="fd-empty"><b>Nothing to look for yet</b><span>Chase a card on the wall (tap it, then Chase it) and every listing found for it lands here.</span><button type="button" class="mbtn primary" data-go="chase">Go to the wall</button></li>`;
@@ -242,7 +242,7 @@ function renderFeed(slideId = null) {
   else if (!list.length && all) pfList.innerHTML = `<li class="fd-empty"><b>Every source is off</b><span>${plural1(all, "listing")} for your chases ${all === 1 ? "is" : "are"} hidden. Switch a source back on to see ${all === 1 ? "it" : "them"}.</span><button type="button" class="mbtn primary" data-go="source">Open Source</button></li>`;
   else if (!list.length) pfList.innerHTML = `<li class="fd-empty"><b>Looking for ${plural1(chased.length, "card")} you chase</b><span>A listing under market lands here the moment it's found.</span></li>`;
   else pfList.innerHTML = feedSorted(list).map((L) => feedRowHTML(L, L.id === slideId)).join("");
-  pfNote.innerHTML = chased.length ? `${watching ? `Still looking for ${plural1(watching, "more card")} you chase, with nothing under market yet. ` : ""}Your chase list, one tile a card with its best deal, is the <button type="button" class="linklike" data-go="lens">Chase lens</button> on the wall.` : "";
+  pfNote.innerHTML = chased.length ? `${watching ? `Still looking for ${plural1(watching, "more card")} you chase. ` : ""}Your chase list, one tile a card, is the <button type="button" class="linklike" data-go="lens">Chase lens</button> on the wall.` : "";
   if (keep !== null) pgFeed.scrollTop = pgFeed.scrollHeight - keep;
 }
 // The tools row: sort, condition, and damaged copies. A line under it says what the filters hide, with Show all.
@@ -284,7 +284,7 @@ function feedArrived(c) {
 // The list view's Feed section: the same listings, as rows a screen reader reads.
 function feedListHTML() {
   const list = feedSorted(feedList()), now = Date.now(), order = { newest: "newest first", best: "best deals first", price: "cheapest first", pct: "most under market first" }[feedView.sort];
-  return `<section data-sec="feed"><h2>Feed</h2><p class="lsub">${list.length ? `Every listing found for the cards you chase, ${order}: ${plural1(list.length, "listing")}. Sort and filter it in the Feed.` : "Every listing found for the cards you chase lands here. Nothing yet."}</p><ul>${list.map((L) => {
+  return `<section data-sec="feed"><h2>Feed</h2><p class="lsub">${list.length ? `${plural1(list.length, "listing")} for the cards you chase, ${order}.` : "Every listing found for the cards you chase lands here. Nothing yet."}</p><ul>${list.map((L) => {
     const c = L.c, st = sets[c.si];
     return `<li><button class="lrow" data-listing="${esc(L.id)}"><span class="lname">${isNewL(L) ? "NEW. " : ""}${esc(c.name)}</span><span class="lmeta">${esc(st.name)} #${esc(c.num)}. ${esc(whereText(L))}, ${agoText(L.seen, now)}. Score ${scoreOf(L).score}.</span><span class="lprice"><b class="ldeal">${money(L.price)}</b></span><span class="lstate">Market ${money(c.price)}, ${pctOf(L)}% under</span></button></li>`;
   }).join("")}</ul></section>`;
@@ -300,14 +300,13 @@ function openListing(id) {
   lsOpen = L;
   const c = L.c, st = sets[c.si], M = marketOf(c), v = priceVerdict(L), sc = scoreOf(L), pct = pctOf(L), diff = Math.abs(c.price - L.price), now = Date.now();
   const r = (x) => h32(`${L.id}|ph|${x}`), mats = ["#2F4A3C", "#3A3550", "#4B3527", "#24394F", "#55443A"], tilt = (r("t") * 8 - 4).toFixed(1);
-  const where = L.how === "Auction" ? "current bid" : L.ship === 0 ? "with free shipping" : L.ship > 0 ? "delivered" : "before shipping";
-  const sentence = Math.abs(pct) < 3 ? `At <b>${money(L.price)}</b> ${where}, this is right at the <b>${money(c.price)}</b> market price.` : `At <b>${money(L.price)}</b> ${where}, this is <b>${Math.abs(pct)}% under</b> the <b>${money(c.price)}</b> market price: about <b>${money(diff)}</b> less.`;
+  const sentence = Math.abs(pct) < 3 ? `Right at the <b>${money(c.price)}</b> market price.` : pct > 0 ? `<b>${pct}% under</b> the <b>${money(c.price)}</b> market price, ${money(diff)} less.` : `<b>${-pct}% over</b> the <b>${money(c.price)}</b> market price.`;
   const conf = CONFIDENCE_TEXT[M.conf];
   const others = listingsOf(c).filter((x) => x !== L && srcOn(x.src)).sort((a, b) => a.price - b.price), cheaper = others.filter((x) => x.price < L.price);
   const inc = [];
   if (L.how === "Auction") inc.push(`This is the <b>current bid</b> (${plural1(L.bids, "bid")}), ending in ${agoLeft(L.endsAt - now)}. Auctions usually climb, so the discount counts for 60% in the score. Decide your top price before you bid.`);
   if (L.ship === 0) inc.push("Shipping is free, so the price shown is the price delivered.");
-  else if (L.ship > 0) inc.push(`Includes <b>${money(L.ship)}</b> shipping (the card itself is ${money(L.price - L.ship)}).`);
+  else if (L.ship > 0) inc.push(`The card itself is ${money(L.price - L.ship)}, plus <b>${money(L.ship)}</b> shipping.`);
   else if (L.ship == null && L.src === "ebay") inc.push("<b>Shipping isn't listed,</b> so the real price will be higher. The score takes 2 points off for that.");
   inc.push("Sales tax isn't included.");
   if (L.bestOffer) inc.push("The seller takes <b>offers</b>, so you may get it for less.");
@@ -329,13 +328,13 @@ function openListing(id) {
     <div class="ls-photo" style="--mat:${mats[Math.floor(r("m") * mats.length)]};--tilt:${tilt}deg">${cardFaceHTML(c, r("s") < 0.5 ? " slv" : "", 118)}<small class="ls-cap">The seller's photo</small><small class="ls-cap-pic">${artStamped(c) ? "Pictured: a 1st Edition print" : "A stock picture"}. The seller's photos are on ${esc(openOn(L))}.</small><button type="button" class="ib ls-x" data-ls-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div class="ls-head"><span class="ls-verdict ${v.tone}">${v.head}</span><h2 id="ls-name">${esc(c.name)} <span>#${esc(c.num)}</span></h2><p class="ls-meta">${esc(st.name)}${ci ? ` · ${ci[1]}` : L.src === "tcgplayer" ? " · Any condition" : ""}</p><p class="ls-title">“${esc(L.title)}”</p></div>
     <div class="ls-price"><b>${money(L.price)}</b>${L.was ? `<s>${money(L.was)}</s>` : ""}<span>${shipText(L)}</span></div>
-    <div class="ls-row"><span class="slab ${slabClass(sc.score)}"><b>${sc.score}</b><small>score</small></span><p>${L.src === "ebay" ? `Sold by ${esc(L.seller)} (${L.fb}%, ${L.fbN.toLocaleString()} sales) on eBay` : L.src === "reddit" ? `Posted by ${esc(L.seller)} on r/${L.sub}` : L.src === "local" ? `${esc(L.seller)}` : L.src === "tcgplayer" ? `Sold by ${esc(L.seller)} on TCGplayer` : `In stock at ${esc(srcName(L.src))}`}<small>${esc(whereText(L))}. ${L.dropAt ? `Dropped ${agoText(L.dropAt, now)}, listed ${agoText(L.at, now)}` : `Listed ${agoText(L.at, now)}`}.</small></p></div>
+    <div class="ls-row"><span class="slab ${slabClass(sc.score)}"><b>${sc.score}</b><small>score</small></span><p>${L.src === "ebay" ? `Sold by ${esc(L.seller)} (${L.fb}%, ${L.fbN.toLocaleString()} sales) on eBay` : L.src === "reddit" ? `Posted by ${esc(L.seller)} on r/${L.sub}` : L.src === "local" ? `${esc(L.seller)}` : L.src === "tcgplayer" ? `Sold by ${esc(L.seller)} on TCGplayer` : `Sold by ${esc(srcName(L.src))}`}<small>${esc(howText(L))} · ${L.dropAt ? `dropped ${agoText(L.dropAt, now)}, listed ${agoText(L.at, now)}` : `listed ${agoText(L.at, now)}`}</small></p></div>
     <p class="ls-sentence">${sentence}</p>
     ${priceRuler(L)}<p class="ls-legend"><i></i>within 10% of market</p>
-    <section class="ls-sec"><h3>How we worked out the market price</h3><ul>${M.src.map((s) => `<li><b>${s.name} ${money(s.value)}</b>${s.name === "TCGplayer" ? ` <span class="ls-age">(${s.age === 0 ? "updated today" : `updated ${plural1(s.age, "day")} ago`})</span>` : s.n ? ` <span class="ls-age">(${s.n} listings)</span>` : ""}<small>${SOURCE_TEXT[s.name]}</small></li>`).join("")}</ul>${M.src.length > 1 ? `<p class="ls-fine" style="margin:8px 0 0">The headline is TCGplayer's. The others back it up or disagree, and that's what moves how sure we are.</p>` : ""}<p class="ls-conf ${M.conf}"><b>${conf[0]} confidence.</b> ${conf[1]}</p></section>
-    <section class="ls-sec"><h3>Against other copies</h3><p>${!others.length ? "This is the only listing we've found for this card." : !cheaper.length ? `The cheapest of the <b>${others.length + 1}</b> listings we're tracking for this card. The next lowest is <b>${money(others[0].price)}</b>, on ${openOn(others[0])}.` : `<b>${cheaper.length}</b> of the other ${plural1(others.length, "listing")} ${cheaper.length === 1 ? "is" : "are"} cheaper: <button type="button" class="linklike" data-other="${esc(cheaper[0].id)}">${money(cheaper[0].price)} on ${openOn(cheaper[0])}</button>.`}</p></section>
+    <section class="ls-sec"><h3>How we worked out the market price</h3><ul>${M.src.map((s) => `<li><b>${s.name} ${money(s.value)}</b>${s.name === "TCGplayer" ? ` <span class="ls-age">(${s.age === 0 ? "updated today" : `updated ${plural1(s.age, "day")} ago`})</span>` : s.n ? ` <span class="ls-age">(${s.n} listings)</span>` : ""}<small>${SOURCE_TEXT[s.name]}</small></li>`).join("")}</ul><p class="ls-conf ${M.conf}"><b>${conf[0]} confidence.</b> ${conf[1]}</p></section>
+    <section class="ls-sec"><h3>Against other copies</h3><p>${!others.length ? "This is the only listing we've found for this card." : !cheaper.length ? `The cheapest of the <b>${others.length + 1}</b> listings we're tracking for this card. The next lowest is <b>${money(others[0].price)}</b>, on ${openOn(others[0])}.` : `${others.length === 1 ? "The other listing is" : `<b>${cheaper.length}</b> of the other ${others.length} listings ${cheaper.length === 1 ? "is" : "are"}`} cheaper: <button type="button" class="linklike" data-other="${esc(cheaper[0].id)}">${money(cheaper[0].price)} on ${openOn(cheaper[0])}</button>.`}</p></section>
     <section class="ls-sec"><h3>What's in the price</h3><ul>${inc.map((t) => `<li>${t}</li>`).join("")}</ul></section>
-    <section class="ls-sec"><h3>What moved the score</h3><ul class="points">${sc.lines.map((p) => `<li><span class="pts ${p.key === "start" ? "" : p.pts > 0 ? "up" : p.pts < 0 ? "down" : ""}">${p.key === "start" ? p.pts : fmt(p.pts)}</span><span><b>${esc(p.label)}</b>${p.note ? `<small>${esc(p.note)}</small>` : ""}</span></li>`).join("")}<li class="pts-total"><span class="pts">${sc.score}</span><span><b>Score</b><small>${sc.capped ? `Capped at ${sc.capped === "high" ? 100 : 0}. ` : ""}Points are rounded, so the lines can be a point out. 40 is a fair price, 65 and up is a good deal, 80 and up is a standout.</small></span></li></ul></section>
+    <section class="ls-sec"><h3>What moved the score</h3><ul class="points">${sc.lines.map((p) => `<li><span class="pts ${p.key === "start" ? "" : p.pts > 0 ? "up" : p.pts < 0 ? "down" : ""}">${p.key === "start" ? p.pts : fmt(p.pts)}</span><span><b>${esc(p.label)}</b>${p.note ? `<small>${esc(p.note)}</small>` : ""}</span></li>`).join("")}<li class="pts-total"><span class="pts">${sc.score}</span><span><b>Score</b><small>${sc.capped ? `Capped at ${sc.capped === "high" ? 100 : 0}. ` : ""}40 is a fair price, 65 and up a good deal, 80 and up a standout.</small></span></li></ul></section>
     <section class="ls-sec"><h3>Check before you buy</h3><ul>${watch.slice(0, 4).map((t) => `<li>${t}</li>`).join("")}</ul></section>
     ${mine}
     <p class="ls-fine">A guide to where to look first, not a promise. The listings here are made up for the demo.</p>
@@ -343,7 +342,7 @@ function openListing(id) {
   <div class="ls-foot"><button type="button" class="mbtn" data-ls-close>Close</button><button type="button" class="mbtn primary" data-ls-open>Open on ${esc(openOn(L))}</button></div>`;
   if (!lsheet.open) lsheet.showModal();
   lsheet.querySelector(".ls-scroll").scrollTop = 0;
-  lsheet.querySelector("[data-ls-open]").focus({ preventScroll: true });
+  focusFor(lsheet.querySelector("[data-ls-open]"), lsheet);
   tick(5);
 }
 const agoLeft = (ms) => { const h = Math.floor(ms / 3600e3), m = Math.max(1, Math.round((ms % 3600e3) / 60e3)); return ms <= 0 ? "moments" : h >= 24 ? `${Math.floor(h / 24)} d ${h % 24} h` : h ? `${h} h ${m} min` : `${m} min`; };

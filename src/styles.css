@@ -30,6 +30,7 @@ canvas#wall { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
 canvas#wall:active { cursor: grabbing; }
 button { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid #E2B33C; outline-offset: 2px; }
+[tabindex="-1"]:focus { outline: none; } /* a sheet holding focus for the keyboard after a tap (focusFor) */
 .glass { background: var(--panel); -webkit-backdrop-filter: blur(18px) saturate(1.3); backdrop-filter: blur(18px) saturate(1.3); border: 1px solid var(--line); box-shadow: var(--shadow); }
 
 /* Top: one strip. Rearrange, search, the count (tap it to see everything), about. */
@@ -50,6 +51,11 @@ button { font: inherit; color: inherit; }
 .clear { flex: none; width: 30px; height: 30px; margin-right: 4px; border: 0; border-radius: 8px; background: var(--line); cursor: pointer; display: none; place-items: center; }
 .search.has .clear { display: grid; }
 .search.has .count { display: none; }
+/* Inside the trade binder and at the table, Back is the only way on: search, filters, settings and about act on the wall,
+   which isn't there. Either way up, the strip is just Back, at the left. */
+body:is(.inbinder, .trading) .top { justify-content: flex-start; }
+body:is(.inbinder, .trading) .strip { width: auto; }
+body:is(.inbinder, .trading) .strip > :not(#back) { display: none; }
 
 /* Lenses: filters that recolour the wall instead of opening a page. */
 .lens { position: fixed; z-index: 3; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); transform: translateX(-50%); display: flex; padding: 4px; border-radius: 14px;
@@ -792,7 +798,8 @@ body.trading #pg-trade { opacity: 0; transition: opacity .3s; }
 .fd-pick select.on { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
 .fd-hidden { margin: 10px 2px 0; color: var(--muted); font-size: 13.5px; }
 .fd-hidden[hidden] { display: none; }
-.rp-stripe { height: 4px; margin: 12px 0 14px; border-radius: 2px; background: linear-gradient(90deg, var(--c-red) 0 25%, var(--c-yellow) 25% 50%, var(--c-green) 50% 75%, var(--c-blue) 75%); }
+.rp-stripe { height: 3px; margin: 12px 0 14px; border-radius: 2px; background: var(--c-blue); } /* the room's colour, as along the top of its card on the map */
+#pg-trade .rp-stripe { background: var(--c-green); }
 .rpage h2 { margin: 26px 2px 8px; font: 800 13px var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 .rp-note { color: var(--muted); font-size: 13.5px; line-height: 1.45; margin: 16px 2px 0; }
 .linklike { border: 0; background: none; padding: 0; font: inherit; color: inherit; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
@@ -925,6 +932,10 @@ body.trading #pg-trade { opacity: 0; transition: opacity .3s; }
 .verdict.close > b { color: var(--gold); }
 .verdict.uneven { border-color: var(--c-red); background: color-mix(in srgb, var(--c-red) 8%, var(--panel-fill)); }
 .verdict.uneven > b { color: var(--c-red); }
+.tsides { display: grid; gap: 10px; }
+.tsides.two { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } /* nothing on either side yet: side by side, a button each */
+.tsides.two .tc-add { justify-self: stretch; padding: 0 8px; }
+.mtext span:empty { display: none; }
 .tside { padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel-solid); display: grid; gap: 8px; }
 .tside-head { display: flex; align-items: baseline; justify-content: space-between; }
 .tside-head b { font: 800 16px var(--font); font-stretch: 88%; }
@@ -1068,11 +1079,18 @@ body.trading #pg-trade { opacity: 0; transition: opacity .3s; }
   .lens { top: calc(env(safe-area-inset-top, 0px) + 8px); bottom: auto; left: auto; right: calc(var(--sar) + 10px); width: var(--lens-w); height: 46px; padding: 3px; transform: none; }
   .lens button { flex: 1; height: 38px; min-width: 0; padding: 0 8px; }
   .lens .ink { top: 3px; bottom: 3px; }
+  /* A filter that's on widens the lens bar for its chip (the strip gives up the room), so the lenses never squeeze. */
+  :root:has(#fchip:not([hidden])) { --lens-w: 334px; }
+  .lens .fchip button { flex: none; }
+  .lens .fchip #fchip-open { max-width: 120px; padding: 0 6px 0 11px; }
   /* Wherever the lens bar steps aside, it rises out of the row rather than dropping into the view. */
   body:is(.focused, .marking, .offering, .trading, .inroom, .inbinder, .maptrans) .lens, body:not([data-room="chase"]) .lens { transform: translateY(-140%); }
   body:is(.welcoming, .arriving) .lens { transform: translateY(-6px); } /* waits in place, faded, to come back when the sheet goes */
   .arrange-menu { top: calc(env(safe-area-inset-top, 0px) + 60px); left: calc(var(--sal) + 10px); max-height: calc(100dvh - 70px); overflow-y: auto; }
   .arrange-menu.right { right: auto; left: calc(var(--sal) + 10px + min(600px, 100vw - var(--sal) - var(--sar) - 30px - var(--lens-w)) - min(290px, 100vw - 20px)); }
+  /* Filters on a phone on its side: two columns, so every choice and Done show without scrolling. */
+  .arrange-menu.right.fsheet { left: calc(var(--sal) + 10px); width: min(640px, calc(100vw - var(--sal) - var(--sar) - 20px)); grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 20px; align-items: end; }
+  .fsheet .fs-foot { padding-top: 0; padding-bottom: 6px; }
   .maptip { left: calc(var(--sal) + 12px); top: calc(env(safe-area-inset-top, 0px) + 62px); }
   .timebar { bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); }
   .caption { bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); }
@@ -1153,10 +1171,10 @@ body.trading #pg-trade { opacity: 0; transition: opacity .3s; }
   #pg-feed .feed { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
   /* The Trade room in two columns: the closed binder and who to trade with at the left, the checker at the right. */
   #pg-trade .rp-wrap { max-width: 1000px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); column-gap: 22px; align-items: start;
-    grid-template-areas: "head head" "sub sub" "stripe stripe" "cover h2a" "cover tc" "h2b tc" "trs tc" ". tc"; grid-template-rows: repeat(7, auto) 1fr; }
-  #pg-trade .rp-head { grid-area: head; } #pg-trade .rp-sub { grid-area: sub; } #pg-trade .rp-stripe { grid-area: stripe; }
-  #pg-trade .tcover { grid-area: cover; } #pg-trade h2:nth-of-type(1) { grid-area: h2a; } #pg-trade .checker { grid-area: tc; }
-  #pg-trade h2:nth-of-type(2) { grid-area: h2b; } #pg-trade .traders { grid-area: trs; }
+    grid-template-areas: "head head" "stripe stripe" "cover h2a" "cover tc" "h2b tc" "trs tc" ". tc"; grid-template-rows: repeat(6, auto) 1fr; }
+  #pg-trade .rp-head { grid-area: head; } #pg-trade .rp-stripe { grid-area: stripe; }
+  #pg-trade .tcover { grid-area: cover; } #pg-trade h2:nth-of-type(2) { grid-area: h2a; } #pg-trade .checker { grid-area: tc; }
+  #pg-trade h2:nth-of-type(1) { grid-area: h2b; } #pg-trade .traders { grid-area: trs; }
   .arrange-menu.tradehow { bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); max-height: calc(100dvh - 20px); }
 
   /* The binder open on a phone on its side: the spread takes the height; Back at the top left corner, the title in the

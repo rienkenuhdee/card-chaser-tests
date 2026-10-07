@@ -67,7 +67,7 @@ function summaryRows(P) {
     const noun = n === fin.length ? "sets" : n ? "sets and chases" : "chases";
     rows.push({ id: "fin", lead: { kind: "plaque", g },
       title: fin.length === 1 ? `${names[0]} is complete` : fin.length === 2 ? `${names[0]} and ${names[1]} are complete` : `${fin.length} ${noun} complete`,
-      sub: fin.length === 1 ? `Every card. On the shelf today, worth ${short(worthOf(g.base))}.` : fin.length === 2 ? "Every card. On the shelf today." : `${fin.length > 3 ? `${names.slice(0, 2).join(", ")} and ${fin.length - 2} more` : arAnd(names)}, on the shelf today.`,
+      sub: fin.length === 1 ? `On the shelf today, worth ${short(worthOf(g.base))}` : fin.length === 2 ? "On the shelf today" : `${fin.length > 3 ? `${names.slice(0, 2).join(", ")} and ${fin.length - 2} more` : arAnd(names)}, on the shelf today.`,
       label: fin.length === 1 ? "Open its album" : `Open the ${names[0]} album`,
       go: () => arOpen(() => groups.find((x) => (x.set || x.chase) && doneKey(x) === key) || null) });
   }
@@ -75,10 +75,10 @@ function summaryRows(P) {
   const near = groups.filter((g) => g.set && !g.done && g.base?.length).map((g) => { const have = ownedIn(g.base); return { g, have, left: g.base.length - have }; })
     .filter((x) => x.have > 0 && x.left > 0).sort((a, b) => a.left - b.left || b.have / b.g.base.length - a.have / a.g.base.length);
   if (near.length) {
-    const a = near[0], b = near[1], id = a.g.set.id;
+    const a = near[0], id = a.g.set.id;
     rows.push({ id: "near", lead: { kind: "set", g: a.g },
       title: `${a.g.name}, ${a.left} to go`,
-      sub: `Closest to done, ${a.have} of ${a.g.base.length}.${b ? ` Then ${b.g.name}, ${b.left} to go.` : ""}`,
+      sub: "Closest to done",
       label: `Open ${a.g.name} at its gaps`,
       go: () => arOpen(() => groups.find((x) => x.set?.id === id) || null, ringGaps) });
   }
@@ -103,7 +103,7 @@ function summaryRows(P) {
     for (const c of page) if (pick.length < 3 && !pick.includes(c)) pick.push(c);
     rows.push({ id: "tb", lead: { kind: "spares", list: pick },
       title: `${stPlural(tb.length, "card")} with spares${wanted ? `, ${wanted} wanted` : ""}`,
-      sub: wanted ? "In your trade binder, the wanted ones first." : "In your trade binder.",
+      sub: "In your trade binder",
       label: "Open the trade binder", go: arToBinder });
   }
   // The Dex, when it's on the wall.
@@ -129,13 +129,13 @@ function openSummary(P) {
       <p class="ar-kick">Import complete</p>
       <h2 id="ar-title">${stPlural(P.n, "card")} from ${mdEsc(P.src)}</h2>
       <p class="ar-line">Worth <b>${money(arWorth())}</b> at today's prices.${P.k ? ` ${P.k.toLocaleString()} more on your chase list.` : ""}</p>
-      ${ar.rows.length ? `<ul class="ar-rows">${ar.rows.map((r, i) => `<li style="--i:${i}"><button type="button" class="ar-row" data-ar="${r.id}" aria-label="${mdEsc(`${r.title}. ${r.sub} ${r.label}.`)}"><span class="ar-lead ar-${r.lead.kind}" aria-hidden="true"></span><span class="ar-text"><b>${mdEsc(r.title)}${r.rank ? ` <i class="rank-tag ${r.rank}">${MD_RANK[r.rank]}</i>` : ""}</b><span>${mdEsc(r.sub)}</span></span><svg class="ar-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button></li>`).join("")}</ul>` : ""}
+      ${ar.rows.length ? `<ul class="ar-rows">${ar.rows.map((r, i) => `<li style="--i:${i}"><button type="button" class="ar-row" data-ar="${r.id}" aria-label="${mdEsc(`${r.title}. ${r.sub.replace(/\.$/, "")}. ${r.label}.`)}"><span class="ar-lead ar-${r.lead.kind}" aria-hidden="true"></span><span class="ar-text"><b>${mdEsc(r.title)}${r.rank ? ` <i class="rank-tag ${r.rank}">${MD_RANK[r.rank]}</i>` : ""}</b><span>${mdEsc(r.sub)}</span></span><svg class="ar-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button></li>`).join("")}</ul>` : ""}
     </div>
     <div class="ar-foot"><button type="button" class="mbtn primary" data-ar-close>See your wall</button></div>`;
   ar.rows.forEach((r) => paintLead(arEl.querySelector(`[data-ar="${r.id}"] .ar-lead`), r.lead));
   arEl.inert = false; document.body.classList.add("arriving", "arrived-sheet");
   tick(10);
-  requestAnimationFrame(() => arEl.querySelector("[data-ar-close]")?.focus({ preventScroll: true }));
+  requestAnimationFrame(() => focusFor(arEl.querySelector("[data-ar-close]"), arEl));
   kick();
 }
 function closeSummary(then = null) {

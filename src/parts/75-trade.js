@@ -108,7 +108,7 @@ function updateTradeBar() {
   else if (ph === "countered") { tbHead.textContent = `${t.name} countered`; tbSub.textContent = `${tbl.rec ? moveText(tbl.rec, t) : ""}. ${bal}`; tbGo.textContent = "Accept"; tbDec.hidden = false; tbAlt.hidden = false; }
   else if (ph === "accepting") { const got = tbl.done ? tbl.done.get : tbl.get; tbHead.textContent = `Traded with ${t.name}`; tbSub.textContent = `${names(got)} ${got.length === 1 ? "is" : "are"} yours`; tbGo.hidden = true; }
   else if (!give && !get && tbl.note) { tbHead.textContent = `${t.name} declined`; tbSub.textContent = tbl.note; tbGo.disabled = true; }
-  else if (!give && !get) { tbHead.textContent = `Trade with ${t.name}`; tbSub.textContent = "Drag a card from either side onto the table"; tbGo.disabled = true; }
+  else if (!give && !get) { tbHead.textContent = `Trade with ${t.name}`; tbSub.textContent = ""; tbGo.disabled = true; } // the empty table says what to do
   else if (give && get) { tbHead.textContent = bal; tbSub.textContent = `${give} of yours for ${get} of ${t.name}'s${tbl.rec ? ". Shake hands sends your counter" : ""}`; tbGo.disabled = Boolean(tbl.shake); }
   else if (get) { tbHead.textContent = `${get} of ${t.name}'s on the table`; tbSub.textContent = "Add one of yours to make it a trade"; tbGo.disabled = true; }
   else { tbHead.textContent = `${give} of yours on the table`; tbSub.textContent = `Add one of ${t.name}'s to make it a trade`; tbGo.disabled = true; }
@@ -366,7 +366,7 @@ function drawBinder(side, now, alpha, value) {
   const tw = R.x + R.w - 12 - tx; // the words fit the binder's own width (narrow when the table runs across)
   ctx.fillStyle = theme.ink; font(800, 17, true); ctx.fillText(fitText(side === "their" ? `${t.name}'s spares` : "Your spares", tw), tx, R.y + 20);
   ctx.fillStyle = theme.muted; font(500, 12.5);
-  ctx.fillText(fitText(side === "their" ? `${t.where}. ${n} spares, ${litN ? `${litN} you chase` : "none you chase"}` : `${n} spares, ${litN ? `${litN} ${t.name} wants` : `none ${t.name}'s after`}`, tw), tx, R.y + 36);
+  ctx.fillText(fitText(side === "their" ? `${t.where} · ${litN ? `${litN} you chase` : "none you chase"}` : litN ? `${litN} ${t.name} wants` : `None ${t.name}'s after`, tw), tx, R.y + 36);
   // the cards, column by column, only the columns on screen
   ctx.save(); ctx.beginPath(); ctx.rect(R.x, R.y + L.head - 4, R.w, R.h - L.head + 4); ctx.clip();
   const step = L.across ? L.ch + L.gap : L.cw + L.gap, c0 = Math.max(0, Math.floor((S.sx - 12) / step)), c1 = Math.ceil((S.sx + (L.across ? R.h : R.w)) / step);
