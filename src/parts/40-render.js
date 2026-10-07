@@ -208,7 +208,7 @@ function emptyPocket(c, sx, sy, w, h, value) {
 
 // A card you own, close up: its picture once it's in (41-art.js), and the drawn face until then, or instead.
 function cardFace(c, sx, sy, w, h, now, value) {
-  const pic = w >= ART_MIN ? artFor(c, w) : null, k = pic ? artFade(pic, now) : 0;
+  const pic = artFor(c, w), k = pic ? artFade(pic, now) : 0;
   if (k < 1) drawnFace(c, sx, sy, w, h, now, value);
   else if (w > 90) faceShadow(sx, sy, w, h);
   if (pic) artDraw(c, pic, sx, sy, w, h, now, value, k);

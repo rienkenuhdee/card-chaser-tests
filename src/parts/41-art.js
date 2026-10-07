@@ -50,9 +50,12 @@ function artWant(u, ask) {
   return e;
 }
 function artFor(c, w) {
-  // Asked for where the card is close up (the Chase lens's tiles count), once the level has landed: not mid-pinch or
-  // mid-flight, when a card passes through sizes and places it won't stay at.
-  const big = w * dpr > ART_BIG, [u0, u1] = artUrls(c, big), ask = (!ART.far || Boolean(c.lift && !ART.still)) && !state.trans && !fly;
+  // Asked for where the card is close up and big enough to read (the Chase lens's tiles count), once the level has
+  // landed: not mid-pinch or mid-flight, when a card passes through sizes and places it won't stay at. One already in
+  // is drawn at any size a face is (so a pinch grows the picture, rather than swapping the face for it part way).
+  // Far out (the mosaic, the map) it's the colour and the shapes, picture or not, so the wall reads as one surface.
+  if (ART.far && (!c.lift || ART.still)) return null;
+  const big = w * dpr > ART_BIG, [u0, u1] = artUrls(c, big), ask = w >= ART_MIN && !state.trans && !fly;
   return artWant(u0, ask) || (u1 ? artWant(u1, ask) : null); // the large scan, or the small one meanwhile (or instead)
 }
 // Which picture a card would show at this size, settled: pictures painted once and kept (the trade binder's pages)
