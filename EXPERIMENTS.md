@@ -23,9 +23,11 @@
   handful like Photos. The mosaic is novel; how you move through it shouldn't be.
 - **A collector's archive, not a toy.** Archivo (condensed for names, tabular figures for prices), hairlines, small
   radii, color from the cards themselves. Rounded, bouncy type read as "comic sans".
-- **Lenses over pages.** Have, Need, Chase and Trade recolor what you're looking at instead of navigating away. A lens
-  may rearrange as well as recolor (Chase deals your chase list out of the wall), as long as every other lens flies it
-  all home and the wall is exactly as it was. Value and Time are filters by the search box: they sit on top of any lens.
+- **Lenses over pages.** Collection and Chase recolor or rearrange what you're looking at instead of navigating away
+  (Chase deals your chase list out of the wall), as long as the other flies it all home and the wall is exactly as it
+  was. What used to be the Need lens is a filter now: Show (All / Missing / Have), Color by, Group by and Time sit in
+  one Filters sheet on top of either, with a chip that names what's on. Places that aren't the wall (Feed, Trade,
+  Trophies, Source) are rooms one level up, not lenses (round 21).
 - **A deal is a property of a want.** A live listing matters because you're chasing the card, so deals live inside the
   want list, leading their set, rather than as a surface of their own.
 - **Frame budget is a feature.** A slow frame makes pinches lag and makes a flick read as a slow release, so snapping
@@ -269,6 +271,23 @@ past Safari's cap); the harvest takes no per-pinch pictures, draws the moving ro
 a memory check in npm test. Not verified on an iPhone. Dropped: the tab bars, the deal banner (the Feed and the
 badge carry the news), the cards flying from the wall into the Feed (a page above the canvas would hide them).
 
+**Round 22: Polish.** No variants: four areas polished in parallel and merged, then a pass for text and noise, then
+the critic's rough edges fixed. Trophies: "Medal" gone from everything a person reads, the room brought into the
+app's own light and dark look (hairline panels, the plaque a flat gold plate heading its set's panel, medals on
+threads in the set's colour; no wood), two columns when wide. Landscape everywhere: the trade binder opens as two
+facing pages with rings down the spine and a page that folds over it under the thumb; a card sits beside its panel;
+the map, Feed, listing, Trade room, table and sheets are laid out for a wide screen; rotating keeps your place.
+Collection · Chase: Have and Need were one axis shown as two lenses, so Need became Show: Missing in one Filters sheet
+(Show, Color by type or value, Group by set, price, rarity or type, the order inside a binder, Time) with a chip that
+names and clears what's on; the Chase lens and the Feed gained sorts, the Feed condition filters. Card pictures:
+real scans from the image hosts production uses wherever a card is big enough to see, lazy, decoded off the frame,
+capped at 32 MB, with a redrawn face as the fallback (the sandbox blocks the hosts, so this is unverified on a
+phone). Learned: four builders in parallel worktrees merge cleanly when each owns a lane, but their scaffolding
+leaks (a committed node_modules link replaced the real folder on merge); a pass for noise needs the user's earlier
+decisions in hand (it removed Remove set, which Ryan had asked to keep; restored). Open from the critic: whether
+Show: Missing and the Chase lens both earn a place once everything missing is chased; greyed art in missing pockets;
+the medal art is still the loudest thing on screen.
+
 ## Open questions (next rounds)
 
 - A deal arriving off screen: one tap from the line to the offers, and whether the arrival should nudge the wall.
@@ -279,4 +298,4 @@ badge carry the news), the cards flying from the wall into the Feed (a page abov
 - The import: a real import without acquisition dates loses the story (round 20); and the Complete Dex can't be chosen on the import path, only in Choose your sets.
 - A chase's twins: should a custom panel's cards also lead in the Chase lens, or only their set's copy? And should a chase hide from the wall once it's complete?
 - Trophies: the worth line is a made-up year; real data would start at the finish date ("Up $27 since you finished"). Medals: whether Undo after a mint should take a medal back (production keeps it), the full-screen completion ceremony production plays, and the server-side luck roll when the two merge. Sharing a trophy (safe's picture card), and whether a sub-chase of a finished set should fold into the set's plaque. The room hides the lenses; Value could recolour the engravings.
-- Bringing the wall into the real app: the rooms map is the navigation model (round 21); production's tabs sit at the top, and a merge would put the map where they are. The Trade room's page is long on a phone (cover, checker, traders).
+- Bringing the wall into the real app: the rooms map is the navigation model (round 21); production's tabs sit at the top, and a merge would put the map where they are. 
