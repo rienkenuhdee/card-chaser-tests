@@ -125,12 +125,15 @@ for (const [W, H, notch] of [[844, 390, 0], [932, 430, NOTCH]]) {
   let b = await bd();
   R.push([`${tag}the binder opens as two facing pages (it was part way open at ${mid.q.toFixed(2)})`, mid.on && mid.q > 0.05 && mid.q < 1 && b.on && b.q === 1 && b.spread === 2]);
   const P = b.pages;
-  // Full frame (round 22 polish): the paper fills the screen; the pockets and the chrome stay clear of the notch.
-  const pk = await p.evaluate(() => { const G = __w.bnd.L, list = __w.tbList(), v = __w.bnd.vi * 2, r = (i) => __w.tbPocketRect(list[i]); return { l: r(v * 9), r: r(v * 9 + 9 + 2) }; });
-  const cover = (P[0].r - P[0].x + P[1].r - P[1].x) * (P[0].b - P[0].y) / (W * H);
-  R.push([`${tag}the pages face each other across the spine and fill the screen (${Math.round(cover * 100)}% of it)`, P[1].x - P[0].r >= 12 && Math.abs(P[0].y - P[1].y) < 1 && cover >= 0.9 && P[0].x >= 0 && P[1].r <= W + 1 && P[0].y >= 0 && P[0].b <= H + 1 && pk.l.x >= notch + 8 && pk.r.x + pk.r.w <= W - notch - 8]);
-  const back = await rect(p, "#back"), show = await rect(p, "#bb-show");
-  R.push([`${tag}Back and Show mode sit on the pages' outer edges, clear of the pockets and the notch`, inside(back, W, H, notch) && back.r <= pk.l.x && inside(show, W, H, 0, notch) && show.x >= pk.r.x + pk.r.w]);
+  // Production's proportions (round 22 polish, Ryan: "use the full screen"): one thin bar along the top, and the two
+  // pages under it taking the rest of the height, each pocket a card at the full height of its row, clear of the notch.
+  const pk = await p.evaluate(() => { const list = __w.tbList(), v = __w.bnd.vi * 2, r = (i) => __w.tbPocketRect(list[i]); return { l: r(v * 9), r: r(v * 9 + 9 + 2), all: list.slice(v * 9, v * 9 + 18).map((c) => __w.tbPocketRect(c)) }; });
+  const back = await rect(p, "#back"), show = await rect(p, "#bb-show"), bar = Math.max(back.b, show.b), small = Math.min(...pk.all.map((r) => r.h));
+  R.push([`${tag}the pages face each other across the spine under a thin bar (${Math.round(bar)}px) and take the height under it (${Math.round((P[0].b - P[0].y) / H * 100)}% of it)`, P[1].x - P[0].r >= 12 && Math.abs(P[0].y - P[1].y) < 1 && bar <= 48 && P[0].y >= bar && (P[0].b - P[0].y) / H >= 0.85 && P[0].x >= notch && P[1].r <= W - notch + 1 && P[0].b <= H + 1 && pk.l.x >= notch + 8 && pk.r.x + pk.r.w <= W - notch - 8]);
+  R.push([`${tag}every pocket is a card at least 26% of the screen's height (${Math.round(small)}px, ${(small / H * 100).toFixed(1)}%), at 63:88`, pk.all.length === 18 && small / H >= 0.26 && pk.all.every((r) => Math.abs(r.w / r.h - 63 / 88) < 0.02)]);
+  R.push([`${tag}Back and Show mode sit in the bar, clear of the pages and the notch`, inside(back, W, H, notch) && inside(show, W, H, 0, notch) && back.r <= show.x]);
+  const said = await p.evaluate(() => { const v = __w.bnd.vi * 2; return [v, v + 1].flatMap((i) => __w.bnd.labels.get(i) || []); });
+  R.push([`${tag}who wants each card and its price sit on the card, none cut short (${said.slice(0, 3).join(" | ")})`, said.length >= 36 && said.every((t) => t && !t.includes("…") && !t.includes(".."))]);
   // A turn under the thumb: hold a drag from the right page's outer edge to the spine, and the leaf is half over.
   const y = (P[0].y + P[0].b) / 2, x0 = P[1].r - 20, spine = (P[0].r + P[1].x) / 2;
   await p.evaluate(async (a) => {
@@ -149,12 +152,15 @@ for (const [W, H, notch] of [[844, 390, 0], [932, 430, NOTCH]]) {
   R.push([`${tag}letting go past half way turns the spread`, b.vi === 1 && b.turn === 0]);
   await t.drag(P[0].x + 40, y, y, 110, 260); await wait(800);
   R.push([`${tag}a quick flick the other way turns it back`, (await bd()).vi === 0]);
+  await t.tap(P[1].r + 22, y); await wait(800); const fw = (await bd()).vi;
+  await t.tap(P[0].x - 22, y); await wait(800);
+  R.push([`${tag}the arrows beside the spread turn it forward and back`, fw === 1 && (await bd()).vi === 0]);
   // Show mode: the same spread, full screen, dark.
   await p.click("#bb-show"); await wait(900);
   const sh = await bd();
   R.push([`${tag}Show mode is the same spread, full screen`, sh.show && sh.spread === 2 && Math.abs(sh.pages[0].x - P[0].x) < 1 && Math.abs(sh.pages[0].y - P[0].y) < 1 && (await p.evaluate(() => getComputedStyle(document.querySelector(".top")).opacity === "0"))]);
-  const done = await rect(p, "#sb-done"), last = await p.evaluate(() => { const list = __w.tbList(), c = list[Math.min(list.length - 1, __w.bnd.vi * 18 + 9 + 2)]; return __w.tbPocketRect(c); });
-  R.push([`${tag}its Done sits on the right page's outer edge, clear of the pockets`, inside(done, W, H, 0, notch) && done.x >= last.x + last.w - 1]);
+  const done = await rect(p, "#sb-done"), price = await rect(p, "#sb-price");
+  R.push([`${tag}its own thin bar holds the prices switch and Done, above the pages`, inside(done, W, H, 0, notch) && done.b <= 48 && done.b <= sh.pages[0].y && Boolean(price) && price.w > 0 && price.r <= done.x]);
   await p.click("#sb-done"); await wait(700);
   // Turning the phone with the binder open: one page at a time in portrait, two facing on its side, the same page.
   await t.drag(P[1].r - 30, y, y, 110, -260); await wait(800); // to the second spread: pages 3 and 4
@@ -162,6 +168,9 @@ for (const [W, H, notch] of [[844, 390, 0], [932, 430, NOTCH]]) {
   let r1 = await bd();
   const pc = (r1.pages[0].r - r1.pages[0].x) * (r1.pages[0].b - r1.pages[0].y) / (W * H);
   R.push([`${tag}turning to portrait leaves the binder open at the same page, one at a time, full frame (${Math.round(pc * 100)}%)`, r1.on && r1.spread === 1 && r1.vi === 2 && r1.pages[0].x >= 0 && r1.pages[0].r <= H + 1 && pc >= 0.9]);
+  const up = await p.evaluate(() => { const list = __w.tbList(), v = __w.bnd.vi; return { r: list.slice(v * 9, v * 9 + 9).map((c) => __w.tbPocketRect(c)), said: __w.bnd.labels.get(v) || [] }; });
+  const upW = Math.min(...up.r.map((r) => r.w));
+  R.push([`${tag}upright, every pocket is at least 30% of the screen's width (${Math.round(upW)}px, ${(upW / H * 100).toFixed(1)}%), its words on the card in full`, up.r.length === 9 && upW / H >= 0.3 && up.said.length >= 18 && up.said.every((t) => !t.includes("…") && !t.includes(".."))]);
   await turn(p, W, H);
   r1 = await bd();
   R.push([`${tag}and on its side again, the same spread`, r1.on && r1.spread === 2 && r1.vi === 1]);

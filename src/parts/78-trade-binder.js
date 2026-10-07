@@ -1,14 +1,14 @@
 // ---------- the trade binder (round 17) ----------
 // Real collectors keep a trade binder: nine-pocket pages of the cards they'll part with, flipped through across a table
 // at a show. Here it holds exactly the cards you have a spare copy of (sparesOf > 0, from the copies model in
-// 77-copies.js), most wanted first, each pocket naming who chases it under the card.
+// 77-copies.js), most wanted first, each card naming who chases it along its foot.
 //   The cover sits at the top of the Trade room (94-trade-room.js, round 21), with its first page in small. Tap it and
 //   that page grows into the binder: a level inside the room, the way a set is a level inside the wall. Swipe
-//   sideways to turn the page (it folds about the rings under your thumb, then snaps by speed first, distance second).
-//   Tap a pocket and the trade table opens with whoever wants it, the card already on it. Back, a pinch or Escape
+//   sideways to turn the page (it folds about the rings under your thumb, then snaps by speed first, distance second),
+//   or tap the arrows beside a spread. Tap a pocket and the trade table opens with whoever wants it, the card already on it. Back, a pinch or Escape
 //   returns to the Trade room.
-//   Show mode turns the binder into a dark, full-screen spread to hand across a table: no chrome, prices shown or
-//   hidden, swipe to turn. The other person taps what they'd like. Taking the phone back, Done asks who it was: a trader
+//   Show mode turns the binder into the same spread, dark, to hand across a table: its own thin bar (what's picked,
+//   prices shown or hidden, Done) and nothing else, swipe to turn. The other person taps what they'd like. Taking the phone back, Done asks who it was: a trader
 //   opens the table with the picks on your side; someone new takes one copy of each (Undo puts them back).
 // While the binder is up it owns every touch on the canvas (Touch Events for fingers, pointer events for the mouse),
 // like the table. Pages are painted once into the corner of the wall's canvas, copied offscreen and kept, keyed on the
@@ -27,43 +27,40 @@ const tbFresh = () => { tbMemo.key = ""; return tbList(); }; // after a change i
 const tbPageCount = () => Math.max(1, Math.ceil(tbList().length / 9));
 const plural1 = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
-// ----- geometry: a page is three by three pockets, each a card with a line of small type under it -----
-// On a wide screen, and on any phone on its side (round 22), the binder lies open as two facing pages with the rings
-// down the spine between them, the way a real one does; otherwise one page at a time. Full frame (round 22 polish,
-// Ryan): the paper fills the screen edge to edge and top to bottom (inside the notch), and the chrome is tucked into
-// the page's own edges. In portrait, Back and Show mode sit on the page's top edge and the dots on its bottom edge,
-// with the pockets spread over the rest like a real page; on its side the pockets hug the spine and each page's outer
-// edge holds what the margins used to (Back and the title at the left, Show mode and the page count at the right).
+// ----- geometry: a page is three by three pockets, each a card at 63:88 with what's said about it on the card -----
+// Production's proportions (round 22 polish, Ryan: "use the full screen"): one thin bar along the top (Back, the title
+// and its count, where you are, Show mode), and the book takes all the height under it. On a wide screen, and on any
+// phone on its side, it lies open as two facing pages with the rings down a narrow spine between them and an arrow at
+// either side: each page's three rows share its height, every pocket a card at full row height, the grid centred on
+// its page, the page number in its outer bottom corner. Upright, one page at a time: the paper across the whole width
+// under the bar, the pockets as wide as it allows, the dots and the page number along its bottom edge. Who wants a
+// card and its price sit on the card itself, so no line under the pockets takes their height.
 // The map's Trade card draws the classic page (full: false), pockets packed.
 const SHOW_BG = "#0B0C0F", SHOW_PAGE = "#15171C", SHOW_SLEEVE = "#22262E", SHOW_LINE = "#2C313B", SHOW_MUTED = "#9AA0AD", SHOW_PICK = "#3BD597";
-function safeInsets() { return SAFE; }
+const TB_BAR = 44, TB_ARROW = 44, TB_SLEEVE = 3; // the bar's height, an arrow's column, the sleeve around a card
 function tbGeom(show, only = 0, full = true) {
-  const S = SAFE, flat = landPhone(), spread = only || (flat || (vw >= 820 && vh >= 600) ? 2 : 1), sp = spread === 2 ? 18 : 0; // sp: the spine between the pages
-  const lh = flat ? 18 : show ? 24 : 22, g = flat ? 6 : show ? 6 : 8, ring = spread === 2 ? 14 : show ? 8 : 20, edge = flat ? 9 : show ? 8 : 10, pad = 8;
+  const S = SAFE, flat = landPhone(), spread = only || (flat || (vw >= 820 && vh >= 600) ? 2 : 1);
   if (!full) { // the classic page, packed: just its proportions matter (the map's card)
-    const cw = 100, ch = Math.round(cw * TH / TW), pw = ring + cw * 3 + g * 2 + edge, ph = pad * 2 + (ch + lh) * 3 + g * 2;
-    return { show, flat, spread, sp, cw, ch, lh, g, gx: g, gy: g, ring, edge, pad, pw, ph, bx: ring, bxL: edge, by: pad, side: 0, x0: 0, y0: 0, top: 0, pages: [{ x: 0, y: 0 }] };
+    const ring = 20, edge = 10, pad = 8, g = 8, lh = 22, cw = 100, ch = Math.round(cw * TH / TW), pw = ring + cw * 3 + g * 2 + edge, ph = pad * 2 + (ch + lh) * 3 + g * 2;
+    return { show, flat, spread, sp: 0, cw, ch, lh, g, gx: g, gy: g, ring, edge, pad, pw, ph, bx: ring, bxL: edge, by: pad, x0: 0, y0: 0, pages: [{ x: 0, y: 0 }] };
   }
-  // The paper: the whole screen, under the notch too; what's on it stays clear of the notch and the home bar. T and B:
-  // the bands at its top and bottom edges for the chrome (the safe area's top and bottom included).
-  const pw = Math.floor((vw - sp) / spread), ph = Math.floor(vh), inX = Math.max(S.left, S.right);
-  const T = S.top + (flat ? 10 : show ? 64 : 66), B = S.bottom + (flat ? 26 : show ? 104 : 34);
-  const side = flat ? 120 : 0; // on its side: each page's outer edge keeps room for the chrome
-  const contentW = pw - ring - edge - (flat ? inX : S.left + S.right), availH = ph - T - B;
-  const byW = (contentW - side - g * 2) / 3, byH = ((availH - g * 2) / 3 - lh) * TW / TH;
-  const cw = Math.floor(clamp(Math.min(byW, byH), 36, show ? 230 : 172)), ch = Math.round(cw * TH / TW);
-  const blockW = cw * 3 + g * 2, blockH = (ch + lh) * 3 + g * 2, exW = Math.max(0, contentW - side - blockW), exH = Math.max(0, availH - blockH);
-  let gx = g, gy = g, bx, bxL, by;
-  if (flat) { bx = ring + 4; bxL = pw - ring - 4 - blockW; by = T + exH / 2; } // hugging the spine; the outer edge is the chrome's
-  else { // spread over the page like a real one: a share of what's spare between the rows, the rest around them
-    const ax = Math.min(exW / 4, cw * 0.3), ay = Math.min(exH / 4, ch * 0.3);
-    gx = g + ax; gy = g + ay;
-    const bw = blockW + ax * 2, bh = blockH + ay * 2;
-    bx = S.left + ring + (contentW - bw) / 2; bxL = S.left + edge + (contentW - bw) / 2; by = T + (availH - bh) / 2;
-  }
-  bx = Math.round(bx); bxL = Math.round(bxL); by = Math.round(by);
-  const sideW = flat ? Math.floor(contentW - blockW - 4) : 0; // the outer edge's width inside the notch, for the chrome that stands in it
-  return { show, flat, spread, sp, cw, ch, lh, g, gx, gy, ring, edge, pad, pw, ph, T, B, bx, bxL, by, side: sideW, x0: 0, y0: 0, top: 0, pages: Array.from({ length: spread }, (_, j) => ({ x: j * (pw + sp), y: 0 })) };
+  const two = spread === 2, g = 6, sl = TB_SLEEVE, sp = two ? 14 : 0, ring = 12, edge = two ? 12 : 4, pad = 8;
+  const y0 = Math.round(S.top + TB_BAR + 2); // the book starts under the bar
+  let x0, pw, ph, B;
+  if (two) { // between the arrows, clear of the notch at either side and of the home bar
+    const l = Math.max(10, S.left), r = Math.max(10, S.right);
+    x0 = l + TB_ARROW; pw = Math.floor((vw - l - r - TB_ARROW * 2 - sp) / 2); ph = Math.floor(vh - Math.max(6, S.bottom) - y0); B = 0;
+  } else { x0 = 0; pw = Math.floor(vw); ph = Math.floor(vh - y0); B = S.bottom + 30; } // the paper runs to the bottom edge; the dots stand clear of the home bar
+  const innerW = pw - ring - edge - sl * 2, availH = ph - pad * 2 - B;
+  const byW = (innerW - g * 2) / 3, byH = ((availH - g * 2) / 3) * TW / TH;
+  // the card: from the row's height when that's what binds (the usual case on its side), else from the width
+  const c0 = clamp(Math.min(byW, byH), 36, 260), byRow = byH <= byW && byH <= 260;
+  const ch = byRow ? Math.floor((availH - g * 2) / 3) : Math.floor(c0 * TH / TW), cw = byRow ? Math.floor(ch * TW / TH * 2) / 2 : Math.floor(c0);
+  const blockW = cw * 3 + g * 2, exH = Math.max(0, availH - (ch * 3 + g * 2));
+  const ay = Math.min(exH / 4, ch * (two ? 0.15 : 0.2)), gy = g + ay; // height to spare (upright, or a tablet): a share between the rows
+  const ox = Math.round((innerW - blockW) / 2);
+  const bx = ring + sl + ox, bxL = edge + sl + ox, by = Math.round(pad + (availH - (ch * 3 + gy * 2)) / 2);
+  return { show, flat, spread, sp, cw, ch, lh: 0, g, gx: g, gy, ring, edge, pad, pw, ph, B, bx, bxL, by, x0, y0, arrows: two ? TB_ARROW : 0, dotY: ph - S.bottom - 15, pages: Array.from({ length: spread }, (_, j) => ({ x: x0 + j * (pw + sp), y: y0 })) };
 }
 const tbSpreadRect = (G) => ({ x: G.x0, y: G.y0, w: G.pw * G.spread + G.sp, h: G.ph });
 // On a two-page spread the rings sit at the spine: a left page has them on its right.
@@ -72,71 +69,122 @@ function tbPocket(G, i, k) {
   const ox = tbLeft(G, i) ? G.bxL : G.bx;
   return { x: ox + (k % 3) * (G.cw + G.gx), y: G.by + Math.floor(k / 3) * (G.ch + G.lh + G.gy), w: G.cw, h: G.ch };
 }
-const bnd = { on: false, q: 0, anim: null, closing: false, vi: 0, turn: 0, tAnim: null, show: false, sq: 0, sa: null, prices: true, picks: new Set(), L: null, pinch: null, drag: null, rest: false, swallow: false, press: null, cache: new Map() };
+const bnd = { on: false, q: 0, anim: null, closing: false, vi: 0, turn: 0, tAnim: null, show: false, sq: 0, sa: null, prices: true, picks: new Set(), L: null, pinch: null, drag: null, rest: false, swallow: false, press: null, cache: new Map(), labels: new Map() };
 const tbViews = () => Math.max(1, Math.ceil(tbPageCount() / (bnd.L?.spread || 1)));
 const tbCan = (d) => bnd.vi + d >= 0 && bnd.vi + d < tbViews();
-// The margin beside the spread on a phone on its side, for the bars that stand in it.
-function tbSides(G) { document.body.style.setProperty("--tb-side", `${Math.max(90, Math.floor(G.side - 16))}px`); } // a page's outer edge, inside the paper
 
 // ----- painting a page (once, into the corner of the wall's canvas, then copied offscreen and kept) -----
+// A pocket's picture is the large scan once the pocket is wider on screen than the small scan (an iPhone upright), else
+// the small one. A page painted with a picture keeps it when the picture cache later lets it go (tbArtKept), so leafing
+// through a binder with more pictures than the cache holds never sets the pages repainting each other's out.
+const TB_BIG = 300; // device px
+const tbArtKept = new Map();
+const tbArtId = (c, w) => `${c.id}|${w * dpr > TB_BIG ? 1 : 0}`;
+function tbArt(c, w) { // which picture the pocket would show, settled: "0" the first choice, "1" the small one meanwhile, "-" the face
+  const urls = artUrls(c, w * dpr > TB_BIG), t = performance.now();
+  for (let i = 0; i < urls.length; i++) { const e = ART.map.get(urls[i]); if (e) e.want = t; if (e?.state === "ready" && t - e.t >= 200) return String(i); }
+  const kept = tbArtKept.get(tbArtId(c, w)); if (kept) return kept;
+  if (!ART.map.has(urls[0])) artWant(urls[0], !state.trans && !fly);
+  return "-";
+}
+function tbPic(c, w) { // the settled picture to paint (asking for it, and for the small scan meanwhile), or null for the face
+  const [u0, u1] = artUrls(c, w * dpr > TB_BIG), ask = !state.trans && !fly, was = ART.still;
+  ART.still = true; const e = artWant(u0, ask) || (u1 ? artWant(u1, ask) : null); ART.still = was;
+  if (e) tbArtKept.set(tbArtId(c, w), e.url === u0 ? "0" : "1"); else tbArtKept.delete(tbArtId(c, w));
+  return e;
+}
 function tbKey(i, G) {
   const items = tbList().slice(i * 9, i * 9 + 9);
-  return `${copiesKey}|${G.show}|${G.pw}|${G.ph}|${G.cw}|${G.lh}|${G.spread}|${G.bx}|${G.bxL}|${G.by}|${G.gx}|${G.gy}|${dpr}|${theme.bg}|${theme["panel-solid"]}|${theme.gold}|${bnd.prices}|${i}|${items.map((c) => `${c.id}.${sparesOf(c)}.${c.away ? 1 : 0}.${artMark(c, Math.min(G.cw, 108))}.${G.show && bnd.picks.has(c.id) ? 1 : 0}`).join(",")}`;
+  return `${copiesKey}|${G.show}|${G.pw}|${G.ph}|${G.cw}|${G.spread}|${G.bx}|${G.bxL}|${G.by}|${G.gy}|${G.dotY}|${dpr}|${theme.bg}|${theme["panel-solid"]}|${theme.gold}|${bnd.prices}|${i}|${items.map((c) => `${c.id}.${sparesOf(c)}.${c.away ? 1 : 0}.${tbArt(c, G.cw)}.${G.show && bnd.picks.has(c.id) ? 1 : 0}`).join(",")}`;
 }
 function tbPaint(i, G) {
-  const items = tbList().slice(i * 9, i * 9 + 9), show = G.show, small = G.lh <= 18;
+  const items = tbList().slice(i * 9, i * 9 + 9), show = G.show, two = G.spread === 2, sl = TB_SLEEVE, said = [];
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
   ctx.clearRect(0, 0, G.pw + 2, G.ph + 2);
   const fill = show ? SHOW_PAGE : theme["panel-solid"], line = show ? SHOW_LINE : theme["slot-line"], sleeve = show ? SHOW_SLEEVE : theme.slot;
-  const muted = show ? SHOW_MUTED : theme.muted;
-  rr(0.5, 0.5, G.pw - 1, G.ph - 1, 10); ctx.fillStyle = fill; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = line; ctx.stroke();
-  const left = tbLeft(G, i), rx = left ? G.pw - G.ring / 2 : G.ring / 2;
-  if (!show || G.spread === 2) for (const f of [0.17, 0.5, 0.83]) { ctx.beginPath(); ctx.arc(rx, G.ph * f, G.spread === 2 ? 3 : 3.6, 0, Math.PI * 2); ctx.fillStyle = show ? SHOW_BG : theme.bg; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = line; ctx.stroke(); } // the holes the rings go through
+  const muted = show ? SHOW_MUTED : theme.muted, left = tbLeft(G, i);
+  rr(0.5, 0.5, G.pw - 1, G.ph - 1, two ? (left ? [10, 4, 4, 10] : [4, 10, 10, 4]) : 10); ctx.fillStyle = fill; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = line; ctx.stroke();
+  const rx = left ? G.pw - G.ring / 2 : G.ring / 2;
+  for (const f of [0.17, 0.5, 0.83]) { ctx.beginPath(); ctx.arc(rx, G.ph * f, two ? 3 : 3.4, 0, Math.PI * 2); ctx.fillStyle = show ? SHOW_BG : theme.bg; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = line; ctx.stroke(); } // the holes the rings go through
   ctx.textBaseline = "alphabetic";
   for (let k = 0; k < 9; k++) {
     const r = tbPocket(G, i, k), c = items[k];
-    rr(r.x - 3, r.y - 3, r.w + 6, r.h + 6, 6); ctx.fillStyle = sleeve; ctx.fill(); // the sleeve
-    ctx.fillStyle = line; ctx.fillRect(r.x - 1, r.y - 3, r.w + 2, 1); // its opening along the top
+    rr(r.x - sl, r.y - sl, r.w + sl * 2, r.h + sl * 2, 6); ctx.fillStyle = sleeve; ctx.fill(); // the sleeve
+    ctx.fillStyle = line; ctx.fillRect(r.x - 1, r.y - sl, r.w + 2, 1); // its opening along the top
     if (!c) continue;
     if (c.away) { // out on the trade table: the pocket keeps its name
       ctx.setLineDash([4, 4]); rr(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1, r.w * 0.045); ctx.lineWidth = 1; ctx.strokeStyle = line; ctx.stroke(); ctx.setLineDash([]);
-      ctx.textAlign = "center"; ctx.fillStyle = muted; font(600, 11); ctx.fillText(fitText("On the table", r.w - 6), r.x + r.w / 2, r.y + r.h / 2 + 4);
-    } else { // the card, drawn at a size whose face carries no price (the price is under it, or hidden)
+      ctx.textAlign = "center"; ctx.fillStyle = muted; font(600, 11); ctx.fillText("On the table", r.x + r.w / 2, r.y + r.h / 2 + 4);
+      continue;
+    }
+    const pic = tbPic(c, r.w);
+    if (pic) { faceShadow(r.x, r.y, r.w, r.h); ctx.drawImage(pic.bmp, r.x, r.y, r.w, r.h); }
+    else { // the drawn face, at a size that prints no price of its own (the pill has it)
       const W0 = Math.min(r.w, 108), s = r.w / W0;
       ctx.setTransform(dpr * s, 0, 0, dpr * s, dpr * r.x, dpr * r.y);
-      foilOff = ART.still = true; cardFace(c, 0, 0, W0, W0 * TH / TW, 0, false); foilOff = ART.still = false; // a settled picture, or the face (the key above repaints it)
+      foilOff = true; drawnFace(c, 0, 0, W0, W0 * TH / TW, 0, false); foilOff = false;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1;
-      if (!show && sparesOf(c) >= 2) { // more than one spare in the pocket (in words: on the wall "×3" is how many you have)
-        font(800, small ? 10 : 11); const t = `${sparesOf(c)} spares`, tw = textW(t) + (small ? 10 : 12);
-        rr(r.x + 4, r.y + 4, tw, small ? 16 : 18, small ? 8 : 9); ctx.fillStyle = theme.gold; ctx.fill();
-        ctx.textAlign = "center"; ctx.fillStyle = theme.dark ? "#171920" : "#fff"; ctx.fillText(t, r.x + 4 + tw / 2, r.y + (small ? 15.5 : 17));
-      }
     }
     if (show && bnd.picks.has(c.id)) { // picked across the table
       ctx.lineWidth = 3.5; ctx.strokeStyle = SHOW_PICK; rr(r.x - 2.5, r.y - 2.5, r.w + 5, r.h + 5, r.w * 0.045 + 2.5); ctx.stroke();
-      const R = small ? 11 : 13, cx = r.x + r.w - R - 5, cy = r.y + R + 5;
+      const R = clamp(r.w * 0.11, 9, 14), cx = r.x + r.w - R - 4, cy = r.y + R + 4;
       ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fillStyle = SHOW_PICK; ctx.fill();
-      ctx.lineWidth = 2.6; ctx.strokeStyle = "#0B0C0F"; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.beginPath();
+      ctx.lineWidth = Math.max(2, R * 0.2); ctx.strokeStyle = "#0B0C0F"; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.beginPath();
       ctx.moveTo(cx - R * 0.45, cy + R * 0.02); ctx.lineTo(cx - R * 0.12, cy + R * 0.36); ctx.lineTo(cx + R * 0.48, cy - R * 0.36); ctx.stroke(); ctx.lineCap = "butt"; ctx.lineJoin = "miter";
     }
-    // under the card, yours: who chases it, and the price. Across the table: its name, and the price if shown.
-    const ly = r.y + r.h + (small ? 13.5 : 17), price = show && !bnd.prices ? "" : short(c.price);
-    ctx.textAlign = "right"; font(600, small ? 11 : show ? 12.5 : 11.5); ctx.fillStyle = show ? "rgb(255 255 255 / .72)" : muted;
-    const pw = price ? textW(price) + 6 : 0;
-    if (price) ctx.fillText(price, r.x + r.w, ly);
-    ctx.textAlign = "left";
-    if (show) { ctx.fillStyle = "#FFFFFF"; font(700, small ? 12 : 13.5, true); if (r.w >= 100) ctx.fillText(fitText(c.name, r.w - pw), r.x, ly); } // narrow pockets (two pages side by side) leave the name to the card itself
-    else {
-      const who = wantedBy(c);
-      if (who.length) { // who chases it: every name when they fit, else the first and how many more
-        ctx.fillStyle = theme.gold; font(700, small ? 11.5 : 12.5, true);
-        const all = who.map((t) => t.name).join(", "), more = `${who[0].name} +${who.length - 1}`, room = r.w - pw;
-        ctx.fillText(textW(all) <= room ? all : who.length > 1 && textW(more) <= room ? more : fitText(who[0].name, room), r.x, ly);
-      }
-      else { ctx.fillStyle = muted; font(500, small ? 10.5 : 11.5); ctx.fillText(fitText("No takers yet", r.w - pw), r.x, ly); }
-    }
+    said.push(...tbOnCard(c, r, pic, show));
   }
-  if (G.spread === 1 && !show) { ctx.textAlign = "center"; ctx.fillStyle = muted; font(600, 10); ctx.fillText(String(i + 1), G.ring / 2, G.ph - (G.B ? G.B / 2 - 4 : 8)); } // the page number, by the rings (a spread has its folios under the pages)
+  // the page number, in the outer bottom corner
+  ctx.fillStyle = muted; font(600, 11);
+  if (two) { ctx.textAlign = left ? "left" : "right"; ctx.fillText(String(i + 1), left ? 12 : G.pw - 12, G.ph - 6); }
+  else { ctx.textAlign = "right"; ctx.fillText(String(i + 1), G.pw - 14, G.dotY + 4); }
+  bnd.labels.set(i, said);
+}
+// What's said about a pocket, on the card itself: who wants it along the card's foot (across the table, the price
+// there instead), the price in a pill at its top corner, and the print and how many spares just over the foot, clear
+// of the card's name. Never cut short: a list of names too long becomes "Theo +1", the type steps down a little before
+// that gives way to the first name alone. On the drawn face the foot sits just over its label strip, so its name shows.
+// Returns the words, for the tests.
+function tbOnCard(c, r, pic, show) {
+  const m = Math.max(2.5, r.w * 0.035), fs = clamp(r.w * 0.125, 9.5, 13), bh = Math.round(fs * 1.6), room = r.w - m * 2 - 6;
+  const footY = pic ? r.y + r.h - m - bh : r.y + r.h * 0.76 - 3 - bh, said = [];
+  const price = show && !bnd.prices ? "" : short(c.price);
+  let foot = price, f = fs, ink = "#FFFFFF";
+  if (!show) {
+    const who = wantedBy(c), names = who.map((t) => t.name);
+    const tries = who.length ? [names.join(", "), ...(who.length > 1 ? [`${names[0]} +${who.length - 1}`] : []), names[0]] : ["No takers yet", "No takers"];
+    foot = null;
+    for (const t of tries) { for (let z = fs; z >= Math.max(8, fs - 1.5); z -= 0.5) { font(700, z, true); if (textW(t) <= room) { foot = t; f = z; break; } } if (foot) break; }
+    if (!foot) { foot = tries[tries.length - 1]; f = 8; }
+    ink = who.length ? (theme.dark ? theme.gold : shade(theme.gold, -0.22)) : theme.muted;
+  }
+  if (foot) { // the foot
+    rr(r.x + m, footY, r.w - m * 2, bh, Math.min(5, bh / 2)); ctx.fillStyle = show ? "rgb(11 12 15 / .82)" : theme.dark ? "rgb(22 26 36 / .92)" : "rgb(255 255 255 / .94)"; ctx.fill();
+    font(700, f, !show); ctx.textAlign = "center"; ctx.fillStyle = ink; ctx.fillText(foot, r.x + r.w / 2, footY + bh / 2 + f * 0.36);
+    said.push(foot);
+  }
+  const ph = Math.round(fs * 1.4), pf = fs * 0.88;
+  if (price && !show) { // the price, in a pill at the top corner
+    font(700, pf); const tw = textW(price) + 9, x = r.x + r.w - m - tw;
+    rr(x, r.y + m, tw, ph, ph / 2); ctx.fillStyle = "rgb(16 18 24 / .8)"; ctx.fill();
+    ctx.textAlign = "center"; ctx.fillStyle = "#FFFFFF"; ctx.fillText(price, x + tw / 2, r.y + m + ph / 2 + pf * 0.36);
+    said.push(price);
+  }
+  if (show || !foot) return said;
+  let spareX = r.x + r.w - m;
+  if (sparesOf(c) >= 2) { // more than one spare in the pocket (in words: on the wall "×3" is how many you have)
+    const t = `${sparesOf(c)} spares`; font(800, pf); const tw = textW(t) + 9; spareX -= tw;
+    rr(spareX, footY - 3 - ph, tw, ph, ph / 2); ctx.fillStyle = theme.gold; ctx.fill();
+    ctx.textAlign = "center"; ctx.fillStyle = theme.dark ? "#171920" : "#FFFFFF"; ctx.fillText(t, spareX + tw / 2, footY - 3 - ph / 2 + pf * 0.36);
+    said.push(t);
+  }
+  if (pic && c.tag) { // which print (the drawn face prints it in its strip)
+    font(700, pf); const tw = textW(c.tag) + 9, x = r.x + m, y = footY - 3 - ph - (x + tw > spareX - 3 ? ph + 3 : 0);
+    rr(x, y, tw, ph, ph / 2); ctx.fillStyle = "rgb(16 18 24 / .8)"; ctx.fill();
+    ctx.textAlign = "center"; ctx.fillStyle = "#FFFFFF"; ctx.fillText(c.tag, x + tw / 2, y + ph / 2 + pf * 0.36);
+    said.push(c.tag);
+  }
+  return said;
 }
 // The binder's front cover: green board (the Trade room's colour) with a darker spine at its ring side, the title in
 // gold. The same object as the closed binder on the Trade room's page, which opens into the pages.
@@ -204,45 +252,31 @@ function tbDraw(now) {
   for (const i of need) tbEnsure(i, G);
   if (bnd.q < 1) tbEnsure(-1, G);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1;
-  const q = bnd.q, sq = bnd.sq, bg = sq > 0.001 ? mix(theme.bg, SHOW_BG, sq) : theme.bg;
-  ctx.fillStyle = theme.bg; ctx.fillRect(0, 0, vw, vh);
+  const q = bnd.q, sq = bnd.sq;
+  ctx.fillStyle = sq > 0.001 ? mix(theme.bg, SHOW_BG, sq) : theme.bg; ctx.fillRect(0, 0, vw, vh);
   // Opening or closing: the Trade room's page fades as the binder comes off it.
   pgTrade.style.opacity = q >= 1 ? "0" : String(clamp(1 - q / (OPEN_AT * 0.45), 0, 1)); // quickly: the page is over the canvas
-  if (sq > 0.001) { ctx.fillStyle = bg; ctx.fillRect(0, 0, vw, vh); }
   let S = tbSpreadRect(G);
   if (bnd.sa) S = lerpRect(bnd.sa.from, S, ease(bnd.sa.k));
   const ha = clamp((q - 0.72) / 0.28, 0, 1);
+  if (q >= 1 && G.spread === 2) { ctx.fillStyle = `rgb(0 0 0 / ${(0.07 * (1 - sq * 0.6)).toFixed(3)})`; rr(S.x + 1, S.y + 2, S.w - 2, S.h, 10); ctx.fill(); rr(S.x + 3, S.y + 4, S.w - 6, S.h - 1, 10); ctx.fill(); } // the book's weight on the table
   if (q < 1) tbOpening(G, S, q); else tbPages(G, S);
-  tbHeader(G, ha, sq); // on the paper's edge, over it
   if (bnd.press && !bnd.turn && q >= 1) { const r = tbPocketRect(bnd.press); if (r) { ctx.lineWidth = 2; ctx.strokeStyle = G.show ? "#fff" : theme.ink; rr(r.x - 3, r.y - 3, r.w + 6, r.h + 6, 6); ctx.stroke(); } }
+  tbArrows(G, S, ha);
   tbDots(G, S, ha);
   ctx.globalAlpha = 1;
 }
-function tbHeader(G, a, sq) {
-  if (a <= 0.01) return;
-  const n = tbList().length, pages = tbPageCount(), v = bnd.vi + 1, x = SAFE.left + 16;
-  const which = G.spread === 2 ? (v * 2 > pages ? `Page ${v * 2 - 1}` : `Pages ${v * 2 - 1} and ${v * 2}`) : `Page ${v}`;
-  ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-  if (G.flat) { // on the left page's outer edge, under Back
-    const mx = SAFE.left + 14, mw = G.side - 20; if (mw < 70) return;
-    let y = SAFE.top + (sq > 0.5 ? 34 : 92);
-    ctx.globalAlpha = a; ctx.fillStyle = sq > 0.5 ? "#FFFFFF" : theme.ink; font(800, 19, true);
-    for (const l of wrapLines("Trade binder", mw, 2)) { ctx.fillText(l, mx, y); y += 21; }
-    ctx.fillStyle = sq > 0.5 ? SHOW_MUTED : theme.muted; font(500, 12.5); y += 2;
-    const text = sq > 0.5 ? `${which} of ${pages}` : n ? `${plural1(n, "card")} · ${tbMemo.wanted ? `${tbMemo.wanted} wanted` : "no takers yet"}` : "Empty for now. On a card you have, + adds a spare.";
-    for (const l of wrapLines(text, mw, 5)) { ctx.fillText(l, mx, y); y += 16; }
-    ctx.globalAlpha = 1; return;
+// The arrows either side of a two-page spread (production's): tap one to turn that way; faint at the ends.
+function tbArrows(G, S, a) {
+  if (!G.arrows || a <= 0.01) return;
+  const cy = S.y + S.h / 2, s = 9;
+  ctx.lineWidth = 2.6; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = G.show ? "#FFFFFF" : theme.ink;
+  for (const d of [-1, 1]) {
+    const cx = d < 0 ? S.x - G.arrows / 2 : S.x + S.w + G.arrows / 2;
+    ctx.globalAlpha = a * (tbCan(d) ? 0.8 : 0.18);
+    ctx.beginPath(); ctx.moveTo(cx - d * s * 0.5, cy - s); ctx.lineTo(cx + d * s * 0.5, cy); ctx.lineTo(cx - d * s * 0.5, cy + s); ctx.stroke();
   }
-  // Upright, the page's top edge holds Back and Show mode (or, across the table, the prices switch): only Show mode
-  // says where you are, at the left where Back would be.
-  if (sq > 0.001) {
-    ctx.globalAlpha = a * sq;
-    const y = SAFE.top + 30;
-    ctx.fillStyle = "#FFFFFF"; font(800, 19, true); ctx.fillText("Trade binder", x, y);
-    ctx.fillStyle = SHOW_MUTED; font(500, 12.5);
-    ctx.fillText(fitText(`${which} of ${pages}`, vw - x - 150), x, y + 18);
-  }
-  ctx.globalAlpha = 1;
+  ctx.globalAlpha = 1; ctx.lineCap = "butt"; ctx.lineJoin = "miter";
 }
 // A leaf turning over the rings, drawn in slices so it reads as a page lifting toward you, not one shrinking flat:
 // hinge is where it's bound, dir which way it lies from there (1 right, -1 left), f how far it has come up (0 flat,
@@ -338,16 +372,10 @@ function tbOpening(G, S, q) {
   else { const u = (1 - f) * 2; tbLeaf(tbImg(v * 2, G), xl, S.y, pw, ph, -1, u, true); }
 }
 function tbDots(G, S, a) {
-  const views = tbViews(); if (views < 2 || a <= 0.01) return;
-  const k = S.h / G.ph, y = S.y + S.h - (G.show && !G.flat ? G.B - 14 : G.B / 2) * k, on = G.show ? "#FFFFFF" : theme.ink, off = G.show ? "#3A3F4A" : theme["slot-line"], cx = S.x + S.w / 2; // on the page's bottom edge
+  const views = tbViews(); if (views < 2 || a <= 0.01 || G.spread !== 1) return; // a spread: the bar says where you are, the folios which page
+  const k = S.h / G.ph, y = S.y + G.dotY * k, on = G.show ? "#FFFFFF" : theme.ink, off = G.show ? "#3A3F4A" : theme["slot-line"], cx = S.x + S.w / 2; // on the page's bottom edge
   ctx.globalAlpha = a;
   if (views > 24) { ctx.textAlign = "center"; ctx.fillStyle = G.show ? SHOW_MUTED : theme.muted; font(600, 12); ctx.fillText(`${bnd.vi + 1} of ${views}`, cx, y + 4); ctx.globalAlpha = 1; return; }
-  if (G.spread === 2 && !G.show) { // the folios, at each page's outer corner (across the table, the bar has the corners)
-    const pages = tbPageCount(), l = bnd.vi * 2 + 1; ctx.fillStyle = G.show ? SHOW_MUTED : theme.muted; font(600, 11);
-    ctx.textAlign = "left"; ctx.fillText(String(l), S.x + SAFE.left + 16, y + 4);
-    if (l + 1 <= pages) { ctx.textAlign = "right"; ctx.fillText(String(l + 1), S.x + S.w - SAFE.right - 16, y + 4); }
-    ctx.textAlign = "left";
-  }
   const gap = 12, x0 = cx - ((views - 1) * gap) / 2, cur = bnd.vi + clamp(bnd.turn, -1, 1);
   for (let i = 0; i < views; i++) { ctx.beginPath(); ctx.arc(x0 + i * gap, y, 3, 0, Math.PI * 2); ctx.fillStyle = off; ctx.fill(); }
   ctx.beginPath(); ctx.arc(x0 + cur * gap, y, 3.6, 0, Math.PI * 2); ctx.fillStyle = on; ctx.fill();
@@ -389,14 +417,18 @@ function openBinder() {
   if (!tbFresh().length) { tick(3); cancelPress(); toast("Your trade binder is empty. On a card you have, + adds a spare."); return; } // nothing to leaf through
   hideCaption(); cancelPress(); closePop(true); hideHow(); hideWho(); tick(8);
   Object.assign(bnd, { on: true, closing: false, turn: 0, tAnim: null, pinch: null, drag: null, rest: false, swallow: false, press: null, show: false, sq: 0, sa: null, vi: 0, from: tbCoverRect() });
-  tbFresh(); bnd.L = tbGeom(false); tbSides(bnd.L);
+  tbFresh(); bnd.L = tbGeom(false);
   bnd.q = reduced ? 1 : 0; bnd.anim = reduced ? null : { from: 0, to: 1, t0: performance.now(), dur: 860 };
   document.body.classList.add("inbinder"); setChrome(); tbSync(); kick();
+  if (!tbHinted) { tbHinted = true; try { localStorage.setItem("wall-tb-hint", "1"); } catch { /* private mode */ } setTimeout(() => { if (bnd.on && !bnd.show) toast("Most wanted first. Tap a card to trade it."); }, reduced ? 0 : 900); } // the first visit only
 }
+// Whether the binder has said how it works (once, as it first opens: it isn't chrome to carry every visit).
+let tbHinted = false;
+try { tbHinted = localStorage.getItem("wall-tb-hint") === "1"; } catch { /* fresh */ }
 function closeBinder(instant = false) {
   if (!bnd.on || bnd.closing) return;
   hideWho();
-  if (bnd.show) { bnd.show = false; bnd.sq = 0; bnd.sa = null; bnd.L = tbGeom(false); tbSides(bnd.L); document.body.classList.remove("showing"); }
+  if (bnd.show) { bnd.show = false; bnd.sq = 0; bnd.sa = null; bnd.L = tbGeom(false); document.body.classList.remove("showing"); }
   Object.assign(bnd, { closing: true, pinch: null, drag: null, tAnim: null, turn: 0, press: null, from: tbCoverRect() || bnd.from }); // back onto the cover wherever it is now
   if (instant || reduced) { bnd.q = 0; bnd.anim = null; tbEnd(); return; }
   bnd.anim = { from: bnd.q, to: 0, t0: performance.now(), dur: 160 + 600 * bnd.q }; tick(6); kick();
@@ -425,7 +457,7 @@ function tbEnterShow() {
   if (!bnd.on || bnd.show || bnd.q < 1 || !tbList().length) return;
   hideWho(); tick(8);
   const from = tbSpreadRect(bnd.L);
-  bnd.show = true; bnd.L = tbGeom(true); tbSides(bnd.L); bnd.turn = 0; bnd.tAnim = null;
+  bnd.show = true; bnd.L = tbGeom(true); bnd.turn = 0; bnd.tAnim = null;
   bnd.vi = clamp(bnd.vi, 0, tbViews() - 1);
   bnd.sa = reduced ? null : { t0: performance.now(), dur: 380, k: 0, from }; bnd.sq = reduced ? 1 : 0;
   document.body.classList.add("showing"); setChrome(); tbSync(); kick();
@@ -433,7 +465,7 @@ function tbEnterShow() {
 function tbExitShow() {
   if (!bnd.show) return;
   const from = tbSpreadRect(bnd.L);
-  bnd.show = false; bnd.L = tbGeom(false); tbSides(bnd.L); bnd.turn = 0; bnd.tAnim = null;
+  bnd.show = false; bnd.L = tbGeom(false); bnd.turn = 0; bnd.tAnim = null;
   bnd.vi = clamp(bnd.vi, 0, tbViews() - 1);
   bnd.sa = reduced ? null : { t0: performance.now(), dur: 340, k: 0, from }; bnd.sq = reduced ? 0 : 1;
   document.body.classList.remove("showing"); setChrome(); tbSync(); tick(6); kick();
@@ -508,25 +540,26 @@ whoEl.addEventListener("click", (e) => { const b = e.target.closest("[data-w]");
 whoEl.addEventListener("keydown", (e) => { if (e.key === "Escape") hideWho(); });
 addEventListener("pointerdown", (e) => { if (!whoEl.hidden && !e.target.closest("#tb-who")) { hideWho(); whoClosed = performance.now(); } }, true);
 
-// ----- the bars: the binder's along the bottom, Show mode's, and the prices switch -----
+// ----- the bars: one thin bar along the top (production's), the binder's and Show mode's -----
+// The binder's: Back (the strip's, at its left end), the title and its count, where you are in the middle, Show mode at
+// the right. Show mode's: what's picked, where you are, the prices switch and Done.
 const bbar = document.createElement("div");
-bbar.className = "bbar glass"; bbar.id = "bbar"; bbar.setAttribute("role", "group"); bbar.setAttribute("aria-label", "Trade binder");
-bbar.innerHTML = `<div class="mtext" aria-live="polite"><b id="bb-head"></b><span id="bb-sub"></span></div><button type="button" class="mbtn primary" id="bb-show">Show mode</button>`;
+bbar.className = "bbar"; bbar.id = "bbar"; bbar.setAttribute("role", "group"); bbar.setAttribute("aria-label", "Trade binder");
+bbar.innerHTML = `<div class="mtext"><b id="bb-head">Trade binder</b><span id="bb-sub"></span></div><span class="bb-pages" id="bb-pages" aria-live="polite"></span><button type="button" class="mbtn primary" id="bb-show">Show mode</button>`;
 const sbar = document.createElement("div");
 sbar.className = "showbar"; sbar.id = "showbar"; sbar.setAttribute("role", "group"); sbar.setAttribute("aria-label", "Show mode");
-sbar.innerHTML = `<div class="mtext" aria-live="polite"><b id="sb-head"></b><span id="sb-sub"></span></div><button type="button" class="mbtn" id="sb-done">Done</button>`;
-const sPrice = document.createElement("button");
-sPrice.type = "button"; sPrice.className = "showpill"; sPrice.id = "sb-price";
-document.body.append(bbar, sbar, sPrice);
-const bbHead = bbar.querySelector("#bb-head"), bbSub = bbar.querySelector("#bb-sub"), bbShow = bbar.querySelector("#bb-show");
-const sbHead = sbar.querySelector("#sb-head"), sbSub = sbar.querySelector("#sb-sub");
+sbar.innerHTML = `<div class="mtext" aria-live="polite"><b id="sb-head"></b><span id="sb-sub"></span></div><span class="bb-pages" id="sb-pages"></span><button type="button" class="showpill" id="sb-price"></button><button type="button" class="mbtn" id="sb-done">Done</button>`;
+document.body.append(bbar, sbar);
+const bbSub = bbar.querySelector("#bb-sub"), bbPages = bbar.querySelector("#bb-pages"), bbShow = bbar.querySelector("#bb-show");
+const sbHead = sbar.querySelector("#sb-head"), sbSub = sbar.querySelector("#sb-sub"), sbPages = sbar.querySelector("#sb-pages"), sPrice = sbar.querySelector("#sb-price");
 function tbSync() {
   const n = tbList().length, G = bnd.L, pages = tbPageCount(), v = bnd.vi + 1, k = bnd.picks.size;
-  bbHead.textContent = n ? (G?.spread === 2 ? (v * 2 > pages ? `Page ${v * 2 - 1} of ${pages}` : `Pages ${v * 2 - 1} and ${v * 2} of ${pages}`) : `Page ${v} of ${pages}`) : "Nothing in it yet";
-  bbSub.textContent = n ? "Most wanted first. Tap a card to trade it." : "On a card you have, + adds a spare";
+  const where = G?.spread === 2 ? (v * 2 > pages ? `Page ${v * 2 - 1} of ${pages}` : `Pages ${v * 2 - 1}–${v * 2} of ${pages}`) : `Page ${v} of ${pages}`;
+  bbSub.textContent = n ? `${plural1(n, "card")} · ${tbMemo.wanted ? `${tbMemo.wanted} wanted` : "no takers yet"}` : "Empty for now";
+  bbPages.textContent = sbPages.textContent = n ? where : "";
   bbShow.disabled = !n;
   sbHead.textContent = k ? `${plural1(k, "card")} picked` : "Tap the cards you'd like";
-  sbSub.textContent = k ? "Tap one again to put it back" : "Swipe sideways for more pages";
+  sbSub.textContent = k ? "Tap one again to put it back" : "";
   sPrice.textContent = bnd.prices ? "Prices shown" : "Prices hidden"; sPrice.setAttribute("aria-pressed", String(bnd.prices));
 }
 bbShow.onclick = () => tbEnterShow();
@@ -605,7 +638,12 @@ function bUp(remaining, cancelled) {
 }
 function tbTap(x, y) {
   if (bnd.q < 1) return;
-  const h = tbPocketAt(x, y); if (!h) return;
+  const h = tbPocketAt(x, y);
+  if (!h) { // beside a spread: its arrows
+    const G = bnd.L, S = G && tbSpreadRect(G);
+    if (G?.arrows && y >= S.y && y <= S.y + S.h && (x < S.x || x > S.x + S.w)) tbTurn(x < S.x ? -1 : 1);
+    return;
+  }
   if (bnd.show) {
     const id = h.c.id; if (bnd.picks.has(id)) bnd.picks.delete(id); else bnd.picks.add(id);
     tick(bnd.picks.has(id) ? 10 : 4); tbSync(); kick(); return;
