@@ -374,7 +374,7 @@ function drawMedal(c2, t, cx, top, w, mode = "", crop = 124, S = w) {
 // shelf's colour. The plaque, when there is one, heads the panel and the medals hang from it.
 const MD_FILTERS = [["all", "All"], ["earned", "Earned"], ["locked", "To earn"], ["crit", "Critical"], ["shiny", "Shiny"]];
 const MD_MW = 50, MD_SW = 58, MD_NW = 34, MD_PW = 42, MD_NH = 58;
-const MD_ROW = 124; // a row of medals on their threads, their labels under them
+const MD_ROW = 122; // a row of medals on their threads, their labels under them
 const MD_SROW = Math.round(MD_SW * 1.24) + 66; // the showcase: medals standing on a hairline
 let mdFilter = "all", mdFoldAll = false;
 const mdOpen = new Set(); // shelves whose locked medals are unfolded
@@ -528,13 +528,13 @@ function mdRowImage(it) {
   mdRows.set(key, { cv, use: ++mdRowUse });
   return cv;
 }
-// A medal's name (two lines at most), then its date, its luck tag, or how many to go.
+// A medal's name (two lines at most), then its luck tag or how many to go (in the Showcase, its date).
 function mdLabel(x, t, cx, y, w, big) {
   x.textAlign = "center"; x.textBaseline = "alphabetic";
   fontOn(x, t.earned ? 700 : 500, big ? 13 : 12.5, true); x.fillStyle = t.earned ? theme["room-ink"] : theme["room-muted"];
   for (const ln of wrapOn(x, t.name, w, 2)) { x.fillText(ln, cx, y); y += 14; }
   if (mdLucky(t)) { const p = mdPill(t.rank); x.drawImage(p.cv, cx - p.w / 2, y - 10, p.w, p.h); }
-  else { fontOn(x, 500, 11.5); x.fillStyle = theme["room-muted"]; x.fillText(mdStatus(t), cx, y + 1); }
+  else if (big || !t.earned) { fontOn(x, 500, 11.5); x.fillStyle = theme["room-muted"]; x.fillText(mdStatus(t), cx, y + 1); } // on a shelf an earned one's date waits in its sheet
   x.textAlign = "left";
 }
 function wrapOn(x, text, w, max) {
