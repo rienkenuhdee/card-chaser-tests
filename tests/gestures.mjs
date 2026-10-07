@@ -139,9 +139,12 @@ for (const dpr of [1, 2]) {
   let cv = await cover(); R.push(["the Trade room shows the binder's cover", Boolean(cv) && cv.y > 60 && cv.y < 400 && /cards on/.test(cv.text) && (await bd()).n > 18]);
   const openIt = async () => { await p.click("#pt-cover"); await wait(900); };
   await openIt(); R.push(["tapping the cover opens the binder", (await bd()).on && (await bd()).q === 1]);
-  // Full frame (round 22 polish): the page fills the screen; Back and Show mode sit on its top edge, clear of the pockets.
-  const ff = await p.evaluate(() => { const G = __w.bnd.L, c = __w.tbList()[__w.bnd.vi * 9], r = __w.tbPocketRect(c), sh = document.getElementById("bb-show").getBoundingClientRect(), bk = document.getElementById("back").getBoundingClientRect(); return { cover: (G.pw * G.ph * G.spread) / (innerWidth * innerHeight), top: r.y, chrome: Math.max(sh.bottom, bk.bottom) }; });
-  R.push([`the open binder's page fills the screen (${Math.round(ff.cover * 100)}%), its chrome clear of the pockets`, ff.cover >= 0.9 && ff.chrome <= ff.top]);
+  // Production's proportions (round 22 polish): a thin bar along the top (Back, the title, Show mode), and under it the
+  // page across the whole width, each pocket a card as wide as it allows with who wants it and its price on the card.
+  const ff = await p.evaluate(() => { const G = __w.bnd.L, v = __w.bnd.vi, cs = __w.tbList().slice(v * 9, v * 9 + 9), rs = cs.map((c) => __w.tbPocketRect(c)), sh = document.getElementById("bb-show").getBoundingClientRect(), bk = document.getElementById("back").getBoundingClientRect(); return { cover: (G.pw * G.ph * G.spread) / (innerWidth * innerHeight), top: Math.min(...rs.map((r) => r.y)), w: Math.min(...rs.map((r) => r.w)), n: rs.length, chrome: Math.max(sh.bottom, bk.bottom), vw: innerWidth, said: __w.bnd.labels.get(v) || [] }; });
+  R.push([`the open binder's page fills the screen under a thin bar (${Math.round(ff.cover * 100)}%, the bar ${Math.round(ff.chrome)}px), clear of the pockets`, ff.cover >= 0.9 && ff.chrome <= 48 && ff.chrome <= ff.top]);
+  R.push([`every pocket is at least 30% of the screen's width (${Math.round(ff.w)}px, ${(ff.w / ff.vw * 100).toFixed(1)}%)`, ff.n === 9 && ff.w / ff.vw >= 0.3]);
+  R.push([`who wants each card and its price sit on the card, none cut short (${ff.said.slice(0, 3).join(" | ")})`, ff.said.length >= 18 && ff.said.every((t) => t && !t.includes("…") && !t.includes(".."))]);
   await v.drag(300, 450, 450, 120, -200); await wait(700); R.push(["a sideways flick turns the page", (await bd()).vi === 1]);
   await v.drag(100, 450, 450, 120, 200); await wait(700); R.push(["a flick the other way turns it back", (await bd()).vi === 0]);
   await p.click("#back"); await wait(900); R.push(["back closes the binder to the Trade room", !(await bd()).on && (await p.evaluate(() => __w.rooms.at === "trade" && !__w.rooms.map))]);

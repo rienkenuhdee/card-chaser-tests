@@ -473,36 +473,44 @@ body.inroom .caption { display: none; }
 :root[data-theme="dark"] .sl-acts .pill-btn.primary { color: #171920; }
 .sl-acts .pill-btn[hidden] { display: none; }
 
-/* The trade binder (round 17): its bar, and Show mode's bar and prices switch. */
-.bbar { position: fixed; z-index: 3; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); transform: translate(-50%, 160%); opacity: 0; pointer-events: none;
-  width: min(460px, calc(100vw - 20px)); display: flex; align-items: center; gap: 6px; padding: 5px 5px 5px 14px; border-radius: 14px;
-  transition: transform .4s cubic-bezier(.2,.9,.25,1.04), opacity .3s; }
-body.inbinder:not(.showing):not(.trading) .bbar { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
-/* Full frame (round 22 polish): the pages fill the screen, so Show mode sits on the page's top edge at the right, across
-   from Back; where you are is the dots on its bottom edge (the bar's words stay, for the screen reader). */
-body.inbinder .bbar { top: calc(env(safe-area-inset-top, 0px) + 10px); bottom: auto; left: auto; right: calc(var(--sar) + 10px); width: auto; padding: 5px; }
-body.inbinder:not(.showing):not(.trading) .bbar { transform: none; }
-body.inbinder .bbar .mtext { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-.bbar .mtext, .showbar .mtext { flex: 1; min-width: 0; display: grid; gap: 1px; line-height: 1.2; }
-.bbar b { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
-.bbar span { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* The trade binder (round 17), in production's proportions (round 22 polish): one thin bar along the top and the book
+   under it taking the rest. The binder's bar: Back (the strip's) at its left end, the title and its count, where you are
+   in the middle, Show mode at the right. Show mode's: what's picked, where you are, the prices switch and Done. */
+.bbar, .showbar { position: fixed; z-index: 3; top: env(safe-area-inset-top, 0px); left: max(10px, var(--sal)); right: max(10px, var(--sar)); height: 44px;
+  display: flex; align-items: center; gap: 10px; pointer-events: none; opacity: 0; transform: translateY(-10px);
+  transition: transform .3s cubic-bezier(.2,.9,.25,1.04), opacity .25s; }
+body.inbinder:not(.showing):not(.trading) .bbar, body.showing .showbar { opacity: 1; transform: none; }
+body.inbinder:not(.showing):not(.trading) .bbar > :not(.bb-pages), body.showing .showbar > :not(.bb-pages) { pointer-events: auto; }
+.bbar { padding-left: 46px; }
+.bbar .mtext, .showbar .mtext { flex: 1 1 auto; min-width: 0; display: flex; align-items: baseline; gap: 8px; overflow: hidden; line-height: 1.2; }
+.bbar b, .showbar b { flex: none; font: 800 17px/1.2 var(--font); font-stretch: 85%; white-space: nowrap; }
+.bbar .mtext span, .showbar .mtext span { min-width: 0; font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bb-pages { position: absolute; left: 50%; transform: translateX(-50%); font: 600 13.5px var(--font); color: var(--muted); white-space: nowrap; }
+.bbar .mbtn, .showbar .mbtn { flex: none; height: 36px; padding: 0 14px; }
+#bb-show, #sb-price { margin-left: auto; }
+.showbar { color: #fff; padding-left: 6px; }
+.showbar .mtext span, .showbar .bb-pages { color: rgb(255 255 255 / .62); }
+.showbar .mbtn { padding: 0 20px; color: #0B0C0F; background: #fff; border-color: #fff; }
+.showbar .mbtn:not(:disabled):hover { background: #fff; }
+.showpill { flex: none; height: 32px; padding: 0 13px; border-radius: 16px; border: 1px solid rgb(255 255 255 / .32); background: none; color: #fff; font: 700 13px var(--font); cursor: pointer; transition: background .2s; }
+.showpill[aria-pressed="false"] { color: rgb(255 255 255 / .66); border-style: dashed; }
+@media (min-width: 600px) { .bbar .mtext, .showbar .mtext { max-width: calc(50% - 120px); } } /* clear of where you are, in the middle */
+/* Upright the bar is narrow: the count goes under the title, and where you are is the dots under the page. */
+@media (max-width: 599px) {
+  .bb-pages, .showbar .mtext span { display: none; }
+  .bbar .mtext { flex-direction: column; align-items: flex-start; gap: 0; }
+  .bbar b, .showbar b { font-size: 16px; }
+  .showbar b { flex: 0 1 auto; min-width: 0; white-space: normal; line-height: 1.1; }
+  .bbar .mtext span { font-size: 12px; }
+}
 body.inbinder .lens, body.inbinder .timebar { transform: translate(-50%, 160%); opacity: 0; pointer-events: none; }
 body.inbinder .caption { display: none; }
 body.showing .top, body.showing .toast { opacity: 0; pointer-events: none; }
-
-/* Show mode: dark, full screen, nothing but the pages, the picks and Done. */
-.showbar { position: fixed; z-index: 3; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 12px; padding: 12px 16px calc(env(safe-area-inset-bottom, 0px) + 16px);
-  color: #fff; opacity: 0; pointer-events: none; transform: translateY(24px); transition: transform .35s cubic-bezier(.2,.9,.25,1.04), opacity .25s; }
-body.showing .showbar { opacity: 1; pointer-events: auto; transform: none; }
-.showbar b { font: 800 21px/1.1 var(--font); font-stretch: 85%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
-.showbar span { font-size: 13.5px; color: rgb(255 255 255 / .62); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.showbar .mbtn { height: 48px; padding: 0 24px; color: #0B0C0F; background: #fff; border-color: #fff; font-size: 16px; }
-.showbar .mbtn:not(:disabled):hover { background: #fff; }
-.showpill { position: fixed; z-index: 3; top: calc(env(safe-area-inset-top, 0px) + 18px); right: 12px; height: 34px; padding: 0 14px; border-radius: 17px;
-  border: 1px solid rgb(255 255 255 / .32); background: none; color: #fff; font: 700 13.5px var(--font); cursor: pointer; opacity: 0; pointer-events: none; transition: opacity .25s, background .2s; }
-.showpill[aria-pressed="false"] { color: rgb(255 255 255 / .66); border-style: dashed; }
-body.showing .showpill { opacity: 1; pointer-events: auto; }
-@media (prefers-reduced-motion: reduce) { .bbar, .showbar, .showpill { transition: none; } }
+/* Back, at the bar's left end: the strip's glass steps aside and the button stays (at the table, the table's own). */
+body.inbinder:not(.trading) .top { top: env(safe-area-inset-top, 0px); height: 44px; align-items: center; padding: 0 0 0 max(10px, var(--sal)); }
+body.inbinder:not(.trading) .strip { height: 40px; padding: 0; background: none; border-color: transparent; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+body.inbinder:not(.trading) .strip .ib { width: 40px; height: 40px; }
+@media (prefers-reduced-motion: reduce) { .bbar, .showbar { transition: none; } }
 
 /* Medals (round 19): production's four colours and the medal's face, for the trophy sheet, the celebration and the list.
    The canvas reads the same values (theme["c-red"] and so on) to paint the medals in the room and on a set's bar. */
@@ -1193,26 +1201,6 @@ body.trading #pg-trade { opacity: 0; transition: opacity .3s; }
   #pg-trade h2:nth-of-type(1) { grid-area: h2b; } #pg-trade .traders { grid-area: trs; }
   .arrange-menu.tradehow { bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); max-height: calc(100dvh - 20px); }
 
-  /* The binder open on a phone on its side: the spread fills the screen; Back at the top left corner, the title under
-     it (drawn), on the left page's outer edge; Show mode and the page count on the right page's outer edge. */
-  body.inbinder .top { padding-right: 0; }
-  body.inbinder .strip { width: auto; }
-  body.inbinder .strip > :not(#back) { display: none; }
-  body.inbinder .bbar { left: auto; right: calc(var(--sar) + 12px); top: calc(env(safe-area-inset-top, 0px) + 8px); bottom: auto; width: var(--tb-side, 140px); transform: translateY(-12px);
-    flex-direction: column-reverse; align-items: flex-end; gap: 10px; padding: 0; background: none; border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
-  body.inbinder:not(.showing):not(.trading) .bbar { transform: none; }
-  body.inbinder .bbar .mtext { position: static; width: auto; height: auto; overflow: visible; clip-path: none; text-align: right; gap: 3px; }
-  body.inbinder .bbar b, body.inbinder .bbar span { white-space: normal; }
-  body.inbinder .bbar .mbtn { height: 44px; padding: 0 12px; white-space: nowrap; }
-  /* Show mode: the same spread, dark; what's picked at the bottom left, Done at the bottom right. */
-  .showbar { left: calc(var(--sal) + 14px); right: calc(var(--sar) + 12px); bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); padding: 0; align-items: flex-end; }
-  body.showing .showbar { pointer-events: none; }
-  body.showing .showbar > * { pointer-events: auto; }
-  .showbar .mtext { flex: 0 1 auto; max-width: var(--tb-side, 140px); }
-  .showbar b { font-size: 16px; white-space: normal; }
-  .showbar span { font-size: 12.5px; white-space: normal; }
-  .showbar .mbtn { margin-left: auto; height: 44px; padding: 0 22px; }
-  .showpill { top: calc(env(safe-area-inset-top, 0px) + 12px); right: calc(var(--sar) + 12px); }
   /* The trade table runs across: Back over their column, the trade bar under the table in the middle. */
   body.trading .top { padding-right: 0; }
   body.trading .strip { width: auto; }
