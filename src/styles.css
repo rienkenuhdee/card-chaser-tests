@@ -993,7 +993,8 @@ body.trading #pg-trade { opacity: 0; transition: opacity .3s; }
   .lens button { flex: 1; height: 38px; min-width: 0; padding: 0 8px; }
   .lens .ink { top: 3px; bottom: 3px; }
   /* Wherever the lens bar steps aside, it rises out of the row rather than dropping into the view. */
-  body:is(.focused, .marking, .offering, .trading, .inroom, .inbinder, .maptrans, .welcoming, .arriving, .building) .lens, body:not([data-room="chase"]) .lens { transform: translateY(-140%); }
+  body:is(.focused, .marking, .offering, .trading, .inroom, .inbinder, .maptrans) .lens, body:not([data-room="chase"]) .lens { transform: translateY(-140%); }
+  body:is(.welcoming, .arriving) .lens { transform: translateY(-6px); } /* waits in place, faded, to come back when the sheet goes */
   .arrange-menu { top: calc(env(safe-area-inset-top, 0px) + 60px); left: calc(var(--sal) + 10px); max-height: calc(100dvh - 70px); overflow-y: auto; }
   .arrange-menu.right { right: auto; left: calc(var(--sal) + 10px + min(600px, 100vw - var(--sal) - var(--sar) - 30px - var(--lens-w)) - min(290px, 100vw - 20px)); }
   .maptip { left: calc(var(--sal) + 12px); top: calc(env(safe-area-inset-top, 0px) + 62px); }
