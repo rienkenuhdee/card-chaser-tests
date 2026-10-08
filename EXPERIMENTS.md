@@ -447,13 +447,13 @@ and the card again don't replay it, and the reduced-motion still; perf: the cere
 ## Open questions (next rounds)
 
 - Production parity (audit, round 23). What production has that the Wall doesn't yet, beyond what's out of scope for
-  an on-device prototype (accounts, sync, real push, PSA lookups): the Feed's language, version,
-  lots and too-cheap filters (the made-up listings don't carry them yet), a real check of an added shop (parity 5 made
-  its stock up, seeded by its domain) and its restocks and price drops after the first look, "Fill your Dex" in the Feed,
-  grade wants (the per-set Grade you want) and PSA's population and cert checks (graded slabs landed in parity 2), real price history kept day by day (parity 3 made it up, seeded), value by chase, savings stats from "I bought it" (what the market said when you bought),
-  print placeholders, card reports, and the completion ceremony (favorites and priority stars landed in parity 4,
-  without the favorites picker or scan rotation). Replaced, not lost: the collection grid (the wall, search, Filters, the list view), the card sheet (the
-  favourites and priority stars, print placeholders, card reports (the completion ceremony landed in parity 6). Replaced, not lost: the collection grid (the wall, search, Filters, the list view), the card sheet (the
+  an on-device prototype (accounts, sync, real push, PSA lookups): the Feed's language, version, lots and too-cheap
+  filters (the made-up listings don't carry them yet), a real check of an added shop and its restocks and price drops
+  (parity 5 made its stock up), "Fill your Dex" in the Feed (Ryan: skip), grade wants (the per-set Grade you want) and
+  PSA's population and cert checks (graded slabs landed in parity 2), real price history kept day by day (parity 3 made
+  it up), value by chase, savings stats from "I bought it", the favorites picker and priority's scan rotation
+  (favorites and priority landed in parity 4), print placeholders and card reports. The completion ceremony landed in
+  parity 6. Replaced, not lost: the collection grid (the wall, search, Filters, the list view), the card sheet (the
   card up close), the public trade page (Show mode and Someone new, in person). Online trading stays pinned (round 18).
 
 - A deal arriving off screen: one tap from the line to the offers, and whether the arrival should nudge the wall.
