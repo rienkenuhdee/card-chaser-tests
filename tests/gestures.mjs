@@ -203,6 +203,10 @@ for (const dpr of [1, 2]) {
   await p.click('[data-lens="chase"]'); await wait(1600);
   const lens = await p.evaluate(() => { const lead = new Set(__w.groupsNow.flatMap((g) => (g.done ? [] : (g.lead || []).map((c) => c.base || c)))), chased = __w.cards.filter(__w.isChase).length; return { lead: lead.size, chased, toast: document.getElementById("toast").textContent }; });
   R.push(["the Chase lens still lifts the want list, every card you chase", lens.lead > 0 && lens.lead === lens.chased && /Your chase list/.test(lens.toast) && /Feed/.test(lens.toast)]);
+  // Messages sit in the top bar, in its colours, not as a dark banner over the wall.
+  const tb = await p.evaluate(() => { const t = document.getElementById("toast"), r = t.getBoundingClientRect(), s = document.querySelector(".top .strip").getBoundingClientRect(), cs = getComputedStyle(t);
+    return { inBar: r.top >= s.top - 1 && r.bottom <= s.bottom + 1 && r.left >= s.left - 1 && r.right <= s.right + 1, bg: cs.backgroundColor, panel: getComputedStyle(document.documentElement).getPropertyValue("--panel-solid").trim() }; });
+  R.push(["a message sits inside the top bar, in the bar's colours, not over the wall", tb.inBar && !/rgb\(1[0-9], 2[0-9], 2[0-9]\)/.test(tb.bg) && tb.bg !== "rgb(18, 21, 29)"]);
   await p.click('[data-lens="have"]'); await wait(1600);
   await f.drag(100, 450, 460, 120, 200); await wait(900); R.push(["a sideways flick on the wall the other way goes to the Feed", (await where()).at === "feed"]);
   await f.pageDrag(300, 450, 455, 120, -200); await wait(900); R.push(["a sideways flick on the Feed's page comes back to Chase", (await where()).at === "chase" && (await where()).pages.length === 0]);
