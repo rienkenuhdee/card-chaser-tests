@@ -207,6 +207,52 @@ for (const dark of [false, true]) {
   R.push([`the Feed's Filters narrow it (${all.length} listings, ${ebay.length} on eBay, ${auc.length} eBay auctions), count what's on ("${label}"), and Clear brings them all back`, all.length > 0 && ebay.length < all.length && auc.length <= ebay.length && auc.every((id) => ebay.includes(id)) && label === "Filters (2)" && back.length >= all.length && !p.errors.length]);
   await p.close();
 }
+// Graded slabs (parity 2): adding one on the card up close owns the card and puts a badge on its pocket; Remove takes
+// it out (and the card, when the slab was all you had of it), and Undo brings both back. In the Feed, the three new
+// filters narrow to slabs, a company and a grade, Clear brings everything back, and a slab passes "Near Mint only".
+{
+  const p = await phone(browser, file, { motion: false });
+  await p.evaluate(() => {
+    const at = Date.now() - 30 * 86400e3, owned = {}, chase = {};
+    for (const c of __w.cards) { if (c.own0) owned[c.id] = { on: true, at }; else chase[c.id] = true; }
+    localStorage.setItem("wall-owned", JSON.stringify(owned)); localStorage.setItem("wall-chase", JSON.stringify(chase));
+    localStorage.setItem("wall-imported", "TCGplayer"); localStorage.setItem("wall-welcomed", "1"); localStorage.setItem("wall-map-seen", "1");
+  });
+  await p.reload({ waitUntil: "load" }); await wait(800);
+  await p.evaluate(() => __w.enterGroup(__w.groups[0])); await wait(900);
+  const k = await p.evaluate(() => { const g = __w.groups[0], k = g.cards.findIndex((c) => !c.owned && !c.ph); __w.focus(g.cards[k]); return k; }); await wait(700);
+  const badge = () => p.evaluate((k) => { // the pixel just inside the badge's corner, where its white field is
+    const c = __w.groups[0].cards[k], r = __w.binderRect(c, __w.cam), inset = Math.max(3, r.w * 0.05), cv = document.getElementById("wall"), d = window.devicePixelRatio || 1;
+    const px = cv.getContext("2d").getImageData(Math.round((r.x + r.w - inset - 2) * d), Math.round((r.y + r.h * 0.76 - inset - 2) * d), 1, 1).data;
+    return px[0] + px[1] + px[2] === 765;
+  }, k);
+  const before = await badge();
+  await p.click("#p-gadd"); await wait(200);
+  await p.select("#p-gco", "PSA"); await p.select("#p-ggr", "10"); await p.type("#p-gcert", "12345678"); await p.click("#p-gsave"); await wait(600);
+  const added = await p.evaluate((k) => { const c = __w.groups[0].cards[k]; return { owned: c.owned, n: __w.slabsOf(c).length, worth: __w.worthOf([c]) === __w.gradeAsk(c, "PSA", 10), link: document.querySelector("#p-slabs a")?.href || "", list: Boolean(document.querySelector("#p-slabs li")) }; }, k);
+  const shown = await badge();
+  R.push([`adding a graded copy owns the card (${added.owned ? "owned" : "not owned"}), counts it at its grade (${added.worth ? "PSA 10 ask" : "not"}), links to PSA, and its pocket wears the badge (${before ? "white before" : "none before"}, ${shown ? "shown" : "not shown"})`, added.owned && added.n === 1 && added.worth && added.list && added.link === "https://www.psacard.com/cert/12345678" && !before && shown]);
+  await p.click("#p-slabs [data-gr-rm]"); await wait(500);
+  const removed = await p.evaluate((k) => { const c = __w.groups[0].cards[k]; return { owned: c.owned, n: (__w.graded[c.id] || []).length }; }, k);
+  await p.click("#toast .toast-btn"); await wait(500);
+  const undone = await p.evaluate((k) => { const c = __w.groups[0].cards[k]; return { owned: c.owned, n: __w.slabsOf(c).length, kept: JSON.parse(localStorage.getItem("wall-graded") || "{}")[c.id]?.length || 0 }; }, k);
+  R.push([`removing the slab takes the card out (${removed.owned ? "still owned" : "out"}, ${removed.n} slabs) and Undo brings both back (${undone.owned ? "owned" : "not owned"}, ${undone.n} slab, ${undone.kept} kept)`, !removed.owned && removed.n === 0 && undone.owned && undone.n === 1 && undone.kept === 1]);
+  await p.evaluate(() => __w.unfocus()); await wait(300);
+  await p.evaluate(() => __w.goRoom("feed")); await wait(900);
+  const rows = () => p.evaluate(() => { const by = new Map(__w.feedList().map((L) => [L.id, L])); return [...document.querySelectorAll("#pf-list [data-l]")].map((b) => { const L = by.get(b.dataset.l); return { id: b.dataset.l, g: L?.grade ? `${L.grade.co} ${L.grade.grade}` : "", co: L?.grade?.co || "", gr: L?.grade?.grade || 0 }; }); });
+  const all = await rows(), slabsIn = all.filter((x) => x.g);
+  await p.click("#pf-more-btn"); await wait(150);
+  await p.select("#pf-slab", "graded"); await wait(200); const only = await rows();
+  await p.select("#pf-slab", "raw"); await wait(200); const raw = await rows();
+  await p.select("#pf-slab", ""); await p.select("#pf-gco", "PSA"); await wait(200); const psa = await rows();
+  await p.select("#pf-gmin", "10"); await wait(200); const ten = await rows(), label = await p.$eval("#pf-more-btn", (e) => e.textContent);
+  await p.click("#pf-clear"); await wait(200); const back = await rows();
+  await p.select("#pf-cond", "NM"); await wait(200); const nm = await rows();
+  await p.select("#pf-cond", ""); await wait(150);
+  R.push([`the Feed's raw-or-slab, company and grade filters narrow it (${all.length} listings, ${only.length} slabs, ${raw.length} raw, ${psa.length} PSA, ${ten.length} PSA 10; "${label}") and Clear brings them back`, slabsIn.length > 0 && only.length === slabsIn.length && only.every((x) => x.g) && raw.every((x) => !x.g) && all.every((x) => (x.g ? only : raw).some((y) => y.id === x.id)) && psa.every((x) => x.co === "PSA") && psa.length <= only.length && ten.every((x) => x.co === "PSA" && x.gr >= 10) && ten.length <= psa.length && label === "Filters (2)" && all.every((x) => back.some((y) => y.id === x.id))]); // (a live arrival may land meanwhile: always raw)
+  R.push([`a slab passes "Near Mint only" (${slabsIn.filter((x) => nm.some((y) => y.id === x.id)).length} of ${slabsIn.length} slabs stay, ${nm.length} listings in all)`, slabsIn.length > 0 && slabsIn.every((x) => nm.some((y) => y.id === x.id)) && nm.length <= all.length && !p.errors.length]);
+  await p.close();
+}
 await browser.close();
 const bad = report(R);
 console.log(`\nScreenshots: ${path.relative(process.cwd(), out)}`);

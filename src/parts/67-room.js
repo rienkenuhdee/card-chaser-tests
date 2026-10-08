@@ -35,7 +35,7 @@ function seriesOf(g) {
   const worth = worthOf(g.base), key = `${g.base.length}|${Math.round(worth * 100)}`;
   if (g.ser?.key === key) return g.ser;
   const pts = new Array(MONTHS + 1).fill(0);
-  for (const c of g.base) { if (!c.owned) continue; const w = walkOf(c); for (let i = 0; i <= MONTHS; i++) pts[i] += c.price * w[i]; }
+  for (const c of g.base) { if (!c.owned) continue; const w = walkOf(c); for (let i = 0; i <= MONTHS; i++) pts[i] += worthOne(c) * w[i]; }
   return (g.ser = { key, pts, worth, delta: pts[MONTHS] - pts[0] });
 }
 function caseSeries() {

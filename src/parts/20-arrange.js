@@ -3,7 +3,7 @@
 // group is a block on the wall with a title and a grid of cards, in the order picked for binders (60-lenses.js).
 const BANDS = [[100, Infinity, "$100 and up", 2], [20, 100, "$20 to $100", 1.5], [5, 20, "$5 to $20", 1], [1, 5, "$1 to $5", 1], [0, 1, "Under $1", 1]];
 const BAND_INK = ["#FF4F2E", "#E8B53A", "#BF9428", "#5C66A8", "#7A88A8"];
-const worthOf = (list) => list.reduce((a, c) => a + (c.owned ? c.price : 0), 0);
+const worthOf = (list) => list.reduce((a, c) => a + (c.owned ? worthOne(c) : 0), 0); // a slab counts at its grade's ask (79-graded.js)
 const ownedIn = (list) => list.filter((c) => c.owned).length;
 const RARITY_GROUPS = [[6, "Special illustration rare", "#E8603C"], [5, "Secret rare", "#E9B524"], [4, "Ultra rare", "#A35BD6"], [3, "Holo rare", "#3D8BE8"], [2, "Rare", "#45A866"], [1, "Uncommon", "#5C66A8"], [0, "Common", "#7A88A8"]];
 const showNow = () => (state.lens === "chase" ? "all" : state.show); // Show (Filters) is for the collection; Chase is its own view
