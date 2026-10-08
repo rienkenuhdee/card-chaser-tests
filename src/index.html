@@ -68,8 +68,20 @@
     <header class="rp-head"><h1 id="pf-h" tabindex="-1">Feed</h1><span class="rp-count" id="pf-count"></span></header>
     <p class="rp-sub" id="pf-sub"></p>
     <div class="fd-tools" id="pf-tools">
-      <label class="fd-pick"><span class="sr">Sort</span><select id="pf-sort"><option value="newest">Newest first</option><option value="best">Best deals first</option><option value="price">Cheapest first</option><option value="pct">Most under market</option></select></label>
+      <label class="fd-pick"><span class="sr">Sort</span><select id="pf-sort"><option value="newest">Newest first</option><option value="best">Best deals first</option><option value="ending">Ending soonest</option><option value="price">Price: low to high</option><option value="priceDesc">Price: high to low</option><option value="pct">Biggest discount %</option><option value="savings">Biggest savings $</option><option value="shops">Shops first</option><option value="local">Local and trades first</option><option value="seller">Best seller feedback</option><option value="freeShip">Free shipping first</option><option value="card">Card name A to Z</option></select></label>
       <label class="fd-pick"><span class="sr">Condition</span><select id="pf-cond"><option value="">Any but damaged</option><option value="NM">Near Mint only</option><option value="LP">Lightly played or better</option><option value="MP">Moderately played or better</option><option value="any">Any, damaged too</option></select></label>
+      <button type="button" class="fd-more-btn" id="pf-more-btn" aria-expanded="false" aria-controls="pf-more">Filters</button>
+    </div>
+    <div class="fd-more" id="pf-more" hidden>
+      <label class="fd-pick"><span>Source</span><select id="pf-src"><option value="">All sources</option><option value="ebay">eBay</option><option value="tcgplayer">TCGplayer lowest</option><option value="reddit">Reddit trades</option><option value="local">Local</option><option value="shops">Shops</option></select></label>
+      <label class="fd-pick"><span>Format</span><select id="pf-how"><option value="">Any format</option><option value="auction">Auctions</option><option value="fixed">Buy It Now</option><option value="offer">Best Offer</option></select></label>
+      <label class="fd-pick"><span>Discount</span><select id="pf-off"><option value="">Any</option><option value="10">10% under market or more</option><option value="20">20% or more</option><option value="30">30% or more</option><option value="50">50% or more</option></select></label>
+      <label class="fd-pick"><span>Listed</span><select id="pf-fresh"><option value="">Any time</option><option value="1">Last hour</option><option value="6">Last 6 hours</option><option value="24">Last day</option><option value="168">Last week</option></select></label>
+      <label class="fd-pick fd-num"><span>Max total price</span><input type="number" id="pf-max" inputmode="decimal" min="0" placeholder="No limit"></label>
+      <label class="fd-check"><input type="checkbox" id="pf-free"> Free shipping only</label>
+      <label class="fd-check"><input type="checkbox" id="pf-fav"> Favorite sellers only</label>
+      <label class="fd-check"><input type="checkbox" id="pf-soon"> Ending in 6 hours</label>
+      <button type="button" class="mbtn" id="pf-clear" hidden>Clear filters</button>
     </div>
     <p class="fd-hidden" id="pf-hidden" hidden></p>
     <div class="rp-stripe" aria-hidden="true"></div>

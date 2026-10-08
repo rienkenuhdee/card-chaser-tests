@@ -325,11 +325,18 @@ the painting redefines against what it replaces (nothing dropped) and walked eve
 both sizes, light, dark and reduced motion: one older bug fixed (a trade accepted off the table dropped a card you
 already had instead of adding a copy, round 17's model), with a gesture check.
 
+**Parity 1: the Feed's sorts and filters.** No variants (Ryan: "one at a time as lean as possible"). Production's
+twelve sorts (best deals, newest, ending soonest, price both ways, biggest discount and savings, shops first, local and
+trades first, seller feedback, free shipping, card name) and its Filters panel, as far as the listings here carry it:
+source, format (auctions, Buy It Now, Best Offer), discount, how recently listed, max total price, free shipping,
+favorite sellers, ending in 6 hours. A Filters button beside sort and condition opens them under the row and counts
+what's on; Clear brings everything back; what they hide is counted like a source switched off.
+
 ## Open questions (next rounds)
 
 - Production parity (audit, round 23). What production has that the Wall doesn't yet, beyond what's out of scope for
-  an on-device prototype (accounts, sync, real push, PSA lookups): most of the Feed's sorts and filters (12 sorts down
-  to 4; raw or slab, grade, lots, too cheap, hide, max price), adding a shop in Source, "Fill your Dex" in the Feed,
+  an on-device prototype (accounts, sync, real push, PSA lookups): the Feed's raw or slab, grade, language, version,
+  lots and too-cheap filters (the made-up listings don't carry them yet), adding a shop in Source, "Fill your Dex" in the Feed,
   graded slabs and grade wants, price history and the collection's value over time, savings stats from "I bought it",
   favourites and priority stars, print placeholders, card reports, the card sheet's Graded tab, and the completion
   ceremony. Replaced, not lost: the collection grid (the wall, search, Filters, the list view), the card sheet (the

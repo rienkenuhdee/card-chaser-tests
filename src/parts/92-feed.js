@@ -100,12 +100,50 @@ function listingsOf(c) {
 // damaged or heavily played copy stays hidden unless you pick "Any, damaged too" (production's separate switch; it only
 // matters with any condition, so it's the last choice of the same picker). The filter counts everywhere the Feed is
 // counted (the rooms button, the map), like a source switched off. The sort is only how the page reads.
-const feedView = { sort: "newest", cond: "" }; // cond: "" any but damaged, NM, LP or MP and better, "any" damaged too
-try { const v = JSON.parse(localStorage.getItem("wall-feed-view") || "null"); if (v) Object.assign(feedView, { sort: ["newest", "best", "price", "pct"].includes(v.sort) ? v.sort : "newest", cond: ["", "NM", "LP", "MP", "any"].includes(v.cond) ? v.cond : "" }); } catch { /* fresh */ }
+const FEED_SORT_IDS = ["newest", "best", "ending", "price", "priceDesc", "pct", "savings", "shops", "local", "seller", "freeShip", "card"];
+const FEED_F0 = { src: "", how: "", off: "", fresh: "", max: "", free: false, fav: false, soon: false }; // the Filters panel (production's, where the listings carry it)
+const feedView = { sort: "newest", cond: "", ...FEED_F0, v: 0 }; // cond: "" any but damaged, NM, LP or MP and better, "any" damaged too
+try {
+  const v = JSON.parse(localStorage.getItem("wall-feed-view") || "null");
+  if (v) {
+    Object.assign(feedView, { sort: FEED_SORT_IDS.includes(v.sort) ? v.sort : "newest", cond: ["", "NM", "LP", "MP", "any"].includes(v.cond) ? v.cond : "" });
+    for (const k of Object.keys(FEED_F0)) if (typeof v[k] === typeof FEED_F0[k]) feedView[k] = v[k];
+  }
+} catch { /* fresh */ }
 const COND_RANK = { NM: 0, LP: 1, MP: 2, HP: 3, DMG: 4 };
 const damagedL = (L) => L.cond === "HP" || L.cond === "DMG";
-const feedPass = (L) => feedView.cond === "any" || (feedView.cond ? !L.cond || COND_RANK[L.cond] <= COND_RANK[feedView.cond] : !damagedL(L));
-const FEED_SORTS = { best: (a, b) => scoreOf(b).score - scoreOf(a).score, price: (a, b) => a.price - b.price, pct: (a, b) => pctOf(b) - pctOf(a) };
+const totalOf = (L) => L.price + (typeof L.ship === "number" ? L.ship : 0);
+const feedFiltersOn = () => Object.keys(FEED_F0).filter((k) => feedView[k] !== FEED_F0[k]).length;
+function feedPass(L) {
+  const f = feedView, now = Date.now();
+  if (!(f.cond === "any" || (f.cond ? !L.cond || COND_RANK[L.cond] <= COND_RANK[f.cond] : !damagedL(L)))) return false;
+  if (f.src && (f.src === "shops" ? !L.src.startsWith("shop") : L.src !== f.src)) return false;
+  if (f.how === "auction" && L.how !== "Auction") return false;
+  if (f.how === "fixed" && L.how === "Auction") return false;
+  if (f.how === "offer" && !L.bestOffer) return false;
+  if (f.off && pctOf(L) < +f.off) return false;
+  if (f.fresh && now - L.seen > +f.fresh * 3600e3) return false;
+  if (f.max !== "" && +f.max > 0 && totalOf(L) > +f.max) return false;
+  if (f.free && L.ship !== 0) return false;
+  if (f.fav && !L.fav) return false;
+  if (f.soon && !(L.endsAt > now && L.endsAt - now <= 6 * 3600e3)) return false;
+  return true;
+}
+const byScoreL = (a, b) => scoreOf(b).score - scoreOf(a).score;
+const FEED_SORTS = {
+  best: byScoreL,
+  ending: (a, b) => (a.endsAt || Infinity) - (b.endsAt || Infinity) || byScoreL(a, b),
+  price: (a, b) => totalOf(a) - totalOf(b),
+  priceDesc: (a, b) => totalOf(b) - totalOf(a),
+  pct: (a, b) => pctOf(b) - pctOf(a),
+  savings: (a, b) => (b.c.price - b.price) - (a.c.price - a.price),
+  shops: (a, b) => b.src.startsWith("shop") - a.src.startsWith("shop") || byScoreL(a, b),
+  local: (a, b) => ["local", "reddit"].includes(b.src) - ["local", "reddit"].includes(a.src) || byScoreL(a, b),
+  seller: (a, b) => (b.fb ?? -1) - (a.fb ?? -1) || byScoreL(a, b),
+  freeShip: (a, b) => (b.ship === 0) - (a.ship === 0) || byScoreL(a, b),
+  card: (a, b) => a.c.name.localeCompare(b.c.name) || a.price - b.price,
+};
+const FEED_ORDER = { newest: "newest first", best: "best deals first", ending: "ending soonest first", price: "cheapest first", priceDesc: "dearest first", pct: "most under market first", savings: "biggest savings first", shops: "shops first", local: "local and trades first", seller: "best seller feedback first", freeShip: "free shipping first", card: "by card name" };
 const feedSorted = (list) => (FEED_SORTS[feedView.sort] ? [...list].sort((a, b) => FEED_SORTS[feedView.sort](a, b) || b.seen - a.seen) : list);
 // The Feed: every listing from a source that's on and past its filters, newest first. counts: listings per source,
 // on or off; hidden: how many the filters keep out (from the sources that are on).
@@ -120,7 +158,7 @@ function feedList(counts = null, hidden = null) {
 }
 let feedMemo = { key: "", v: null };
 function feedData() { // once a frame at most, for the map's cards
-  const key = `${lastFrame}|${srcState.ver}|${copiesKey}|${scan.last}|${wallVer}|${feedView.cond}`;
+  const key = `${lastFrame}|${srcState.ver}|${copiesKey}|${scan.last}|${wallVer}|${feedView.cond}|${feedView.v}`;
   if (feedMemo.key === key) return feedMemo.v;
   const counts = {}, list = feedList(counts), chased = cards.filter(isChase).length;
   feedMemo = { key, v: { list, counts, chased, fresh: list.filter(isNewL).length } };
@@ -238,30 +276,43 @@ function renderFeed(slideId = null) {
   syncFeedTools(hid.n);
   const keep = pgFeed.scrollTop > 8 ? pgFeed.scrollHeight - pgFeed.scrollTop : null; // a listing landing on top doesn't push away the one you're reading
   if (!chased.length) pfList.innerHTML = `<li class="fd-empty"><b>Nothing to look for yet</b><span>Chase a card on the wall (tap it, then Chase it) and every listing found for it lands here.</span><button type="button" class="mbtn primary" data-go="chase">Go to the wall</button></li>`;
-  else if (!list.length && hid.n) pfList.innerHTML = `<li class="fd-empty"><b>Your filters hide ${hid.n === 1 ? "the one listing" : `all ${hid.n} listings`}</b><span>${plural1(hid.n, "listing")} for your chases ${hid.n === 1 ? "doesn't" : "don't"} pass the condition you picked.</span><button type="button" class="mbtn primary" data-fd-all>Show all</button></li>`;
+  else if (!list.length && hid.n) pfList.innerHTML = `<li class="fd-empty"><b>Your filters hide ${hid.n === 1 ? "the one listing" : `all ${hid.n} listings`}</b><span>${plural1(hid.n, "listing")} for your chases ${hid.n === 1 ? "doesn't" : "don't"} pass ${feedFiltersOn() ? "your filters" : "the condition you picked"}.</span><button type="button" class="mbtn primary" data-fd-all>Show all</button></li>`;
   else if (!list.length && all) pfList.innerHTML = `<li class="fd-empty"><b>Every source is off</b><span>${plural1(all, "listing")} for your chases ${all === 1 ? "is" : "are"} hidden. Switch a source back on to see ${all === 1 ? "it" : "them"}.</span><button type="button" class="mbtn primary" data-go="source">Open Source</button></li>`;
   else if (!list.length) pfList.innerHTML = `<li class="fd-empty"><b>Looking for ${plural1(chased.length, "card")} you chase</b><span>A listing under market lands here the moment it's found.</span></li>`;
   else pfList.innerHTML = feedSorted(list).map((L) => feedRowHTML(L, L.id === slideId)).join("");
   pfNote.innerHTML = chased.length ? `${watching ? `Still looking for ${plural1(watching, "more card")} you chase. ` : ""}Your chase list, one tile a card, is the <button type="button" class="linklike" data-go="lens">Chase lens</button> on the wall.` : "";
   if (keep !== null) pgFeed.scrollTop = pgFeed.scrollHeight - keep;
 }
-// The tools row: sort, condition, and damaged copies. A line under it says what the filters hide, with Show all.
+// The tools row: sort, condition, and Filters, which opens the rest under it (production's Filters panel, as far as the
+// listings here carry it). A line under it says what the filters hide, with Show all.
 const pfSort = document.getElementById("pf-sort"), pfCond = document.getElementById("pf-cond"), pfHidden = document.getElementById("pf-hidden");
+const pfMoreBtn = document.getElementById("pf-more-btn"), pfMore = document.getElementById("pf-more");
+const PF_FIELDS = { "pf-src": "src", "pf-how": "how", "pf-off": "off", "pf-fresh": "fresh", "pf-max": "max", "pf-free": "free", "pf-fav": "fav", "pf-soon": "soon" };
 function syncFeedTools(hidden) {
   pfSort.value = feedView.sort; pfCond.value = feedView.cond;
   pfCond.classList.toggle("on", Boolean(feedView.cond));
+  for (const [id, k] of Object.entries(PF_FIELDS)) { const el = document.getElementById(id); if (el.type === "checkbox") el.checked = feedView[k]; else if (document.activeElement !== el) el.value = feedView[k]; }
+  const n = feedFiltersOn();
+  pfMoreBtn.textContent = n ? `Filters (${n})` : "Filters"; pfMoreBtn.classList.toggle("on", Boolean(n));
+  document.getElementById("pf-clear").hidden = !n;
   pfHidden.hidden = !hidden;
-  if (hidden) pfHidden.innerHTML = `${feedView.cond ? `${plural1(hidden, "listing")} hidden by the condition you picked` : `${plural1(hidden, "damaged listing")} hidden`}. <button type="button" class="linklike" data-fd-all>Show ${hidden === 1 ? "it" : "them"}</button>`;
+  if (hidden) pfHidden.innerHTML = `${n || feedView.cond ? `${plural1(hidden, "listing")} hidden by your filters` : `${plural1(hidden, "damaged listing")} hidden`}. <button type="button" class="linklike" data-fd-all>Show ${hidden === 1 ? "it" : "them"}</button>`;
 }
 function setFeedView(patch) {
-  Object.assign(feedView, patch); tick(4);
+  Object.assign(feedView, patch); feedView.v++; tick(4);
   try { localStorage.setItem("wall-feed-view", JSON.stringify(feedView)); } catch { /* private mode */ }
   pgFeed.scrollTop = 0; renderFeed(); syncBadge(); drawList();
 }
 pfSort.onchange = () => setFeedView({ sort: pfSort.value });
 pfCond.onchange = () => setFeedView({ cond: pfCond.value });
+pfMoreBtn.onclick = () => { const open = pfMore.hidden; pfMore.hidden = !open; pfMoreBtn.setAttribute("aria-expanded", String(open)); tick(3); };
+for (const [id, k] of Object.entries(PF_FIELDS)) {
+  const el = document.getElementById(id);
+  el.addEventListener(el.type === "number" ? "input" : "change", () => setFeedView({ [k]: el.type === "checkbox" ? el.checked : el.value }));
+}
+document.getElementById("pf-clear").onclick = () => setFeedView({ ...FEED_F0 });
 pgFeed.addEventListener("click", (e) => {
-  if (e.target.closest("[data-fd-all]")) { setFeedView({ cond: "any" }); return; }
+  if (e.target.closest("[data-fd-all]")) { setFeedView({ ...FEED_F0, cond: "any" }); return; }
   const row = e.target.closest("[data-l]"); if (row) { tick(4); openListing(row.dataset.l); return; }
   const go = e.target.closest("[data-go]"); if (!go) return;
   if (go.dataset.go === "lens") goRoom("chase", { then: () => setLens("chase") }); else goRoom(go.dataset.go);
@@ -283,7 +334,7 @@ function feedArrived(c) {
 }
 // The list view's Feed section: the same listings, as rows a screen reader reads.
 function feedListHTML() {
-  const list = feedSorted(feedList()), now = Date.now(), order = { newest: "newest first", best: "best deals first", price: "cheapest first", pct: "most under market first" }[feedView.sort];
+  const list = feedSorted(feedList()), now = Date.now(), order = FEED_ORDER[feedView.sort];
   return `<section data-sec="feed"><h2>Feed</h2><p class="lsub">${list.length ? `${plural1(list.length, "listing")} for the cards you chase, ${order}.` : "Every listing found for the cards you chase lands here. Nothing yet."}</p><ul>${list.map((L) => {
     const c = L.c, st = sets[c.si];
     return `<li><button class="lrow" data-listing="${esc(L.id)}"><span class="lname">${isNewL(L) ? "NEW. " : ""}${esc(c.name)}</span><span class="lmeta">${esc(st.name)} #${esc(c.num)}. ${esc(whereText(L))}, ${agoText(L.seen, now)}. Score ${scoreOf(L).score}.</span><span class="lprice"><b class="ldeal">${money(L.price)}</b></span><span class="lstate">Market ${money(c.price)}, ${pctOf(L)}% under</span></button></li>`;
