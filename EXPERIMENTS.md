@@ -330,7 +330,15 @@ the map, the Chase room blank, the rest of the painting in pieces. A frame clear
 that threw part way asked for no next frame, and a clip the throw left open kept anything else from drawing. Every
 frame now runs guarded: one that throws resets the canvas and the next comes as usual, so the move lands; the first
 error of a visit is named in the top bar, so a screenshot from the phone says what threw (the tests' browser couldn't
-reproduce it: the phone's own fonts and pictures are the likely difference). A smoke check arms one fault mid-move.
+reproduce it). The named errors then led to the causes: Safari's "The provided value is non-finite" from a
+gradient in a drawn card face, fed by a bad number. A pinch whose fingertips meet read a distance of 0 and the camera
+divided by it (found by fuzzing gestures with a tracer on the camera); pinch distances now floor at 1px. And a late
+frame drawn by the watchdog can be stamped after the next one, so the time step could go negative and each card's
+emphasis grow instead of settle until it was NaN: the step is clamped at 0. Before every frame the guard puts right a
+bad camera, scroll, layout, emphasis or move, names it in the top bar, and has kept pictures drawn again; a gradient
+at a bad number is made at 0. Learned: a phone finds the numbers a test's tidy fingers never make, so every division
+by a gesture needs a floor, and the screen should say what broke. Smoke checks: a fault mid-move, a bad gradient,
+fingertips that meet.
 
 ## Open questions (next rounds)
 
