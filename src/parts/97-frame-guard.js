@@ -21,9 +21,14 @@ function safeFrame(now) {
 // A bad number that got into the camera or a move (a pinch whose fingers met divided by zero, round 23's glitch) is
 // put right before it's drawn: the camera goes back to the set's fit, a move to where it was going.
 function saneState() {
-  if (![cam.x, cam.y, cam.s].every(Number.isFinite) || cam.s <= 0) { Object.assign(cam, view === "set" && state.g ? fitCam(state.g) : { x: 0, y: 0, s: 1 }); fly = null; inertia = false; noteBad("camera"); }
+  let fixed = "";
+  if (![cam.x, cam.y, cam.s].every(Number.isFinite) || cam.s <= 0) { Object.assign(cam, view === "set" && state.g ? fitCam(state.g) : { x: 0, y: 0, s: 1 }); fly = null; inertia = false; fixed = "camera"; }
+  if (!Number.isFinite(mMax) || !Number.isFinite(mScroll)) { fixed = Number.isFinite(mMax) ? "scroll" : "layout"; if (!Number.isFinite(mMax)) layoutAll(); if (!Number.isFinite(mScroll)) mScroll = 0; }
+  for (const c of drawnCards) if (!Number.isFinite(c.e)) { c.e = emphasis(c); fixed = "emphasis"; }
+  if (!Number.isFinite(state.dimAll)) { state.dimAll = state.focus ? 1 : 0; fixed = "dim"; }
   const T = state.trans;
-  if (T && "q" in T && !Number.isFinite(T.q)) { T.q = T.anim && Number.isFinite(T.anim.to) ? T.anim.to : 0; if (T.anim && !Number.isFinite(T.anim.from)) T.anim.from = T.q; noteBad("move"); }
+  if (T && "q" in T && !Number.isFinite(T.q)) { T.q = T.anim && Number.isFinite(T.anim.to) ? T.anim.to : 0; if (T.anim && !Number.isFinite(T.anim.from)) T.anim.from = T.q; fixed = "move"; }
+  if (fixed) { noteBad(fixed); wallPic.key = ""; baked.clear(); } // pictures kept while it was wrong are drawn again
 }
 // The first two of our own functions in a stack ("drawTile < drawWall"), as Safari and Chrome both write them.
 function whereFrom(stack) {
@@ -69,4 +74,4 @@ function testFault(where) {
   if (where === "nan") ctx.createLinearGradient(NaN, 0, 10, 10); // a gradient at a bad number, as Safari met one
   else throw new Error(`test fault in ${where}`);
 }
-setTimeout(() => { if (window.__w) Object.defineProperties(window.__w, { armFault: { value: (w) => { testFaultArmed = w; } } }); }, 0);
+setTimeout(() => { if (window.__w) Object.defineProperties(window.__w, { armFault: { value: (w) => { testFaultArmed = w; } }, mScroll: { get: () => mScroll }, mMax: { get: () => mMax } }); }, 0);

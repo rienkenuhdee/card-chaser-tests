@@ -205,7 +205,7 @@ function frame(now) {
   raf = 0; frameFoil = false;
   if (roomsFrame(now)) return;
   if (tbl.on && tbl.q >= 1 && !tbl.anim) { drawTable(now); return; }
-  const dt = Math.min(48, now - (lastFrame || now)); lastFrame = now;
+  const dt = clamp(now - (lastFrame || now), 0, 48); lastFrame = Math.max(lastFrame, now); // never a step back in time: a watchdog frame can be stamped later than the next one
   let more = stepFly(now);
   if (stepInertia(dt)) more = true;
   if (view === "set" && !state.trans && !fly) clampCam(state.g);

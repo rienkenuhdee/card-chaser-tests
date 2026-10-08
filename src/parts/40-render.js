@@ -480,7 +480,7 @@ function frame(now) {
   raf = 0; frameFoil = false;
   if (roomsFrame(now)) return; // the map, a move between rooms or up to the map, or a room that is a page (90-rooms.js)
   if (tbl.on && tbl.q >= 1 && !tbl.anim) { drawTable(now); return; } // the table is its own level: nothing of the wall shows
-  const dt = Math.min(48, now - (lastFrame || now)); lastFrame = now;
+  const dt = clamp(now - (lastFrame || now), 0, 48); lastFrame = Math.max(lastFrame, now); // never a step back in time: a watchdog frame can be stamped later than the next one
   let more = stepFly(now);
   if (stepInertia(dt)) more = true;
   if (view === "set" && !state.trans && !fly) clampCam(state.g);
