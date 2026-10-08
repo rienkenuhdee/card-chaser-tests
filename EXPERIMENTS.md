@@ -419,6 +419,31 @@ price drops after the first look, the Chico shops' hours, and adding or removing
 their switches). Smoke checks: a bare domain adds a source with listings in the Feed (none NEW) whose sheet opens its
 search, bad input is refused, the switch hides its listings, Remove and Undo, Reset clears it.
 
+**Parity 6: completion ceremony.** No variants, one build. Production's full-screen finish ("the cards flip in, the
+medal appears, and you can share the image", with confetti), lean and in the painting's language. Finishing a whole set
+or chase by hand (the moment that mints its trophy) plays it before the trophy flow: the set's cards travel across
+their rows into a ruled grid, rows from alternate sides, the farthest card first (at most 30, whole rows; the rest fill
+row by row, drawn in from the left, so a big set is as quick as a small one), the pockets past the last card one red
+field; the plate drops straight down into place under it (a yellow field in a black rule, the Binder Complete trophy on
+its white square, the name beside it); the title and the counts come in across ("Fossil complete.", "62 of 62 ·
+October 8, 2026", what it's worth); squares and short rules in red, yellow, blue and black fall straight down (36,
+seeded by the trophy, nothing turns or bounces). About 4 s, then the final frame holds. Share and Done come up as the
+plate lands. Share hands the phone's share sheet a PNG of the final frame (the grid, the plate, the title; 1170 wide),
+made as the moment lands so the sheet opens inside the tap, or saves it where there's no share sheet; Done, a tap
+anywhere else or Escape ends it, and the trophy flow carries on exactly as before: the mint and the shelf, the medal
+mint or card, and the message with its Undo (held while the ceremony was up, said when it ends). Reduced motion: the
+final frame, still. On its side the grid takes the left and the plate, the words and the buttons the right. It plays
+once per finish, as production's does (a trophy is kept there, so the ceremony never repeats): Undo and the same card
+again finish it with no second ceremony; a set finished quietly (an import, a trade) or before this existed is counted
+as celebrated (localStorage wall-ceremony, cleared by Reset). Drawn on its own canvas over everything, from one copy
+of the final frame lettered once when it opens, so a moving frame only copies rectangles and fills a few dozen squares;
+both canvases are let go when it closes. Left out: production's card pictures flipping in (the grid is the cards'
+colours, as the wall draws them far out; a picture would also taint the share image), the vibration pattern beyond
+what Android allows, and a ceremony for the Dex's or a medal's own milestones. Smoke checks: finishing the smallest set
+plays it with the message and the medal held, it lands and stops, Share gives a PNG, Done lets the flow carry on, Undo
+and the card again don't replay it, and the reduced-motion still; perf: the ceremony with every card on the wall
+(1,327 pockets) under 34 ms with no canvas made while it moves.
+
 ## Open questions (next rounds)
 
 - Production parity (audit, round 23). What production has that the Wall doesn't yet, beyond what's out of scope for
@@ -428,6 +453,7 @@ search, bad input is refused, the switch hides its listings, Remove and Undo, Re
   grade wants (the per-set Grade you want) and PSA's population and cert checks (graded slabs landed in parity 2), real price history kept day by day (parity 3 made it up, seeded), value by chase, savings stats from "I bought it" (what the market said when you bought),
   print placeholders, card reports, and the completion ceremony (favorites and priority stars landed in parity 4,
   without the favorites picker or scan rotation). Replaced, not lost: the collection grid (the wall, search, Filters, the list view), the card sheet (the
+  favourites and priority stars, print placeholders, card reports (the completion ceremony landed in parity 6). Replaced, not lost: the collection grid (the wall, search, Filters, the list view), the card sheet (the
   card up close), the public trade page (Show mode and Someone new, in person). Online trading stays pinned (round 18).
 
 - A deal arriving off screen: one tap from the line to the offers, and whether the arrival should nudge the wall.
@@ -437,6 +463,6 @@ search, bad input is refused, the switch hides its listings, Remove and Undo, Re
 - Spares: Show mode's Someone new gives cards away with nothing back; a stranger at a show might want to offer a card, which needs their side of the table without an account.
 - The import: a real import without acquisition dates loses the story (round 20); and the Complete Dex can't be chosen on the import path, only in Choose your sets.
 - A chase's twins: should a custom panel's cards also lead in the Chase lens, or only their set's copy? And should a chase hide from the wall once it's complete?
-- Trophies: the worth line is a made-up year; real data would start at the finish date ("Up $27 since you finished"). Medals: whether Undo after a mint should take a medal back (production keeps it), the full-screen completion ceremony production plays, and the server-side luck roll when the two merge. Sharing a trophy (safe's picture card), and whether a sub-chase of a finished set should fold into the set's plaque. The room hides the lenses; Value could recolour the engravings.
+- Trophies: the worth line is a made-up year; real data would start at the finish date ("Up $27 since you finished"). Medals: whether Undo after a mint should take a medal back (production keeps it), whether the completion ceremony (parity 6) should show the cards' own pictures (production flips them in; here the grid is their colours, and a picture would taint the share image), and the server-side luck roll when the two merge. Sharing a trophy (safe's picture card), and whether a sub-chase of a finished set should fold into the set's plaque. The room hides the lenses; Value could recolour the engravings.
 - Bringing the wall into the real app: the rooms map is the navigation model (round 21); production's tabs sit at the top, and a merge would put the map where they are.
 - The painting (round 23): gold still marks a chased card while red is the Chase room; the yellow active lens shares yellow with earned; the count fields take the set's nearest primary; card scans come in full colour inside the painting; some motion outside the map still arcs (the trade table's lifts, the reply flights). The binder held mid-turn upright with pictures runs close to the 34 ms budget on the test machine (it did before round 23 too).
