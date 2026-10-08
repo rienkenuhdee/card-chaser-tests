@@ -325,6 +325,23 @@ the painting redefines against what it replaces (nothing dropped) and walked eve
 both sizes, light, dark and reduced motion: one older bug fixed (a trade accepted off the table dropped a card you
 already had instead of adding a copy, round 17's model), with a gesture check.
 
+**Fix: a frame that throws never freezes the screen.** Ryan's recording: pinching out of the wall stopped half way to
+the map, the Chase room blank, the rest of the painting in pieces. A frame clears its request before it draws, so one
+that threw part way asked for no next frame, and a clip the throw left open kept anything else from drawing. Every
+frame now runs guarded: one that throws resets the canvas and the next comes as usual, so the move lands; the first
+error of a visit is named in the top bar, so a screenshot from the phone says what threw (the tests' browser couldn't
+reproduce it). The named errors then led to the causes: Safari's "The provided value is non-finite" from a
+gradient in a drawn card face, fed by a bad number. A pinch whose fingertips meet read a distance of 0 and the camera
+divided by it (found by fuzzing gestures with a tracer on the camera); pinch distances now floor at 1px. And a late
+frame drawn by the watchdog can be stamped after the next one, so the time step could go negative and each card's
+emphasis grow instead of settle until it was NaN: the step is clamped at 0. Before every frame the guard puts right a
+bad camera, scroll, layout, emphasis or move, names it in the top bar, and has kept pictures drawn again; a gradient
+at a bad number is made at 0. Learned: a phone finds the numbers a test's tidy fingers never make, so every division
+by a gesture needs a floor, and the screen should say what broke. The guard's own report then named the last one
+("scroll"): after a pinch the finger still down rests, but moving it still ran the scroll code from a start it didn't
+have, so the wall's scroll became NaN; a resting finger's moves now do nothing. Smoke checks: a fault mid-move, a bad
+gradient, fingertips that meet, a finger left down after a pinch.
+
 **Parity 1: the Feed's sorts and filters.** No variants (Ryan: "one at a time as lean as possible"). Production's
 twelve sorts (best deals, newest, ending soonest, price both ways, biggest discount and savings, shops first, local and
 trades first, seller feedback, free shipping, card name) and its Filters panel, as far as the listings here carry it:

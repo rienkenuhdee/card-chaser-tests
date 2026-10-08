@@ -3,7 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { write } from "../scripts/build.mjs";
-import { launch, phone, wait, report } from "./browser.mjs";
+import { launch, phone, wait, report, installTouch } from "./browser.mjs";
 
 const variant = process.argv.includes("--variant") ? process.argv[process.argv.indexOf("--variant") + 1] : null;
 const { file } = write({ variant, debug: true });
@@ -122,6 +122,71 @@ for (const dark of [false, true]) {
     R.push([`${tag}: every nameplate fits its plinth (${plates.n} checked${plates.bad.length ? `; spills: ${plates.bad.join(", ")}` : ""})`, plates.n > 0 && !plates.bad.length]);
   }
   R.push([`${tag}: the move to the map runs without errors${p.errors.length ? ` (${p.errors[0]})` : ""}`, !p.errors.length]);
+  await p.close();
+}
+// A frame that throws part way never freezes the screen: one fault while the wall's pieces are drawn on the way to the
+// map, and the move still lands on the map, the screen keeps drawing, and the top bar names what happened.
+{
+  const p = await phone(browser, file, { motion: true });
+  await p.evaluate(() => { localStorage.setItem("wall-welcomed", "1"); localStorage.setItem("wall-map-seen", "1"); }); await p.reload({ waitUntil: "load" }); await wait(1500);
+  const t = await installTouch(p);
+  await p.evaluate(() => __w.armFault("pieces"));
+  await t.pinch(195, 420, 260, 70, 500); await wait(1500);
+  const s = await p.evaluate(() => ({ map: __w.rooms.map, trans: Boolean(__w.state.trans), err: window.__frameError || "", toast: document.getElementById("toast").textContent }));
+  const px = await p.evaluate(() => { const c = document.getElementById("wall"), x = c.getContext("2d"), d = x.getImageData(Math.round(c.width * 0.25), Math.round(c.height * 0.5), 1, 1).data; return d[0] + d[1] + d[2]; });
+  R.push([`a frame that throws on the way to the map doesn't freeze it: the move lands (${s.map ? "on the map" : "not on the map"}) and the top bar names the snag`, s.map && !s.trans && /test fault in pieces/.test(s.err) && /snag/.test(s.toast) && px > 0 && !p.errors.length]);
+  await p.close();
+}
+// A gradient at a bad number (Safari throws "The provided value is non-finite") is drawn at 0 instead: the move lands
+// with no snag, and the top bar names where the number came from.
+{
+  const p = await phone(browser, file, { motion: true });
+  await p.evaluate(() => { localStorage.setItem("wall-welcomed", "1"); localStorage.setItem("wall-map-seen", "1"); }); await p.reload({ waitUntil: "load" }); await wait(1500);
+  const t = await installTouch(p);
+  await p.evaluate(() => __w.armFault("nan"));
+  await t.pinch(195, 420, 260, 70, 500); await wait(1500);
+  const s = await p.evaluate(() => ({ map: __w.rooms.map, trans: Boolean(__w.state.trans), err: window.__frameError || "", bad: window.__badNumber || "", toast: document.getElementById("toast").textContent }));
+  R.push([`a gradient at a bad number is drawn anyway and named (${s.bad || "not named"}), and the move lands`, s.map && !s.trans && !s.err && /createLinearGradient in drawPieces/.test(s.bad) && /bad number/.test(s.toast) && !p.errors.length]);
+  await p.close();
+}
+// A pinch whose fingertips meet (the distance reads 0, as an iPhone reports a fast close) never puts a bad number in
+// the camera: the set closes or stays, and the wall draws.
+{
+  const p = await phone(browser, file, { motion: true });
+  await p.evaluate(() => { localStorage.setItem("wall-welcomed", "1"); localStorage.setItem("wall-map-seen", "1"); }); await p.reload({ waitUntil: "load" }); await wait(1500);
+  const t = await installTouch(p);
+  await t.tap(100, 200); await wait(1300);
+  const opened = await p.evaluate(() => __w.view);
+  await p.evaluate(async () => { // both fingers land on one point, then a single jump with them still together
+    const cv = document.getElementById("wall"), T = (id, x, y) => new Touch({ identifier: id, target: cv, clientX: x, clientY: y });
+    const fire = (type, touches, changed) => cv.dispatchEvent(new TouchEvent(type, { touches, changedTouches: changed, cancelable: true, bubbles: true }));
+    let a = T(1, 200, 400), c = T(2, 200, 400); fire("touchstart", [a], [a]); fire("touchstart", [a, c], [c]);
+    a = T(1, 201, 400); c = T(2, 201, 400); fire("touchmove", [a, c], [a, c]); fire("touchend", [], [a, c]);
+  });
+  await wait(1200);
+  const s = await p.evaluate(() => ({ cam: [__w.cam.x, __w.cam.y, __w.cam.s].every(Number.isFinite), bad: window.__badNumber || "", err: window.__frameError || "", view: __w.view }));
+  R.push([`a pinch whose fingertips meet keeps the camera sound (opened a ${opened}, now the ${s.view}${s.bad ? `; ${s.bad}` : ""})`, opened === "set" && s.cam && !s.bad && !s.err && !p.errors.length]);
+  await p.close();
+}
+// After a pinch, the finger still down rests: moving it neither scrolls nor breaks the scroll (it used to set it from
+// a start it didn't have, and the wall went blank).
+{
+  const p = await phone(browser, file, { motion: true });
+  await p.evaluate(() => { localStorage.setItem("wall-welcomed", "1"); localStorage.setItem("wall-map-seen", "1"); }); await p.reload({ waitUntil: "load" }); await wait(1500);
+  const before = await p.evaluate(() => __w.mScroll);
+  await p.evaluate(async () => {
+    const cv = document.getElementById("wall"), T = (id, x, y) => new Touch({ identifier: id, target: cv, clientX: x, clientY: y });
+    const fire = (type, touches, changed) => cv.dispatchEvent(new TouchEvent(type, { touches, changedTouches: changed, cancelable: true, bubbles: true }));
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    let a = T(1, 150, 400), c = T(2, 250, 400); fire("touchstart", [a], [a]); fire("touchstart", [a, c], [c]);
+    a = T(1, 152, 400); c = T(2, 248, 400); fire("touchmove", [a, c], [a, c]); await sleep(20);
+    fire("touchend", [c], [a]); // one finger lifts; the other stays and moves
+    for (let i = 1; i <= 6; i++) { c = T(2, 248, 400 - i * 40); fire("touchmove", [c], [c]); await sleep(16); }
+    fire("touchend", [], [c]);
+  });
+  await wait(600);
+  const s = await p.evaluate(() => ({ scroll: __w.mScroll, bad: window.__badNumber || "" }));
+  R.push([`after a pinch the finger left down rests: the wall doesn't scroll (${before} then ${s.scroll}) and no bad number turns up${s.bad ? ` (${s.bad})` : ""}`, Number.isFinite(s.scroll) && s.scroll === before && !s.bad && !p.errors.length]);
   await p.close();
 }
 // The Feed's sorts and Filters (production's, as far as the listings carry them): each filter narrows the list to

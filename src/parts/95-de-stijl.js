@@ -205,7 +205,7 @@ function frame(now) {
   raf = 0; frameFoil = false;
   if (roomsFrame(now)) return;
   if (tbl.on && tbl.q >= 1 && !tbl.anim) { drawTable(now); return; }
-  const dt = Math.min(48, now - (lastFrame || now)); lastFrame = now;
+  const dt = clamp(now - (lastFrame || now), 0, 48); lastFrame = Math.max(lastFrame, now); // never a step back in time: a watchdog frame can be stamped later than the next one
   let more = stepFly(now);
   if (stepInertia(dt)) more = true;
   if (view === "set" && !state.trans && !fly) clampCam(state.g);
@@ -674,7 +674,7 @@ function drawPieces(k, r, A, R, RW, now) {
     if (x0 > vw || x1 < 0 || y0 > vh || y1 < 0) continue;
     const f = { x: r.x + p.dx, y: r.y + p.dy, w: r.w, h: r.h };
     ctx.save(); ctx.beginPath(); ctx.rect(x0, y0, x1 - x0, y1 - y0); ctx.clip();
-    dsFrame(f, RW); drawCard(k, f, now, 1);
+    testFault("pieces"); testFault("nan"); dsFrame(f, RW); drawCard(k, f, now, 1);
     ctx.restore(); curFont = "";
   }
   // Where two pieces of one room have parted, the cut between them is a rule.

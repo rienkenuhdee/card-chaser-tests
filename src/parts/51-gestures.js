@@ -61,7 +61,7 @@ function finishTransition() {
   state.trans = null; T.done?.(T);
 }
 const mid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
-const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+const dist = (a, b) => Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)); // fingertips that meet read as 1px apart: a pinch never divides by zero
 
 function onDown(pts) {
   hideCaption(); fly = null; inertia = false;
@@ -112,6 +112,7 @@ function onMove(pts) {
   if (!gesture) { if (pts.length) onDown(pts); return; }
   if (gesture.kind === "one" && pts.length >= 2) return startTwo(pts);
   if (gesture.kind === "two") { if (pts.length >= 2) pinchMove(pts[0], pts[1]); return; }
+  if (gesture.kind === "rest") { if (pts.length >= 2) startTwo(pts); return; } // the finger left down after a pinch rests: it has no start to scroll from (it made the scroll NaN)
   const p = pts[0]; if (!p) return;
   const g = gesture, now = performance.now();
   if (g.stroke) { paintTo(p); return; }
