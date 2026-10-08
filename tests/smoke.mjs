@@ -294,6 +294,69 @@ for (const dark of [false, true]) {
   await p.click("#vsheet [data-vs-close]"); await wait(200);
   await p.close();
 }
+// Favourites and priority (parity 4): ☆ on a card you own makes it a favourite, first in Show mode; a sixth takes the
+// oldest one's place and Undo puts it back; ★ on a card you chase boosts its listings' score and leads the Chase lens;
+// My priority narrows the Feed; Reset clears both.
+{
+  const p = await phone(browser, file, { motion: false });
+  await p.evaluate(() => {
+    const at = Date.now() - 30 * 86400e3, owned = {}, chase = {}, copies = {};
+    for (const c of __w.cards) { if (c.own0) { owned[c.id] = { on: true, at }; if (c.i % 4 === 0) copies[c.id] = { n: 2, got: at }; } else chase[c.id] = true; }
+    localStorage.setItem("wall-owned", JSON.stringify(owned)); localStorage.setItem("wall-chase", JSON.stringify(chase)); localStorage.setItem("wall-copies", JSON.stringify(copies));
+    localStorage.setItem("wall-imported", "TCGplayer"); localStorage.setItem("wall-welcomed", "1"); localStorage.setItem("wall-map-seen", "1");
+  });
+  await p.reload({ waitUntil: "load" }); await wait(800);
+  await p.evaluate(() => __w.enterGroup(__w.groups[0])); await wait(900);
+  const fid = await p.evaluate(() => { const c = __w.groups[0].cards.find((c) => c.owned && !c.ph); __w.focus(c); return c.id; }); await wait(600);
+  await p.click("#p-star"); await wait(300);
+  const star = await p.$eval("#p-star", (e) => ({ text: e.textContent, on: e.getAttribute("aria-pressed") }));
+  await p.evaluate(() => __w.unfocus()); await wait(200);
+  await p.evaluate(() => __w.goRoom("trade")); await wait(900);
+  await p.evaluate(() => __w.openBinder()); await wait(1000);
+  await p.evaluate(() => __w.tbEnterShow()); await wait(700);
+  const show = await p.evaluate(() => ({ first: __w.tbPageItems(0, true).map((c) => c.id), vi: __w.bnd.vi, said: __w.bnd.labels.get(0) || [], trade: __w.tbPageItems(1, true).length }));
+  R.push([`a favourite (${star.text}, pressed ${star.on}) is first in Show mode (page 1 of the show: ${show.said.join(", ")})`, star.on === "true" && /★ Favourite/.test(star.text) && show.first[0] === fid && show.vi === 0 && show.said[0] === "Favourites" && show.trade > 0]);
+  await p.evaluate(() => __w.tbHandBack()); await wait(300);
+  await p.evaluate(() => __w.closeBinder(true)); await wait(300);
+  const six = await p.evaluate(() => { // four more, then a sixth
+    const own = __w.cards.filter((c) => c.owned && !c.ph && !__w.isFav(c)).slice(0, 5);
+    for (const c of own.slice(0, 4)) __w.toggleFav(c);
+    const before = __w.favCards().map((c) => c.id);
+    __w.toggleFav(own[4]);
+    return { before, after: __w.favCards().map((c) => c.id), sixth: own[4].id, toast: document.getElementById("toast").textContent, oldest: __w.cards.find((c) => c.id === before[0]).name };
+  });
+  await p.click("#toast .toast-btn"); await wait(200);
+  const undone = await p.evaluate(() => ({ ids: __w.favCards().map((c) => c.id), kept: JSON.parse(localStorage.getItem("wall-favs") || "[]") }));
+  R.push([`a sixth favourite takes the oldest one's place ("${six.toast}") and Undo puts it back (${undone.ids.length} favourites)`, six.before.length === 5 && six.after.length === 5 && six.after.includes(six.sixth) && !six.after.includes(six.before[0]) && six.toast.includes(six.oldest) && six.toast.includes("Undo") && JSON.stringify(undone.ids) === JSON.stringify(six.before) && JSON.stringify(undone.kept) === JSON.stringify(six.before)]);
+  await p.evaluate(() => __w.goRoom("chase")); await wait(900);
+  const pr = await p.evaluate(() => {
+    const listed = new Set(__w.feedList().map((L) => L.c));
+    const g = __w.groups.find((g, i) => i > 0 && g.cards.filter((c) => __w.isChase(c)).length > 1 && g.cards.some((c) => listed.has(c)));
+    const c = g.cards.filter((c) => listed.has(c)).sort((a, b) => a.price - b.price)[0], L = __w.feedList().find((L) => L.c === c);
+    const s0 = __w.scoreOf(L).score;
+    __w.togglePrio(c);
+    const s1 = __w.scoreOf(L), line = s1.lines.find((x) => x.key === "prio");
+    return { id: c.id, name: c.name, s0, s1: s1.score, line: Boolean(line), gi: __w.groups.indexOf(g) };
+  });
+  await p.click('[data-lens="chase"]'); await wait(900);
+  const lead = await p.evaluate((gi) => { const g = __w.groups[gi], live = __w.groups.filter((x) => x.lead?.length).sort((a, b) => a.m.y - b.m.y); return { first: g.cards[0].id, lifted: g.cards[0].lift, top: live[0] === g }; }, pr.gi);
+  R.push([`priority boosts ${pr.name}'s listing (score ${pr.s0} to ${pr.s1}) and puts it first in the Chase lens (${lead.first === pr.id ? "first" : "not first"} in its panel, ${lead.top ? "its panel on top" : "panel not on top"})`, pr.line && (pr.s1 > pr.s0 || pr.s1 === 100) && lead.first === pr.id && lead.lifted === 1 && lead.top]);
+  await p.click('[data-lens="have"]'); await wait(300);
+  await p.evaluate(() => __w.goRoom("feed")); await wait(900);
+  const rows = () => p.$$eval("#pf-list [data-l]", (b) => b.map((x) => x.dataset.l));
+  const all = await rows();
+  await p.click("#pf-more-btn"); await wait(150);
+  await p.click("#pf-prio"); await wait(250);
+  const mine = await rows(), label = await p.$eval("#pf-more-btn", (e) => e.textContent);
+  const row = await p.$eval(`#pf-list [data-prio="${pr.id}"]`, (b) => b.getAttribute("aria-pressed")).catch(() => null);
+  await p.click("#pf-prio"); await wait(200);
+  R.push([`My priority narrows the Feed (${all.length} listings, ${mine.length} for priority cards; "${label}") and the row's star is on`, all.length > mine.length && mine.length > 0 && mine.every((id) => id.split("~")[0] === pr.id) && label === "Filters (1)" && row === "true"]);
+  await p.evaluate(() => document.getElementById("reset").click()); await wait(1500);
+  const reset = await p.evaluate(() => ({ favs: localStorage.getItem("wall-favs"), prio: localStorage.getItem("wall-priority"), n: __w.favCards().length }));
+  R.push([`Reset clears favourites and priority (${reset.favs ?? "none"}, ${reset.prio ?? "none"})`, reset.favs === null && reset.prio === null && reset.n === 0 && !p.errors.length]);
+  if (p.errors.length) console.log(p.errors);
+  await p.close();
+}
 await browser.close();
 const bad = report(R);
 console.log(`\nScreenshots: ${path.relative(process.cwd(), out)}`);

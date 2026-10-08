@@ -115,7 +115,7 @@ function listingsOf(c) {
 // matters with any condition, so it's the last choice of the same picker). The filter counts everywhere the Feed is
 // counted (the rooms button, the map), like a source switched off. The sort is only how the page reads.
 const FEED_SORT_IDS = ["newest", "best", "ending", "price", "priceDesc", "pct", "savings", "shops", "local", "seller", "freeShip", "card"];
-const FEED_F0 = { src: "", how: "", slab: "", gco: "", gmin: "", off: "", fresh: "", max: "", free: false, fav: false, soon: false }; // the Filters panel (production's, where the listings carry it)
+const FEED_F0 = { src: "", how: "", slab: "", gco: "", gmin: "", off: "", fresh: "", max: "", free: false, fav: false, soon: false, prio: false }; // the Filters panel (production's, where the listings carry it)
 const feedView = { sort: "newest", cond: "", ...FEED_F0, v: 0 }; // cond: "" any but damaged, NM, LP or MP and better, "any" damaged too
 try {
   const v = JSON.parse(localStorage.getItem("wall-feed-view") || "null");
@@ -145,6 +145,7 @@ function feedPass(L) {
   if (f.max !== "" && +f.max > 0 && totalOf(L) > +f.max) return false;
   if (f.free && L.ship !== 0) return false;
   if (f.fav && !L.fav) return false;
+  if (f.prio && !isPrio(L.c)) return false;
   if (f.soon && !(L.endsAt > now && L.endsAt - now <= 6 * 3600e3)) return false;
   return true;
 }
@@ -177,7 +178,7 @@ function feedList(counts = null, hidden = null) {
 }
 let feedMemo = { key: "", v: null };
 function feedData() { // once a frame at most, for the map's cards
-  const key = `${lastFrame}|${srcState.ver}|${copiesKey}|${scan.last}|${wallVer}|${feedView.cond}|${feedView.v}`;
+  const key = `${lastFrame}|${srcState.ver}|${copiesKey}|${scan.last}|${wallVer}|${feedView.cond}|${feedView.v}|${prioVer}`;
   if (feedMemo.key === key) return feedMemo.v;
   const counts = {}, list = feedList(counts), chased = cards.filter(isChase).length;
   feedMemo = { key, v: { list, counts, chased, fresh: list.filter(isNewL).length } };
@@ -198,7 +199,7 @@ addEventListener("pagehide", () => { if (inFeed()) feedLeave(); });
 
 // ----- production's score (0 to 100), line by line: about 40 is a fair price, 80 and up a standout -----
 function scoreOf(L) {
-  const ageH = Math.floor((Date.now() - L.at) / 3600e3), key = `${L.price}|${ageH}|${srcOn(L.src)}`;
+  const ageH = Math.floor((Date.now() - L.at) / 3600e3), key = `${L.price}|${ageH}|${srcOn(L.src)}|${isPrio(L.c)}`;
   if (L.sc?.key === key) return L.sc;
   const M = marketL(L), pct = pctOf(L), parts = [{ key: "start", label: "Starting point", pts: 40, note: "Every listing starts here: about the market price." }];
   let score = 40;
@@ -215,6 +216,7 @@ function scoreOf(L) {
   else if (ageH < 24) add("fresh", "Listed today", 3);
   if (L.bestOffer) add("offer", "Best Offer", 3, "The seller takes offers, so you may get it for less.");
   if (L.fav) add("fav", "Favorite seller", 10, "A seller you marked as a favorite (in Source).");
+  if (isPrio(L.c)) add("prio", "Priority card", 4, "A card you marked priority (★).");
   if (L.ship === 0) add("freeship", "Free shipping", 2, "Shipping is already in the total.");
   if (L.ship == null && L.src === "ebay") add("noship", "Shipping not listed", -2, "The real price will be higher once shipping is added.");
   if (L.src === "tcgplayer") add("tcgunk", "Condition unknown", -6, "TCGplayer's lowest listing can be any condition.");
@@ -290,7 +292,7 @@ function feedRowHTML(L, slide) {
     ${cardFaceHTML(c)}<span class="fd-name">${n ? '<b class="fd-new">NEW</b>' : ""}${gt ? `<b class="fd-gr">${gt}</b>` : ""}<span>${esc(c.name)}</span></span><span class="fd-set">${esc(st.name)} #${esc(c.num)}${L.cond ? `, ${condOf(L.cond)[1]}` : ""}</span>
     <b class="fd-price">${money(L.price)}${L.was ? ` <s>${money(L.was)}</s>` : ""}</b><span class="fd-mkt">${gt ? `${gt} ask` : "Market"} ${money(ref)} · <em>${pct}% under</em></span>
     <span class="fd-src"><b>${esc(whereText(L))}</b> · ${L.dropAt ? "dropped " : ""}${agoText(L.seen, now)}</span>
-    <span class="slab ${slabClass(sc.score)}"><b>${sc.score}</b><small>score</small></span></button></li>`;
+    <span class="slab ${slabClass(sc.score)}"><b>${sc.score}</b><small>score</small></span></button>${prioBtnHTML(c)}</li>`;
 }
 function renderFeed(slideId = null) {
   if (pgFeed.hidden && !slideId) return;
@@ -313,7 +315,7 @@ function renderFeed(slideId = null) {
 // listings here carry it). A line under it says what the filters hide, with Show all.
 const pfSort = document.getElementById("pf-sort"), pfCond = document.getElementById("pf-cond"), pfHidden = document.getElementById("pf-hidden");
 const pfMoreBtn = document.getElementById("pf-more-btn"), pfMore = document.getElementById("pf-more");
-const PF_FIELDS = { "pf-src": "src", "pf-how": "how", "pf-slab": "slab", "pf-gco": "gco", "pf-gmin": "gmin", "pf-off": "off", "pf-fresh": "fresh", "pf-max": "max", "pf-free": "free", "pf-fav": "fav", "pf-soon": "soon" };
+const PF_FIELDS = { "pf-src": "src", "pf-how": "how", "pf-slab": "slab", "pf-gco": "gco", "pf-gmin": "gmin", "pf-off": "off", "pf-fresh": "fresh", "pf-max": "max", "pf-free": "free", "pf-fav": "fav", "pf-soon": "soon", "pf-prio": "prio" };
 function syncFeedTools(hidden) {
   pfSort.value = feedView.sort; pfCond.value = feedView.cond;
   pfCond.classList.toggle("on", Boolean(feedView.cond));
@@ -338,6 +340,7 @@ for (const [id, k] of Object.entries(PF_FIELDS)) {
 }
 document.getElementById("pf-clear").onclick = () => setFeedView({ ...FEED_F0 });
 pgFeed.addEventListener("click", (e) => {
+  const star = e.target.closest("[data-prio]"); if (star) { const c = cards.find((x) => x.id === star.dataset.prio); if (c) togglePrio(c); return; }
   if (e.target.closest("[data-fd-all]")) { setFeedView({ ...FEED_F0, cond: "any" }); return; }
   const row = e.target.closest("[data-l]"); if (row) { tick(4); openListing(row.dataset.l); return; }
   const go = e.target.closest("[data-go]"); if (!go) return;

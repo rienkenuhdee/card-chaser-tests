@@ -386,14 +386,29 @@ days), real TCGplayer prices and eBay asks, and value by chase (here by set). Sm
 with finite points and ends at its market, its ranges switch, Collection at market opens the sheet from Trophies,
 its now is the worth total, and its ranges change the change line.
 
+**Parity 4: favourites and priority.** No variants, one build. Production's two stars, lean. Favourites: up to five
+cards you own, your showcase. On the card up close, a card you own has ☆ Favourite under its price; on, it's ★ in a
+yellow field. They come first in Show mode of the trade binder, the Wall's in-person version of production's public
+trade page: a page of their own before the trade pages, titled Favourites and "Not for trade", the cards as large as
+the page lets them be (two across upright, three across on a spread), no price, and a tap on one picks nothing. A card
+you take out drops off (left out when read, so Undo brings it back); a sixth takes the oldest one's place, and the
+message names it with Undo. Priority: ☆ Priority on a chased card up close, and a ★ on every Feed row. A priority card
+leads its panel in the Chase lens, and its panel leads the lens; the lifted tile wears a black star on a yellow field in
+its corner (two rects and one glyph through `font()`); its listings score +4 ("Priority card", production's boost);
+Filters gains My priority; the list view marks it. Kept in `wall-favs` and `wall-priority`, cleared by Reset. Left out:
+production's favourites picker (with its up and down arrows), priority's effect on scan rotation (no scans here), and a
+Show mode reached with favourites but no spares (the binder still opens only with a spare). Smoke checks: a favourite
+is first in Show mode, a sixth replaces the oldest and Undo puts it back, priority boosts a listing's score and leads
+the Chase lens, My priority narrows the Feed, Reset clears both.
+
 ## Open questions (next rounds)
 
 - Production parity (audit, round 23). What production has that the Wall doesn't yet, beyond what's out of scope for
   an on-device prototype (accounts, sync, real push, PSA lookups): the Feed's language, version,
   lots and too-cheap filters (the made-up listings don't carry them yet), adding a shop in Source, "Fill your Dex" in the Feed,
   grade wants (the per-set Grade you want) and PSA's population and cert checks (graded slabs landed in parity 2), real price history kept day by day (parity 3 made it up, seeded), value by chase, savings stats from "I bought it" (what the market said when you bought),
-  favourites and priority stars, print placeholders, card reports, and the completion
-  ceremony. Replaced, not lost: the collection grid (the wall, search, Filters, the list view), the card sheet (the
+  print placeholders, card reports, and the completion ceremony (favourites and priority stars landed in parity 4,
+  without the favourites picker or scan rotation). Replaced, not lost: the collection grid (the wall, search, Filters, the list view), the card sheet (the
   card up close), the public trade page (Show mode and Someone new, in person). Online trading stays pinned (round 18).
 
 - A deal arriving off screen: one tap from the line to the offers, and whether the arrival should nudge the wall.

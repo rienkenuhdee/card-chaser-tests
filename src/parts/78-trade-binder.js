@@ -24,7 +24,14 @@ function tbList() {
   return list;
 }
 const tbFresh = () => { tbMemo.key = ""; return tbList(); }; // after a change in this same frame
-const tbPageCount = () => Math.max(1, Math.ceil(tbList().length / 9));
+// In Show mode your favourites (parity 4) come first, on a page of their own: the trade pages follow it.
+const tbFavOn = (show) => show && favCards().length > 0;
+const tbPageCount = () => Math.max(1, Math.ceil(tbList().length / 9)) + (tbFavOn(bnd.show) ? 1 : 0);
+function tbPageItems(i, show) {
+  const off = tbFavOn(show) ? 1 : 0;
+  if (off && i === 0) return favCards();
+  return tbList().slice((i - off) * 9, (i - off) * 9 + 9);
+}
 const plural1 = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 // ----- geometry: a page is three by three pockets, each a card at 63:88 with what's said about it on the card -----
@@ -69,6 +76,50 @@ function tbPocket(G, i, k) {
   const ox = tbLeft(G, i) ? G.bxL : G.bx;
   return { x: ox + (k % 3) * (G.cw + G.gx), y: G.by + Math.floor(k / 3) * (G.ch + G.lh + G.gy), w: G.cw, h: G.ch };
 }
+// The favourites' page (Show mode, parity 4): a title, then up to five cards as large as the page lets them be, in
+// whichever number across makes them largest, a short row centred.
+const TB_FAV_HEAD = 34;
+function tbFavRects(G, n) {
+  if (!n) return [];
+  const left = tbLeft(G, 0), x0 = (left ? G.edge : G.ring) + 8, W = G.pw - G.ring - G.edge - 16;
+  const y0 = G.pad + TB_FAV_HEAD, H = G.ph - G.pad * 2 - (G.B || 0) - TB_FAV_HEAD, g = 10;
+  let best = null;
+  for (let cols = 1; cols <= n; cols++) {
+    const rows = Math.ceil(n / cols), cw = Math.min((W - g * (cols - 1)) / cols, ((H - g * (rows - 1)) / rows) * TW / TH, n === 1 ? W * 0.62 : Infinity);
+    if (!best || cw > best.cw + 0.5) best = { cols, rows, cw };
+  }
+  const { cols, rows } = best, cw = Math.floor(best.cw), ch = Math.floor(cw * TH / TW), oy = y0 + Math.max(0, (H - (rows * ch + (rows - 1) * g)) / 2);
+  return Array.from({ length: n }, (_, k) => {
+    const row = Math.floor(k / cols), inRow = Math.min(cols, n - row * cols), col = k % cols, bw = inRow * cw + (inRow - 1) * g;
+    return { x: Math.round(x0 + (W - bw) / 2 + col * (cw + g)), y: Math.round(oy + row * (ch + g)), w: cw, h: ch };
+  });
+}
+function tbFavPaint(G) {
+  const F = favCards(), R = tbFavRects(G, F.length), two = G.spread === 2, left = tbLeft(G, 0), sl = TB_SLEEVE;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+  ctx.clearRect(0, 0, G.pw + 2, G.ph + 2);
+  rr(0.5, 0.5, G.pw - 1, G.ph - 1, two ? [10, 4, 4, 10] : 10); ctx.fillStyle = SHOW_PAGE; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = SHOW_LINE; ctx.stroke();
+  const rx = left ? G.pw - G.ring / 2 : G.ring / 2;
+  for (const f of [0.17, 0.5, 0.83]) { ctx.beginPath(); ctx.arc(rx, G.ph * f, two ? 3 : 3.4, 0, Math.PI * 2); ctx.fillStyle = SHOW_BG; ctx.fill(); ctx.strokeStyle = SHOW_LINE; ctx.stroke(); }
+  const x0 = (left ? G.edge : G.ring) + 8, xr = G.pw - (left ? G.ring : G.edge) - 8;
+  ctx.textBaseline = "alphabetic"; ctx.textAlign = "left"; ctx.fillStyle = "#FFFFFF"; font(700, 17); ctx.fillText("Favourites", x0, G.pad + 21);
+  ctx.textAlign = "right"; ctx.fillStyle = SHOW_MUTED; font(600, 12); ctx.fillText("Not for trade", xr, G.pad + 21);
+  F.forEach((c, k) => {
+    const r = R[k];
+    ctx.fillStyle = SHOW_SLEEVE; ctx.fillRect(r.x - sl, r.y - sl, r.w + sl * 2, r.h + sl * 2);
+    const pic = tbPic(c, r.w);
+    if (pic) ctx.drawImage(pic.bmp, r.x, r.y, r.w, r.h);
+    else {
+      const W0 = Math.min(r.w, 108), s = r.w / W0;
+      ctx.setTransform(dpr * s, 0, 0, dpr * s, dpr * r.x, dpr * r.y);
+      foilOff = true; drawnFace(c, 0, 0, W0, W0 * TH / TW, 0, false); foilOff = false;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1;
+    }
+  });
+  ctx.fillStyle = SHOW_MUTED; font(600, 11);
+  if (two) { ctx.textAlign = "left"; ctx.fillText("1", 12, G.ph - 6); } else { ctx.textAlign = "right"; ctx.fillText("1", G.pw - 14, G.dotY + 4); }
+  bnd.labels.set(0, ["Favourites", ...F.map((c) => c.name)]);
+}
 const bnd = { on: false, q: 0, anim: null, closing: false, vi: 0, turn: 0, tAnim: null, show: false, sq: 0, sa: null, prices: true, picks: new Set(), L: null, pinch: null, drag: null, rest: false, swallow: false, press: null, cache: new Map(), labels: new Map() };
 const tbViews = () => Math.max(1, Math.ceil(tbPageCount() / (bnd.L?.spread || 1)));
 const tbCan = (d) => bnd.vi + d >= 0 && bnd.vi + d < tbViews();
@@ -94,11 +145,13 @@ function tbPic(c, w) { // the settled picture to paint (asking for it, and for t
   return e;
 }
 function tbKey(i, G) {
-  const items = tbList().slice(i * 9, i * 9 + 9);
+  if (tbFavOn(G.show) && i === 0) { const F = favCards(), R = tbFavRects(G, F.length); return `fav|${G.pw}|${G.ph}|${G.spread}|${G.by}|${G.dotY}|${dpr}|${F.map((c, k) => `${c.id}.${tbArt(c, R[k].w)}`).join(",")}`; }
+  const items = tbPageItems(i, G.show);
   return `${copiesKey}|${G.show}|${G.pw}|${G.ph}|${G.cw}|${G.spread}|${G.bx}|${G.bxL}|${G.by}|${G.gy}|${G.dotY}|${dpr}|${theme.bg}|${theme["panel-solid"]}|${theme.gold}|${bnd.prices}|${i}|${items.map((c) => `${c.id}.${sparesOf(c)}.${c.away ? 1 : 0}.${tbArt(c, G.cw)}.${G.show && bnd.picks.has(c.id) ? 1 : 0}`).join(",")}`;
 }
 function tbPaint(i, G) {
-  const items = tbList().slice(i * 9, i * 9 + 9), show = G.show, two = G.spread === 2, sl = TB_SLEEVE, said = [];
+  if (tbFavOn(G.show) && i === 0) { tbFavPaint(G); return; }
+  const items = tbPageItems(i, G.show), show = G.show, two = G.spread === 2, sl = TB_SLEEVE, said = [];
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
   ctx.clearRect(0, 0, G.pw + 2, G.ph + 2);
   const fill = show ? SHOW_PAGE : theme["panel-solid"], line = show ? SHOW_LINE : theme["slot-line"], sleeve = show ? SHOW_SLEEVE : theme.slot;
@@ -384,20 +437,24 @@ function tbDots(G, S, a) {
 // The pocket under a point on screen, and where a card's pocket is.
 function tbPocketAt(x, y) {
   const G = bnd.L; if (!G || bnd.turn || bnd.q < 1 || bnd.sa) return null;
-  const list = tbList();
   for (let j = 0; j < G.spread; j++) {
-    const P = G.pages[j], i = bnd.vi * G.spread + j;
+    const P = G.pages[j], i = bnd.vi * G.spread + j, items = tbPageItems(i, G.show);
+    if (tbFavOn(G.show) && i === 0) { // the favourites: large, and not for trade
+      const R = tbFavRects(G, items.length);
+      for (let k = 0; k < R.length; k++) { const r = R[k], X = P.x + r.x, Y = P.y + r.y; if (x >= X && x <= X + r.w && y >= Y && y <= Y + r.h) return { c: items[k], fav: true, r: { x: X, y: Y, w: r.w, h: r.h } }; }
+      continue;
+    }
     for (let k = 0; k < 9; k++) {
       const r = tbPocket(G, i, k), X = P.x + r.x, Y = P.y + r.y;
-      if (x >= X - 3 && x <= X + r.w + 3 && y >= Y - 3 && y <= Y + r.h + G.lh) { const c = list[i * 9 + k]; return c ? { c, r: { x: X, y: Y, w: r.w, h: r.h } } : null; }
+      if (x >= X - 3 && x <= X + r.w + 3 && y >= Y - 3 && y <= Y + r.h + G.lh) { const c = items[k]; return c ? { c, r: { x: X, y: Y, w: r.w, h: r.h } } : null; }
     }
   }
   return null;
 }
 function tbPocketRect(c) {
   const G = bnd.L; if (!G) return null;
-  const i = tbList().indexOf(c); if (i < 0) return null;
-  const page = Math.floor(i / 9), j = page - bnd.vi * G.spread; if (j < 0 || j >= G.spread) return null;
+  const off = tbFavOn(G.show) ? 1 : 0, i = tbList().indexOf(c); if (i < 0) return null;
+  const page = Math.floor(i / 9) + off, j = page - bnd.vi * G.spread; if (j < 0 || j >= G.spread) return null;
   const r = tbPocket(G, page, i % 9), P = G.pages[j];
   return { x: P.x + r.x, y: P.y + r.y, w: r.w, h: r.h };
 }
@@ -458,15 +515,15 @@ function tbEnterShow() {
   hideWho(); tick(8);
   const from = tbSpreadRect(bnd.L);
   bnd.show = true; bnd.L = tbGeom(true); bnd.turn = 0; bnd.tAnim = null;
-  bnd.vi = clamp(bnd.vi, 0, tbViews() - 1);
+  bnd.vi = tbFavOn(true) ? 0 : clamp(bnd.vi, 0, tbViews() - 1); // your favourites first
   bnd.sa = reduced ? null : { t0: performance.now(), dur: 380, k: 0, from }; bnd.sq = reduced ? 1 : 0;
   document.body.classList.add("showing"); setChrome(); tbSync(); kick();
 }
 function tbExitShow() {
   if (!bnd.show) return;
-  const from = tbSpreadRect(bnd.L);
+  const from = tbSpreadRect(bnd.L), sp = bnd.L.spread, page = Math.max(0, bnd.vi * sp - (tbFavOn(true) ? 1 : 0)); // the same trade page, without the favourites' page before it
   bnd.show = false; bnd.L = tbGeom(false); bnd.turn = 0; bnd.tAnim = null;
-  bnd.vi = clamp(bnd.vi, 0, tbViews() - 1);
+  bnd.vi = clamp(Math.floor(page / bnd.L.spread), 0, tbViews() - 1);
   bnd.sa = reduced ? null : { t0: performance.now(), dur: 340, k: 0, from }; bnd.sq = reduced ? 0 : 1;
   document.body.classList.remove("showing"); setChrome(); tbSync(); tick(6); kick();
 }
@@ -644,6 +701,7 @@ function tbTap(x, y) {
     if (G?.arrows && y >= S.y && y <= S.y + S.h && (x < S.x || x > S.x + S.w)) tbTurn(x < S.x ? -1 : 1);
     return;
   }
+  if (h.fav) { tick(2); return; } // a favourite is shown, not offered
   if (bnd.show) {
     const id = h.c.id; if (bnd.picks.has(id)) bnd.picks.delete(id); else bnd.picks.add(id);
     tick(bnd.picks.has(id) ? 10 : 4); tbSync(); kick(); return;

@@ -154,9 +154,11 @@ function setOrder(o) {
 }
 // The chase list's order, in the Chase lens: best deal (live deals first, the biggest discount leading), dearest, or
 // cheapest to get now (its best deal, else market). Closest to what you'd pay isn't offered: the most you'd pay is a
-// flat 85% of market in this demo, so it would sort exactly as best deal does.
+// flat 85% of market in this demo, so it would sort exactly as best deal does. Your priority cards (★) lead whichever
+// order is on (parity 4).
 const nowPrice = (c) => c.deal ?? c.price;
 function chaseCmp(a, b) {
+  const p = isPrio(b) - isPrio(a); if (p) return p;
   if (state.corder === "dear") return b.price - a.price;
   if (state.corder === "cheap") return nowPrice(a) - nowPrice(b);
   return (b.deal ? 1 : 0) - (a.deal ? 1 : 0) || (a.deal && b.deal ? b.price / b.deal - a.price / a.deal : 0) || b.price - a.price;

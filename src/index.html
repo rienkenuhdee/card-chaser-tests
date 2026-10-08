@@ -81,6 +81,7 @@
       <label class="fd-pick"><span>Discount</span><select id="pf-off"><option value="">Any</option><option value="10">10% under market or more</option><option value="20">20% or more</option><option value="30">30% or more</option><option value="50">50% or more</option></select></label>
       <label class="fd-pick"><span>Listed</span><select id="pf-fresh"><option value="">Any time</option><option value="1">Last hour</option><option value="6">Last 6 hours</option><option value="24">Last day</option><option value="168">Last week</option></select></label>
       <label class="fd-pick fd-num"><span>Max total price</span><input type="number" id="pf-max" inputmode="decimal" min="0" placeholder="No limit"></label>
+      <label class="fd-check"><input type="checkbox" id="pf-prio"> My priority</label>
       <label class="fd-check"><input type="checkbox" id="pf-free"> Free shipping only</label>
       <label class="fd-check"><input type="checkbox" id="pf-fav"> Favorite sellers only</label>
       <label class="fd-check"><input type="checkbox" id="pf-soon"> Ending in 6 hours</label>
@@ -150,7 +151,7 @@
 <p class="sr" id="where" aria-live="polite"></p>
 <section class="panel glass" id="panel" aria-live="polite" aria-label="Card">
   <div class="swap" id="swap">
-    <div class="row"><div><h1 id="p-name">Card</h1><p class="meta" id="p-meta"></p></div><div class="price" id="p-price"></div></div>
+    <div class="row"><div><h1 id="p-name">Card</h1><p class="meta" id="p-meta"></p></div><div class="p-side"><div class="price" id="p-price"></div><button type="button" class="p-star" id="p-star" aria-pressed="false" hidden></button></div></div>
     <p class="deal" id="p-deal" hidden></p>
     <div class="ph" id="p-hist">
       <div class="ph-head"><p class="ph-line" id="p-trend"></p><div class="seg ph-seg" role="group" aria-label="Price history range"><button type="button" data-hr="30" aria-pressed="false">30 days</button><button type="button" data-hr="90" aria-pressed="true">90 days</button><button type="button" data-hr="365" aria-pressed="false">1 year</button></div></div>

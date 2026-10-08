@@ -16,6 +16,16 @@ let spares = {};
 try { spares = JSON.parse(localStorage.getItem("wall-spares") || "{}") || {}; } catch { spares = {}; }
 for (const c of cards) c.spare0 = false; // so do your spares
 const isSpare = (c) => c.owned && (spares[c.id] ?? c.spare0);
+// Favourites (parity 4): up to five cards you own, oldest first, shown first in Show mode. A card you take out drops
+// off (it's left out when read, so Undo brings it back). Priority: a ★ on a card you chase (production's).
+let favs = [], prio = {}, prioVer = 0;
+try { favs = (JSON.parse(localStorage.getItem("wall-favs") || "[]") || []).filter((id) => typeof id === "string"); } catch { favs = []; }
+try { prio = JSON.parse(localStorage.getItem("wall-priority") || "{}") || {}; } catch { prio = {}; }
+const FAV_MAX = 5;
+const favCards = () => favs.map((id) => cards.find((c) => c.id === id)).filter((c) => c && c.owned).slice(0, FAV_MAX);
+const isFav = (c) => favCards().includes(c.base || c);
+const isPrio = (c) => Boolean(prio[(c.base || c).id]) && isChase(c);
+const persistStars = () => { prioVer++; try { localStorage.setItem("wall-favs", JSON.stringify(favs)); localStorage.setItem("wall-priority", JSON.stringify(prio)); } catch { /* private mode */ } };
 
 // ----- Chase it, next to I have it on the card panel (on a card you own, the copies stepper takes its place) -----
 const flagBtn = document.getElementById("p-want");
@@ -43,7 +53,7 @@ function updateFlag(c) {
 }
 flagBtn.onclick = () => {
   const c = state.focus; if (!c || c.owned) return;
-  chasing[c.id] = !isChase(c); persistChase(); updateFlag(c); tick(5); drawList(); if (lifted) liftLayout(true); kick();
+  chasing[c.id] = !isChase(c); persistChase(); updateFlag(c); starPanel(c); tick(5); drawList(); if (lifted) liftLayout(true); kick();
   toast(chasing[c.id] ? `${c.name} on your chase list. Pay up to ${money(capOf(c))}.` : `${c.name} off your chase list.`);
 };
 
@@ -225,7 +235,13 @@ function drawFeedTile(c, x, y, w, h, a, now = performance.now()) {
   ctx.globalAlpha = a;
   const tx = x + pad + mw + pad, tw = x + w - pad - tx;
   ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
-  const arrived = deal && c.dealAt > 0, price = fitText(short(c.deal ?? capOf(c)), tw);
+  const star = isPrio(c), sb = Math.round(16 * s); // priority: a black star on a yellow field in a black rule, in the corner
+  if (star) {
+    const bx = x + w - pad - sb, by = y + pad;
+    ctx.fillStyle = theme.rule || "#121212"; ctx.fillRect(bx, by, sb, sb); ctx.fillStyle = theme["c-yellow"] || "#F2C200"; ctx.fillRect(bx + 1.5, by + 1.5, sb - 3, sb - 3);
+    ctx.fillStyle = "#121212"; ctx.textAlign = "center"; font(700, 11 * s); ctx.fillText("★", bx + sb / 2, by + sb * 0.74); ctx.textAlign = "left";
+  }
+  const arrived = deal && c.dealAt > 0, price = fitText(short(c.deal ?? capOf(c)), tw - (star ? sb + 4 : 0));
   ctx.fillStyle = deal ? theme.deal : theme.ink; font(800, 21 * s); ctx.fillText(price, tx, y + pad + 17 * s);
   if (arrived && c.dealWas) { // a price drop: the old asking price, struck through
     const pw = textW(price); font(600, 12 * s);

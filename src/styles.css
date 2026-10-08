@@ -1454,3 +1454,14 @@ a.mbtn { display: inline-flex; align-items: center; justify-content: center; box
 .vb-bar i { display: block; height: 100%; border: 2px solid var(--rule); box-sizing: border-box; }
 .vs-bars b { font-variant-numeric: tabular-nums; }
 .vs-foot .mbtn, .vs-foot .mbtn:first-child { flex: 1; }
+
+/* ===== Parity 4: favourites and priority. The star is a small field in a black rule; on, it's yellow. ===== */
+.p-side { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex: none; }
+.p-star { height: 34px; padding: 0 10px; border: 2px solid var(--rule); border-radius: 0; background: var(--panel-solid); color: var(--ink); font: 700 13.5px var(--font); white-space: nowrap; cursor: pointer; }
+.p-star[hidden] { display: none; }
+.p-star.on { background: var(--c-yellow); color: #121212; }
+.fd { position: relative; }
+.fd-row { grid-template-areas: "card name slab" "card set slab" "card price ." "card mkt ." "card src ."; }
+.fd-star { position: absolute; right: 12px; bottom: 10px; width: 44px; height: 40px; border: 2px solid var(--rule); border-radius: 0; background: var(--panel-solid); color: var(--ink); font: 700 19px/1 var(--font); cursor: pointer; }
+.fd-star.on { background: var(--c-yellow); color: #121212; }
+.fd-star:active { transform: translateY(1px); }
