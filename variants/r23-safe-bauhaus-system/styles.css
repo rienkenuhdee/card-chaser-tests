@@ -1,0 +1,153 @@
+/* Round 23, safe: a Bauhaus design system. The same Wall on stricter tokens: three true primaries and black on warm
+   paper, a geometric sans, square corners or perfect circles, flat colour, an 8px grid. Primaries carry meaning
+   (blue: the market and live deals; red: the chase and what's going down; yellow: what's earned and what's chased);
+   black is the primary action. */
+
+/* ---------- tokens ---------- */
+:root {
+  --bh-red: #D7261E; --bh-yellow: #F2B705; --bh-blue: #1F4FA0; --bh-black: #141414;
+  --bg: #EEEAE0; --slot: #E3DED2; --slot-line: #CCC5B5; --ink: #141414; --muted: #69645A;
+  --panel: #FAF8F2; --panel-solid: #FAF8F2; --panel-fill: #F8F6F0; --line: rgb(20 20 20 / .13);
+  --paper: #FAF8F2; --paper-ink: #141414; --deal: #1F4FA0; --gold: #E3A600; --shadow: none;
+  --font: "Futura", "Futura PT", "Avenir Next", "Avenir", "Century Gothic", "Jost", "Helvetica Neue", Arial, sans-serif;
+  --rule: 2px solid var(--ink);
+  --plaque: #F2B705; --plaque-ink: #141414; --plaque-hi: transparent; --plaque-lo: transparent;
+  --room-down: #D7261E;
+  --c-red: #D7261E; --c-yellow: #F2B705; --c-green: #141414; --c-blue: #1F4FA0; --m-surface: #FAF8F2;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bh-red: #EC4636; --bh-yellow: #F5C10A; --bh-blue: #5A8BE6; --bh-black: #F2EEE3;
+    --bg: #12110F; --slot: #1D1C19; --slot-line: #35332D; --ink: #F2EEE3; --muted: #9C968A;
+    --panel: #1C1B18; --panel-solid: #1C1B18; --panel-fill: #191815; --line: rgb(242 238 227 / .14);
+    --paper: #EDE8DC; --paper-ink: #141414; --deal: #5A8BE6; --gold: #F5C10A; --shadow: none;
+    --plaque: #E0AE06; --plaque-ink: #141414; --plaque-hi: transparent; --plaque-lo: transparent;
+    --room-down: #EC4636;
+    --c-red: #EC4636; --c-yellow: #F5C10A; --c-green: #F2EEE3; --c-blue: #5A8BE6; --m-surface: #24231F;
+  }
+}
+:root[data-theme="dark"] {
+  --bh-red: #EC4636; --bh-yellow: #F5C10A; --bh-blue: #5A8BE6; --bh-black: #F2EEE3;
+  --bg: #12110F; --slot: #1D1C19; --slot-line: #35332D; --ink: #F2EEE3; --muted: #9C968A;
+  --panel: #1C1B18; --panel-solid: #1C1B18; --panel-fill: #191815; --line: rgb(242 238 227 / .14);
+  --paper: #EDE8DC; --paper-ink: #141414; --deal: #5A8BE6; --gold: #F5C10A; --shadow: none;
+  --plaque: #E0AE06; --plaque-ink: #141414; --plaque-hi: transparent; --plaque-lo: transparent;
+  --room-down: #EC4636;
+  --c-red: #EC4636; --c-yellow: #F5C10A; --c-green: #F2EEE3; --c-blue: #5A8BE6; --m-surface: #24231F;
+}
+
+/* ---------- shape: square corners, or a perfect circle ---------- */
+*, *::before, *::after { border-radius: 0 !important; }
+.timebar input[type=range]::-webkit-slider-thumb { border-radius: 50% !important; }
+.timebar input[type=range]::-moz-range-thumb { border-radius: 50% !important; }
+.fsheet .sw::after, .sw span::after, .trow .tdot, .w-dots i, .ms-check, #list .lm-dot, .st-dots i, .timebar .t-marks i,
+.ar-kick::before, .src-clock .dot, .src-clock .dot::after, .trader .tav, .ls-x { border-radius: 50% !important; }
+
+/* ---------- flat: no blur, no soft shadow, no blend ---------- */
+.glass { background: var(--panel); -webkit-backdrop-filter: none; backdrop-filter: none; border: var(--rule); box-shadow: none; }
+dialog { border: var(--rule); box-shadow: none; }
+dialog::backdrop, .pay-scrim { background: rgb(20 20 20 / .55); }
+.timebar input[type=range]::-webkit-slider-thumb { box-shadow: none; background: var(--ink); border-color: var(--ink); }
+.timebar input[type=range]::-moz-range-thumb { background: var(--ink); border-color: var(--ink); }
+.timebar input[type=range]::-webkit-slider-runnable-track { height: 4px; }
+.fsheet .sw::after, .sw span::after { box-shadow: none; }
+.seg button[aria-pressed="true"] { box-shadow: none; }
+.mpop.crit, .st-moment.crit { box-shadow: 0 0 0 2px var(--bh-yellow); }
+.mpop.shiny, .st-moment.shiny { box-shadow: 0 0 0 2px var(--bh-blue); }
+.st-card { box-shadow: none; background: var(--tc); }
+.st-stack { box-shadow: 4px -4px 0 -1px color-mix(in srgb, var(--tc) 55%, var(--bg)); }
+.st-plaque { background: var(--plaque); box-shadow: none; }
+.ar-plate { box-shadow: none; }
+#rooms.glow::after { box-shadow: 0 0 0 2px var(--deal); }
+.rank-tag.shiny { background: var(--bh-yellow); color: #141414; border-color: #141414; }
+#list .lm-dot.tier-holo { background: var(--bh-blue); }
+.ms-card.own::before { background: color-mix(in srgb, var(--tc) 70%, #000); }
+.slab.holo { background: color-mix(in srgb, var(--gold) 14%, var(--slot)); }
+.ls-photo::before { background: none; }
+.ls-photo .cface { box-shadow: 0 0 0 4px var(--paper); }
+.ls-photo .cface.slv { box-shadow: 0 0 0 4px var(--paper), 0 0 0 6px var(--ink); }
+
+/* The DOM card face (Feed, Trade, sheets): a flat chip, a flat window, and a holo's hard-edged stripe of light. */
+.cface { background: var(--t); box-shadow: inset 0 0 0 1px rgb(0 0 0 / .14); }
+.cface::before { background: color-mix(in srgb, var(--t) 68%, #000); }
+.cface.holo::before { background: linear-gradient(115deg, transparent 38%, rgb(255 255 255 / .22) 38% 52%, transparent 52%), color-mix(in srgb, var(--t) 68%, #000); }
+.cface.full::before { background: linear-gradient(115deg, transparent 38%, rgb(255 255 255 / .2) 38% 52%, transparent 52%); }
+
+/* The trade binder's cover, on the Trade room's page: black board, flat. */
+.tc-page { background: #1A1A1A; box-shadow: none; }
+.tc-page::before { box-shadow: none; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tc-page { background: #2A2925; } }
+:root[data-theme="dark"] .tc-page { background: #2A2925; }
+
+/* ---------- type: a geometric sans; titles bold, labels in caps ---------- */
+html, body { font-family: var(--font); }
+.panel h1, dialog h2, #list h1, #list h2, .o-title b, .pay-head b { letter-spacing: 0; font-stretch: 100%; }
+.fsheet .fs-lbl, dialog .lbl { letter-spacing: .1em; }
+
+/* ---------- the 8px grid: the chrome ---------- */
+.top { top: calc(env(safe-area-inset-top, 0px) + 8px); padding: 0 8px; }
+.strip { height: 56px; padding: 0 6px; gap: 0; }
+.ib { width: 40px; height: 40px; }
+.ib:hover, .ib[aria-expanded="true"] { background: var(--line); }
+.search { height: 40px; margin: 0 8px; }
+.count { height: 32px; padding: 0 8px; }
+.lens { bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); padding: 4px; }
+.lens button { height: 40px; padding: 0 16px; font-weight: 600; letter-spacing: .02em; }
+/* The lens you're on is a black block (white on dark). */
+.lens .ink { background: var(--ink); }
+.lens button[aria-pressed="true"] { color: var(--bg); }
+.lens .fchip { margin-left: 8px; padding-left: 8px; border-left: var(--rule); }
+.lens .fchip button { background: var(--bh-yellow); color: #141414; }
+.timebar { bottom: calc(env(safe-area-inset-bottom, 0px) + 80px); padding: 8px 16px 8px 8px; gap: 0 8px; }
+.timebar #t-area { fill: color-mix(in srgb, var(--deal) 16%, transparent); }
+.timebar #t-line { stroke: var(--deal); stroke-width: 2; }
+
+/* Sheets and dialogs: a black rule along the top edge, 24px gutters, 48px buttons. */
+.panel, .offers, .pay, .welcome, .chase-sheet, .msheet, .arrival { border: 0; border-top: var(--rule); }
+.panel { padding: 16px 24px calc(env(safe-area-inset-bottom, 0px) + 16px); gap: 16px; }
+.panel .acts, .pay-acts, .pay-keys { gap: 8px; }
+.act { height: 48px; border: var(--rule); font-weight: 700; }
+.act:not(.primary):not(.owned):not(.on) { border-color: var(--line); border-width: 2px; }
+.act.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.act.owned { border-color: var(--deal); background: color-mix(in srgb, var(--deal) 12%, transparent); }
+.act.want.on { border-color: var(--gold); background: color-mix(in srgb, var(--gold) 22%, transparent); }
+.mbtn, dialog .btn, .pill-btn, .mark { height: 40px; border-width: 2px; }
+.mbtn.primary, dialog .btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.pay-keys button { height: 56px; border-width: 2px; }
+.chip { height: 40px; padding: 0 16px; border-width: 2px; }
+dialog { padding: 24px; }
+.arrange-menu { padding: 8px; gap: 0; }
+.arrange-menu button { padding: 8px 16px; }
+.arrange-menu button:hover, .arrange-menu button:focus-visible { background: var(--line); }
+.arrange-menu [aria-checked="true"] { box-shadow: inset 4px 0 0 var(--ink); }
+.arrange-menu .tick { color: var(--ink); }
+.seg { padding: 4px; background: var(--slot); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.fsheet .seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.fsheet .seg button:hover { background: var(--line); }
+.fsheet .seg button[aria-pressed="true"]:hover { background: var(--ink); }
+.fsheet .fs-row { padding: 8px 0; gap: 8px; }
+.fsheet .fs-foot { padding-top: 16px; }
+.toast { background: var(--ink); color: var(--bg); padding: 8px 8px 8px 16px; }
+.toast:not(.act) { padding-right: 16px; }
+.toast-btn { background: var(--bh-yellow); color: #141414; }
+.caption { padding: 8px 16px; }
+:focus-visible { outline: 2px solid var(--bh-blue); outline-offset: 2px; }
+
+/* Switches: a square track, a round knob (the one circle in the control). */
+.fsheet [aria-checked="true"] .sw, .sw input:checked + span { background: var(--deal); }
+
+/* ---------- the rooms ---------- */
+/* The rooms button: four flat blocks, the map in miniature (already a Mondrian; now square). */
+.rbadge { background: var(--bh-red); color: #fff; box-shadow: 0 0 0 2px var(--panel-solid); }
+.rp-stripe { height: 8px; margin: 16px 0; }
+.fd-row, .fd-empty, .src-clock, .srcs, .tcover, .trader, .verdict, .tside, .impact, .offer { border-width: 2px; }
+.fd.is-new .fd-row { box-shadow: inset 8px 0 0 var(--c-blue); border-color: var(--line); }
+.fd-new { background: var(--c-blue); }
+.trader .tav { font-weight: 700; }
+.verdict.uneven { border-color: var(--c-red); background: color-mix(in srgb, var(--c-red) 8%, var(--panel-fill)); }
+.fd-pick select { border-width: 2px; }
+.fd-pick select.on { box-shadow: none; border-color: var(--ink); }
+.tcadd, .lsheet { border: var(--rule); }
+.ls-x { background: var(--ink); color: var(--bg); }
+.showpill { border-width: 2px; }
