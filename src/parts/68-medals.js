@@ -24,7 +24,8 @@ const MD_NAMES = {
   rarity: { half: "Treasure Hunter", tq: "Collector's Eye", last3: "Last Gem", complete: "Full Hoard" },
   custom: { half: "Halfway", tq: "Home stretch", last3: "Last three", complete: "Complete" },
 };
-const MD_TIERS = { bronze: ["#1E4C9E", "#1E4C9E"], silver: ["#D1281D", "#D1281D"], gold: ["#F2C300", "#C99A00"], holo: ["#F2C300", "#1E4C9E"] }; // the primaries (round 23): the bar's notch and the mint's flash read these
+const MD_SHAPE = { set: "shield", pokemon: "hex", artist: "rosette", region: "octagon", type: "diamond", rarity: "star", custom: "circle", dex: "squircle", global: "badge" };
+const MD_TIERS = { bronze: ["#F0B27A", "#9A5B21"], silver: ["#EEF1F7", "#8E99AD"], gold: ["#FFE066", "#C99A00"], holo: ["#9BE0FF", "#C9A8FF"] };
 const MD_RANK = { shiny: "Shiny", crit: "Critical" };
 const MD_STARTERS = [[1, 9], [152, 160], [252, 260], [387, 395], [495, 503], [650, 658], [722, 730], [810, 818], [906, 914]];
 const MD_LEGENDS = [[144, 146], [150, 151], [243, 245], [249, 251], [377, 386], [480, 494], [638, 649], [716, 721], [772, 773], [785, 809], [888, 898], [905, 905], [1001, 1010], [1014, 1025]];
@@ -267,72 +268,91 @@ function mdAnnounce(got, viaImport) {
   if (!viaImport && got.length <= 4 && inSet) { queueMints(got, cause); return; }
   mdQueue.push(...got); mdQueue.via = viaImport ? "import" : mdQueue.via || ""; mdCelebrateSoon();
 }
-document.fonts?.ready.then(() => { mdArt.clear(); mdRows.clear(); mdVer++; kick(); }); // the nameplates were lettered before the fonts were ready
+document.fonts?.ready.then(() => { mdArt.clear(); mdRows.clear(); mdVer++; kick(); }); // the nameplates were lettered before Archivo arrived
 
-// ----- the artwork: Bauhaus primitives for the page (SVG) and the canvas (painted once and kept) -----
+// ----- the artwork: production's medalSVG for the page, and the same paths painted on the canvas -----
+function mdShape(shape, r, cx = 50, cy = 50) {
+  const P = (pts) => "M" + pts.map(([x, y]) => `${(cx + x).toFixed(2)} ${(cy + y).toFixed(2)}`).join(" L") + " Z";
+  const ring = (n, rot, f) => P(Array.from({ length: n }, (_, i) => { const a = (((i / n) * 360) + rot) * Math.PI / 180, q = f(i); return [Math.cos(a) * q, Math.sin(a) * q]; }));
+  switch (shape) {
+    case "hex": return ring(6, -90, () => r);
+    case "octagon": return ring(8, -22.5, () => r);
+    case "diamond": return ring(4, -90, () => r * 1.1);
+    case "star": return ring(16, -90, (i) => (i % 2 ? r * 0.76 : r));
+    case "badge": return ring(24, -90, (i) => (i % 2 ? r * 0.9 : r));
+    case "rosette": return P(Array.from({ length: 140 }, (_, i) => { const a = (i / 140) * Math.PI * 2, q = r * (0.93 + 0.07 * Math.cos(14 * a)); return [Math.cos(a) * q, Math.sin(a) * q]; }));
+    case "shield": return `M${cx} ${cy - r} L${cx + r * 0.86} ${cy - r * 0.72} L${cx + r * 0.86} ${cy + r * 0.1} Q${cx + r * 0.86} ${cy + r * 0.78} ${cx} ${cy + r} Q${cx - r * 0.86} ${cy + r * 0.78} ${cx - r * 0.86} ${cy + r * 0.1} L${cx - r * 0.86} ${cy - r * 0.72} Z`;
+    case "squircle": { const k = r * 0.36; return `M${cx - r + k} ${cy - r} H${cx + r - k} Q${cx + r} ${cy - r} ${cx + r} ${cy - r + k} V${cy + r - k} Q${cx + r} ${cy + r} ${cx + r - k} ${cy + r} H${cx - r + k} Q${cx - r} ${cy + r} ${cx - r} ${cy + r - k} V${cy - r + k} Q${cx - r} ${cy - r} ${cx - r + k} ${cy - r} Z`; }
+    default: return `M${cx - r} ${cy} a${r} ${r} 0 1 0 ${2 * r} 0 a${r} ${r} 0 1 0 ${-2 * r} 0 Z`;
+  }
+}
+const MD_RIB_L = "M30 70 L22 118 L38 108 L46 120 L52 76 Z", MD_RIB_R = "M70 70 L78 118 L62 108 L54 120 L48 76 Z";
+const MD_STAR = "M50 29 L56.5 43.5 L72 45 L60.5 55.5 L63.8 71 L50 63 L36.2 71 L39.5 55.5 L28 45 L43.5 43.5 Z";
+const MD_CROWN = "M38 13 L42 4 L46 10 L50 2 L54 10 L58 4 L62 13 Z", MD_CRIT = "M84 8 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3 z";
+const MD_RAYS = Array.from({ length: 12 }, (_, i) => { const a = (i / 12) * Math.PI * 2, p = (q, da = 0) => `${(50 + Math.cos(a + da) * q).toFixed(1)} ${(50 + Math.sin(a + da) * q).toFixed(1)}`; return `M${p(40, -0.11)} L${p(49)} L${p(40, 0.11)} Z`; });
+const mdSparkle = (x, y, s) => `M${x} ${y - 7 * s} L${x + 2 * s} ${y - 2 * s} L${x + 7 * s} ${y} L${x + 2 * s} ${y + 2 * s} L${x} ${y + 7 * s} L${x - 2 * s} ${y + 2 * s} L${x - 7 * s} ${y} L${x - 2 * s} ${y - 2 * s} Z`;
+const MD_SPARKLES = [[14, 20, 1.2], [88, 34, 1], [76, 92, 0.9]];
+const MD_RAINBOW = [[0, "#FF6B6B"], [0.25, "#FFD93D"], [0.5, "#6BCB77"], [0.75, "#4D96FF"], [1, "#C77DFF"]];
 const mdEsc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 let mdSvgN = 0;
-// Trophies are Bauhaus primitives (round 23). The kind is the shape (Kandinsky's three): a set, a region or everything
-// is a square; a Pokémon, the Dex or a chase of your own is a circle; an artist, a type or a rarity is a triangle. The
-// tier is a primary and a count anyone can read: bronze one notch in blue, silver two in red, gold three in yellow,
-// holo four with all three primaries in bands. Each sits on a white plate in a black rule, on a black plinth with its
-// short name. Luck changes the plate: Critical cuts a black corner, Shiny turns the ground black. A signature trophy
-// wears a red block on top, a hidden one a black "?" circle.
-const DS_PRIM = { set: "square", region: "square", global: "square", dex: "circle", pokemon: "circle", custom: "circle", artist: "triangle", type: "triangle", rarity: "triangle" };
-const DS_TIER = { bronze: "c-blue", silver: "c-red", gold: "c-yellow" };
-const DS_NOTCH = { bronze: 1, silver: 2, gold: 3, holo: 4 };
-const DS_CY = 46; // the primitive's centre, above the notches
-function dsPrim(x, shape, cx, cy, s) {
-  x.beginPath();
-  if (shape === "circle") x.arc(cx, cy, s, 0, Math.PI * 2);
-  else if (shape === "square") x.rect(cx - s * 0.9, cy - s * 0.9, s * 1.8, s * 1.8);
-  else { x.moveTo(cx, cy - s * 1.1); x.lineTo(cx + s * 1.1, cy + s * 0.8); x.lineTo(cx - s * 1.1, cy + s * 0.8); x.closePath(); }
-}
-const dsNotches = (t) => { const n = DS_NOTCH[t.tier] || 1, w = n * 6 + (n - 1) * 3; return Array.from({ length: n }, (_, i) => 50 - w / 2 + i * 9); }; // each notch's x: 6 square, at y 74
-const MD_TIER_NAME = { bronze: "Bronze", silver: "Silver", gold: "Gold", holo: "Holo" };
+// The page's medal (the sheet, the celebration, the list): production's medalSVG, its colours from CSS variables.
 function medalSvg(t, { locked = false, cls = "" } = {}) {
-  const shape = DS_PRIM[t.kind] || "circle", rank = locked ? "" : MD_RANK[t.rank] ? t.rank : "", g = `md${++mdSvgN}`, cy = DS_CY;
-  const prim = (f) => (shape === "circle" ? `<circle cx="50" cy="${cy}" r="23" fill="${f}"/>` : shape === "square" ? `<rect x="29.3" y="${cy - 20.7}" width="41.4" height="41.4" fill="${f}"/>` : `<path d="M50 ${cy - 25.3} L75.3 ${cy + 18.4} L24.7 ${cy + 18.4} Z" fill="${f}"/>`);
-  const body = t.tier === "holo"
-    ? `<clipPath id="${g}c">${prim("#000")}</clipPath><g clip-path="url(#${g}c)"><rect x="20" y="16" width="20" height="60" fill="var(--c-red)"/><rect x="40" y="16" width="20" height="60" fill="var(--c-yellow)"/><rect x="60" y="16" width="20" height="60" fill="var(--c-blue)"/></g>`
-    : prim(`var(--${DS_TIER[t.tier] || "c-blue"})`);
-  const notch = rank === "shiny" ? "#FFFFFF" : "#121212", notches = dsNotches(t).map((nx) => `<rect x="${nx}" y="74" width="6" height="6" fill="${notch}"/>`).join("");
-  const plate = t.plate ? `<rect x="20" y="94" width="60" height="20" fill="#121212"/><text x="50" y="108.5" text-anchor="middle" fill="#fff" font-size="11" font-weight="700" style="font-family:var(--font-narrow)">${mdEsc(t.plate)}</text>` : `<rect x="40" y="94" width="20" height="12" fill="#121212"/>`;
-  const tier = (MD_TIER_NAME[t.tier] || "").toLowerCase();
-  return `<svg class="medal ${cls} ${locked ? "locked" : ""} tier-${t.tier} ${rank ? `rank-${rank}` : ""}" viewBox="0 0 100 124" role="img" aria-label="${mdEsc(t.name)} ${locked ? "(not yet earned)" : `${tier} trophy${rank ? `, ${MD_RANK[rank]}` : ""}`}">
-    <rect x="6" y="6" width="88" height="88" fill="#121212"/><rect x="13" y="13" width="74" height="74" fill="${rank === "shiny" ? "#121212" : "var(--m-surface)"}"/>
-    ${body}${notches}
-    ${rank === "crit" ? `<path d="M62 13 L87 13 L87 38 Z" fill="#121212"/>` : ""}
+  const [hi, lo] = MD_TIERS[t.tier] || MD_TIERS.bronze;
+  const shape = MD_SHAPE[t.kind] || "circle", col = `var(--c-${t.color || "blue"})`;
+  const rank = locked ? "" : MD_RANK[t.rank] ? t.rank : "", g = `md${++mdSvgN}`;
+  const rays = rank === "crit" ? MD_RAYS.map((d) => `<path d="${d}" fill="#FFCB05" stroke="#9A6A00" stroke-width=".6"/>`).join("") : "";
+  const sparkle = ([x, y, s], i) => `<path class="sparkle" style="animation-delay:${i * 0.5}s" d="${mdSparkle(x, y, s)}" fill="#FFF7B0" stroke="#C99A00" stroke-width=".8"/>`;
+  const plate = t.plate ? (() => { const w = Math.max(26, String(t.plate).length * 7.4 + 12); return `<rect x="${50 - w / 2}" y="61" width="${w}" height="15" rx="7.5" fill="rgb(0 0 0 / .66)"/><text x="50" y="72" text-anchor="middle" fill="#fff" font-size="10" font-weight="800" style="font-family:var(--font)">${mdEsc(t.plate)}</text>`; })() : "";
+  return `<svg class="medal ${cls} ${locked ? "locked" : ""} tier-${t.tier} ${rank ? `rank-${rank}` : ""}" viewBox="0 0 100 124" role="img" aria-label="${mdEsc(t.name)} ${locked ? "(not yet earned)" : `trophy${rank ? `, ${MD_RANK[rank]}` : ""}`}"><defs>
+    <linearGradient id="${g}g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${hi}"/><stop offset="1" stop-color="${lo}"/></linearGradient>
+    <linearGradient id="${g}h" x1="0" y1="0" x2="1" y2="1">${MD_RAINBOW.map(([o, c]) => `<stop offset="${o}" stop-color="${c}"/>`).join("")}</linearGradient></defs>
+    <path d="${MD_RIB_L}" style="fill:${col}"/><path d="${MD_RIB_R}" style="fill:color-mix(in srgb, ${col} 55%, #1B1D2E)"/>
+    ${rays}
+    <path class="rim" d="${mdShape(shape, 38)}" fill="url(#${g}${rank === "shiny" ? "h" : "g"})"/>
+    <path d="${mdShape(shape, 33.5)}" fill="none" stroke="rgb(255 255 255 / .55)" stroke-width="2"/>
+    <path d="${mdShape(shape, 29)}" fill="var(--m-surface)"/>
+    <path d="${MD_STAR}" fill="url(#${g}g)"/>
+    <path d="${mdShape(shape, 28.5)}" fill="none" stroke="${lo}" stroke-width="1.5" opacity=".6"/>
     ${plate}
-    ${t.hidden ? `<circle cx="18" cy="18" r="11" fill="#121212"/><text x="18" y="23" text-anchor="middle" font-size="14" font-weight="700" fill="#fff" style="font-family:var(--font)">?</text>` : ""}
-    ${t.sig ? `<rect x="38" y="-4" width="24" height="12" fill="var(--c-red)" stroke="#121212" stroke-width="2"/>` : ""}</svg>`;
+    ${t.hidden ? `<circle cx="82" cy="14" r="10" fill="#6B3FD1" stroke="#FFFFFF" stroke-width="2"/><text x="82" y="18.5" text-anchor="middle" font-size="13" font-weight="800" font-family="system-ui, sans-serif" fill="#FFFFFF">?</text>` : ""}
+    ${t.sig ? `<path d="${MD_CROWN}" fill="#FFCB05" stroke="#9A6A00" stroke-width="1.2" stroke-linejoin="round"/><circle cx="50" cy="2.8" r="1.6" fill="#E3350D"/>` : ""}
+    ${rank === "crit" ? `<path d="${MD_CRIT}" fill="#FFCB05" stroke="#9A6A00" stroke-width="1"/>` : ""}
+    ${rank === "shiny" ? MD_SPARKLES.map(sparkle).join("") : ""}</svg>`;
 }
-// The canvas's medal: the same drawing, painted once per look, size, dpr and theme and kept. A locked medal is grey at
-// .38; the next one on a bar ("lit") is faint.
+// The canvas's medal: the same paths with Path2D, painted once per look, size, dpr and theme and kept. A locked medal is
+// production's grayscale at .38; the next one on a bar ("lit") is faint with a soft glow.
+const mdPaths = new Map();
+const mdP = (d) => { let p = mdPaths.get(d); if (!p) { p = new Path2D(d); mdPaths.set(d, p); } return p; };
 const mdGrey = (h) => { const [r, g, b] = hex(h), v = Math.round(r * 0.299 + g * 0.587 + b * 0.114).toString(16).padStart(2, "0"); return `#${v}${v}${v}`; };
-function paintMedal(x, t, mode) {
+function paintMedal(x, t, mode, W = 100) {
   const locked = mode === "locked", C = (h) => (locked ? mdGrey(h) : h);
-  const shape = DS_PRIM[t.kind] || "circle", rank = mode ? "" : MD_RANK[t.rank] ? t.rank : "", ink = "#121212";
-  const red = C(theme["c-red"] || "#D1281D"), yel = C(theme["c-yellow"] || "#F2C300"), blu = C(theme["c-blue"] || "#1E4C9E");
-  x.globalAlpha = locked ? 0.38 : mode === "lit" ? 0.78 : 1;
-  x.fillStyle = ink; x.fillRect(6, 6, 88, 88);
-  x.fillStyle = rank === "shiny" ? ink : C(theme["m-surface"] || "#FBFAF6"); x.fillRect(13, 13, 74, 74);
-  if (t.tier === "holo") {
-    x.save(); dsPrim(x, shape, 50, DS_CY, 23); x.clip();
-    x.fillStyle = red; x.fillRect(20, 16, 20, 60); x.fillStyle = yel; x.fillRect(40, 16, 20, 60); x.fillStyle = blu; x.fillRect(60, 16, 20, 60);
-    x.restore();
-  } else { x.fillStyle = { "c-blue": blu, "c-red": red, "c-yellow": yel }[DS_TIER[t.tier] || "c-blue"]; dsPrim(x, shape, 50, DS_CY, 23); x.fill(); }
-  x.fillStyle = rank === "shiny" ? "#FFFFFF" : ink; for (const nx of dsNotches(t)) x.fillRect(nx, 74, 6, 6); // the tier, counted
-  if (rank === "crit") { x.fillStyle = ink; x.beginPath(); x.moveTo(62, 13); x.lineTo(87, 13); x.lineTo(87, 38); x.closePath(); x.fill(); }
-  // the plinth, with its short name
-  x.fillStyle = ink;
+  const [hi0, lo0] = MD_TIERS[t.tier] || MD_TIERS.bronze, hi = C(hi0), lo = C(lo0);
+  const shape = MD_SHAPE[t.kind] || "circle", col = C(theme[`c-${t.color}`] || theme["c-blue"] || "#3B4CCA");
+  const rank = mode ? "" : MD_RANK[t.rank] ? t.rank : "";
+  const lin = (stops) => { const g = x.createLinearGradient(12, 12, 88, 88); for (const [o, c] of stops) g.addColorStop(o, c); return g; };
+  x.globalAlpha = locked ? 0.38 : mode === "lit" ? 0.78 : 1; x.lineJoin = "round";
+  x.fillStyle = col; x.fill(mdP(MD_RIB_L));
+  x.fillStyle = mix(col, "#1B1D2E", 0.45); x.fill(mdP(MD_RIB_R));
+  if (rank === "crit") { x.fillStyle = "#FFCB05"; x.strokeStyle = "#9A6A00"; x.lineWidth = 0.6; for (const d of MD_RAYS) { x.fill(mdP(d)); x.stroke(mdP(d)); } }
+  const glow = Math.min(8, W * 0.12) * dpr; // inside the raster's margin, so the glow never shows an edge
+  if (mode === "lit") { x.save(); x.shadowColor = hi; x.shadowBlur = glow; }
+  else if (rank) { x.save(); x.shadowColor = rank === "crit" ? "rgb(255 203 5 / .75)" : "rgb(160 120 255 / .7)"; x.shadowBlur = glow; } // production's drop-shadow glow
+  x.fillStyle = rank === "shiny" ? lin(MD_RAINBOW) : lin([[0, hi], [1, lo]]); x.fill(mdP(mdShape(shape, 38)));
+  if (mode === "lit" || rank) x.restore();
+  x.strokeStyle = "rgb(255 255 255 / .55)"; x.lineWidth = 2; x.stroke(mdP(mdShape(shape, 33.5)));
+  x.fillStyle = C(theme["m-surface"] || "#FFFDF6"); x.fill(mdP(mdShape(shape, 29)));
+  const sg = x.createLinearGradient(28, 29, 72, 71); sg.addColorStop(0, hi); sg.addColorStop(1, lo); x.fillStyle = sg; x.fill(mdP(MD_STAR));
+  const a0 = x.globalAlpha; x.globalAlpha = a0 * 0.6; x.strokeStyle = lo; x.lineWidth = 1.5; x.stroke(mdP(mdShape(shape, 28.5))); x.globalAlpha = a0;
   if (t.plate) {
-    x.fillRect(20, 94, 60, 20);
-    x.fillStyle = "#fff"; fontOn(x, 700, 11, true); x.textAlign = "center"; x.textBaseline = "alphabetic"; x.fillText(fitOn(x, String(t.plate), 54), 50, 108.5);
-  } else x.fillRect(40, 94, 20, 12);
-  if (t.hidden) { x.beginPath(); x.arc(18, 18, 11, 0, Math.PI * 2); x.fillStyle = ink; x.fill(); x.fillStyle = "#fff"; fontOn(x, 700, 14); x.textAlign = "center"; x.textBaseline = "alphabetic"; x.fillText("?", 18, 23); }
-  if (t.sig) { x.fillStyle = red; x.fillRect(38, -4, 24, 12); x.lineWidth = 2; x.strokeStyle = ink; x.strokeRect(38, -4, 24, 12); }
-  x.globalAlpha = 1; x.textAlign = "left";
+    const w = Math.max(26, String(t.plate).length * 7.4 + 12);
+    rrOn(x, 50 - w / 2, 61, w, 15, 7.5); x.fillStyle = "rgb(0 0 0 / .66)"; x.fill();
+    x.fillStyle = "#fff"; fontOn(x, 800, 10); x.textAlign = "center"; x.textBaseline = "alphabetic"; x.fillText(fitOn(x, String(t.plate), w - 4), 50, 72);
+  }
+  if (t.hidden) { x.beginPath(); x.arc(82, 14, 10, 0, Math.PI * 2); x.fillStyle = C("#6B3FD1"); x.fill(); x.lineWidth = 2; x.strokeStyle = "#fff"; x.stroke(); x.fillStyle = "#fff"; x.font = "800 13px system-ui, sans-serif"; x.textAlign = "center"; x.fillText("?", 82, 18.5); }
+  if (t.sig) { x.fillStyle = C("#FFCB05"); x.strokeStyle = C("#9A6A00"); x.lineWidth = 1.2; x.fill(mdP(MD_CROWN)); x.stroke(mdP(MD_CROWN)); x.beginPath(); x.arc(50, 2.8, 1.6, 0, Math.PI * 2); x.fillStyle = C("#E3350D"); x.fill(); }
+  if (rank === "crit") { x.fillStyle = "#FFCB05"; x.strokeStyle = "#9A6A00"; x.lineWidth = 1; x.fill(mdP(MD_CRIT)); x.stroke(mdP(MD_CRIT)); }
+  if (rank === "shiny") { x.fillStyle = "#FFF7B0"; x.strokeStyle = "#C99A00"; x.lineWidth = 0.8; for (const [sx, sy, s] of MD_SPARKLES) { x.fill(mdP(mdSparkle(sx, sy, s))); x.stroke(mdP(mdSparkle(sx, sy, s))); } }
+  x.globalAlpha = 1;
 }
 const mdArt = new Map();
 const mdLookKey = (t, mode) => `${t.kind}|${t.tier}|${t.color}|${t.plate || ""}|${t.sig ? 1 : 0}|${t.hidden ? 1 : 0}|${mode ? "" : MD_RANK[t.rank] ? t.rank : ""}|${mode}`;
@@ -342,7 +362,7 @@ function medalArt(t, w, mode = "") {
   const pad = Math.ceil(W * 0.16), H = W * 1.24, cv = document.createElement("canvas");
   cv.width = Math.ceil((W + pad * 2) * dpr); cv.height = Math.ceil((H + pad * 2) * dpr);
   const x = cv.getContext("2d"); x.scale(dpr, dpr); x.translate(pad, pad); x.scale(W / 100, W / 100);
-  paintMedal(x, t, mode);
+  paintMedal(x, t, mode, W);
   e = { cv, pad, W }; if (mdArt.size > 600) mdArt.clear(); mdArt.set(key, e);
   return e;
 }
@@ -529,13 +549,15 @@ function wrapOn(x, text, w, max) {
   return lines.length > max ? [...lines.slice(0, max - 1), fitOn(x, lines.slice(max - 1).join(" "), w)] : lines.map((l) => fitOn(x, l, w));
 }
 const mdPills = new Map();
-function mdPill(rank) { // the Critical and Shiny tags, flat: Critical yellow, Shiny black (as its plate), drawn once
-  const key = `${rank}|${dpr}|${theme["c-yellow"]}`; let p = mdPills.get(key); if (p) return p;
+function mdPill(rank) { // production's Critical and Shiny tags, drawn once
+  const key = `${rank}|${dpr}`; let p = mdPills.get(key); if (p) return p;
   const w = rank === "shiny" ? 44 : 54, h = 15, cv = document.createElement("canvas"); cv.width = Math.ceil(w * dpr); cv.height = Math.ceil(h * dpr);
   const x = cv.getContext("2d"); x.scale(dpr, dpr);
-  x.fillStyle = rank === "shiny" ? "#121212" : theme["c-yellow"] || "#F2C300"; x.fillRect(0, 0, w, h);
-  x.lineWidth = 1; x.strokeStyle = "#121212"; x.strokeRect(0.5, 0.5, w - 1, h - 1);
-  x.fillStyle = rank === "shiny" ? "#fff" : "#121212"; fontOn(x, 700, 9); x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(MD_RANK[rank].toUpperCase(), w / 2, h / 2 + 0.5);
+  rrOn(x, 0.5, 0.5, w - 1, h - 1, 4);
+  if (rank === "shiny") { const gr = x.createLinearGradient(0, 0, w, 0); ["#FFD6D6", "#FFF3B0", "#D3F5DC", "#D2E4FF", "#EBD6FF"].forEach((c, i) => gr.addColorStop(i / 4, c)); x.fillStyle = gr; x.strokeStyle = "#8A6BE0"; }
+  else { x.fillStyle = "#FFF1B8"; x.strokeStyle = "#C99A00"; }
+  x.fill(); x.lineWidth = 1; x.stroke();
+  x.fillStyle = rank === "shiny" ? "#2A1F4D" : "#4A3500"; fontOn(x, 800, 9); x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(MD_RANK[rank].toUpperCase(), w / 2, h / 2 + 0.5);
   p = { cv, w, h }; mdPills.set(key, p); return p;
 }
 // The live pieces of the room (panels, headings, Next up, the filters, the fold lines, the notes): a few per screen,
@@ -663,6 +685,7 @@ function startMint(q, now) {
   if (!reduced) setTimeout(() => tick(rank === "shiny" ? [12, 40, 12, 40, 60] : rank === "crit" ? [16, 50, 30] : 18), 500);
   return { ...q, t0: now, from, hold, W, rank, A: 380, H: rank ? 1500 : q.brief ? 850 : 1000, F: 640 };
 }
+const mdBack = (t) => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
 const mdOut3 = (t) => 1 - Math.pow(1 - t, 3);
 function drawMints(now) {
   if (!mintQ.length && !mintsOn.length) return false;
@@ -687,11 +710,11 @@ function drawMint(m, now) {
   const { A, H, F, W, from, hold } = m;
   if (p >= A + H + F) return true;
   let cx, cy, size, alpha = 1, fx = 0, la = 0;
-  if (p < A) { const e = mdOut3(p / A), ux = mdOut3(clamp(p / A / 0.6, 0, 1)), uy = mdOut3(clamp((p / A - 0.4) / 0.6, 0, 1)); size = from.w + (W - from.w) * e; cx = from.x + (hold.x - from.x) * ux; cy = from.y + (hold.y - from.y) * uy; } // up off the bar along straight lines, no overshoot
+  if (p < A) { const e = clamp(mdBack(p / A), 0, 1.2), u = mdOut3(p / A); size = from.w + (W - from.w) * e; cx = from.x + (hold.x - from.x) * u; cy = from.y + (hold.y - from.y) * u; }
   else if (p < A + H) { size = W; cx = hold.x; cy = hold.y + Math.sin((p - A) / 260) * 1.5; la = clamp((p - A) / 180, 0, 1); fx = 1; }
   else {
-    const q = (p - A - H) / F, e = q * q * (3 - 2 * q), T = doorTarget(), ex = clamp(e / 0.6, 0, 1), ey = clamp((e - 0.4) / 0.6, 0, 1);
-    cx = hold.x + (T.x - hold.x) * ex; cy = hold.y + (T.y - hold.y) * ey; // to the door: across, then up
+    const q = (p - A - H) / F, e = q * q * (3 - 2 * q), T = doorTarget(), c = { x: hold.x + (T.x - hold.x) * 0.2, y: Math.min(hold.y, T.y) - 50 };
+    const s = 1 - e; cx = s * s * hold.x + 2 * s * e * c.x + e * e * T.x; cy = s * s * hold.y + 2 * s * e * c.y + e * e * T.y;
     size = W + (14 - W) * e; alpha = q > 0.86 ? (1 - q) / 0.14 : 1; fx = clamp(1 - q * 5, 0, 1); la = clamp(1 - q * 6, 0, 1);
   }
   const revealed = p > A + 120, rv = p - A - 120;
@@ -701,38 +724,41 @@ function drawMint(m, now) {
   if (la > 0) mintLabel(m, cx, cy + size * 0.74, la, revealed);
   return false;
 }
-// Behind the medal while it's up: a flat disc in its tier's colour, then its luck (a starburst of triangles for
-// Critical; the three primaries turning, with small squares, for Shiny; a ring for a plain one).
+// Behind the medal while it's up: a glow, then its luck (a starburst for Critical; a turning rainbow and sparkles for
+// Shiny; a ring for a plain one).
 function mintBurst(m, cx, cy, size, rv, fx, now) {
   const [hi] = MD_TIERS[m.t.tier] || MD_TIERS.gold, rank = m.rank;
-  ctx.globalAlpha = fx * 0.28; ctx.fillStyle = hi; ctx.beginPath(); ctx.arc(cx, cy, size * 0.8, 0, Math.PI * 2); ctx.fill();
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, size * 0.95); g.addColorStop(0, `${hi}AA`); g.addColorStop(1, `${hi}00`);
+  ctx.globalAlpha = fx * 0.8; ctx.fillStyle = g; ctx.fillRect(cx - size, cy - size, size * 2, size * 2);
   if (rv <= 0) return;
-  if (rv < 420) { const q = rv / 420; ctx.globalAlpha = fx * (1 - q); ctx.lineWidth = 3 * (1 - q) + 1; ctx.strokeStyle = rank === "crit" ? theme["c-yellow"] : rank === "shiny" ? theme.ink : hi; ctx.beginPath(); ctx.arc(cx, cy, size * (0.5 + q * 0.75), 0, Math.PI * 2); ctx.stroke(); }
+  if (rv < 420) { const q = rv / 420; ctx.globalAlpha = fx * (1 - q); ctx.lineWidth = 3 * (1 - q) + 1; ctx.strokeStyle = rank === "crit" ? "#FFCB05" : rank === "shiny" ? "#C77DFF" : hi; ctx.beginPath(); ctx.arc(cx, cy, size * (0.5 + q * 0.75), 0, Math.PI * 2); ctx.stroke(); }
   if (rank === "crit") {
-    const q = clamp(rv / 240, 0, 1), R = size * (0.55 + 0.5 * mdOut3(q)), r0 = size * 0.44, rot = reduced ? 0 : now * 0.0007;
-    ctx.globalAlpha = fx * q; ctx.fillStyle = theme["c-yellow"]; ctx.strokeStyle = "#121212"; ctx.lineWidth = 1.5; ctx.beginPath();
+    const q = clamp(rv / 240, 0, 1), R = size * (0.55 + 0.5 * mdOut3(q)), r0 = size * 0.44, rot = now * 0.0007;
+    ctx.globalAlpha = fx * q; ctx.fillStyle = "#FFCB05"; ctx.strokeStyle = "#9A6A00"; ctx.lineWidth = 1; ctx.beginPath();
     for (let i = 0; i < 12; i++) { const a = rot + (i / 12) * Math.PI * 2; ctx.moveTo(cx + Math.cos(a - 0.13) * r0, cy + Math.sin(a - 0.13) * r0); ctx.lineTo(cx + Math.cos(a) * R, cy + Math.sin(a) * R); ctx.lineTo(cx + Math.cos(a + 0.13) * r0, cy + Math.sin(a + 0.13) * r0); }
     ctx.fill(); ctx.stroke();
   } else if (rank === "shiny") {
-    const q = clamp(rv / 300, 0, 1), rot = reduced ? 0 : now * 0.002, R = size * 0.66;
-    ctx.globalAlpha = fx * q; ctx.lineWidth = 5;
-    ["c-red", "c-yellow", "c-blue"].forEach((k, i) => { ctx.strokeStyle = theme[k]; ctx.beginPath(); ctx.arc(cx, cy, R, rot + i * 2.0944, rot + i * 2.0944 + 1.6); ctx.stroke(); });
+    const q = clamp(rv / 300, 0, 1), rot = now * 0.002, R = size * 0.66;
+    ctx.globalAlpha = fx * q; ctx.lineWidth = 4; ctx.lineCap = "round";
+    MD_RAINBOW.forEach(([, col], i) => { ctx.strokeStyle = col; ctx.beginPath(); ctx.arc(cx, cy, R, rot + i * 1.2566, rot + i * 1.2566 + 0.95); ctx.stroke(); });
+    ctx.lineCap = "butt";
     for (let i = 0; i < 5; i++) {
-      const a = -rot * 0.6 + i * 1.2566, s = size * 0.07, x = cx + Math.cos(a) * size * 0.86, y = cy + Math.sin(a) * size * 0.86;
-      ctx.globalAlpha = fx * q; ctx.fillStyle = theme["c-yellow"]; ctx.fillRect(x - s, y - s, s * 2, s * 2); ctx.lineWidth = 1.5; ctx.strokeStyle = "#121212"; ctx.strokeRect(x - s, y - s, s * 2, s * 2);
+      const a = -rot * 0.6 + i * 1.2566, s = 0.45 + 0.4 * Math.sin(now * 0.008 + i * 1.7), x = cx + Math.cos(a) * size * 0.86, y = cy + Math.sin(a) * size * 0.86;
+      ctx.globalAlpha = fx * q * clamp(s + 0.2, 0, 1); ctx.save(); ctx.translate(x, y); ctx.scale(s * size / 100, s * size / 100);
+      ctx.fillStyle = "#FFF7B0"; ctx.strokeStyle = "#C99A00"; ctx.lineWidth = 1; const sp = mdP(mdSparkle(0, 0, 1.6)); ctx.fill(sp); ctx.stroke(sp); ctx.restore();
     }
   }
 }
 function mintLabel(m, cx, y, a, revealed) {
   const t = m.t, rank = revealed ? m.rank : "";
   const l1 = t.name, l2 = rank ? `${MD_RANK[rank]} · 1 in ${rank === "shiny" ? 100 : 10}` : t.chase || "";
-  font(700, 15, true); const w1 = textW(l1); font(600, 11.5); const w2 = textW(l2);
+  font(800, 15, true); const w1 = textW(l1); font(600, 11.5); const w2 = textW(l2);
   const w = Math.max(w1, w2) + 26, x = clamp(cx - w / 2, 8, vw - 8 - w);
-  ctx.globalAlpha = a; ctx.fillStyle = theme["panel-solid"]; ctx.fillRect(x, y, w, 40);
-  ctx.lineWidth = 3; ctx.strokeStyle = rank === "crit" ? theme["c-yellow"] : theme.rule; ctx.strokeRect(x + 1.5, y + 1.5, w - 3, 37); // a field in a rule
+  ctx.globalAlpha = a * 0.96; rr(x, y, w, 40, 10); ctx.fillStyle = theme["panel-solid"]; ctx.fill();
+  ctx.lineWidth = 1; ctx.strokeStyle = rank === "crit" ? "#E0B000" : rank === "shiny" ? "#B58BF0" : theme["slot-line"]; ctx.stroke();
   ctx.globalAlpha = a; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-  ctx.fillStyle = theme.ink; font(700, 15, true); ctx.fillText(l1, x + w / 2, y + 18);
-  ctx.fillStyle = rank === "crit" ? theme.gold : rank === "shiny" ? theme.ink : theme.muted; font(rank ? 700 : 600, 11.5); ctx.fillText(l2, x + w / 2, y + 33);
+  ctx.fillStyle = theme.ink; font(800, 15, true); ctx.fillText(l1, x + w / 2, y + 18);
+  ctx.fillStyle = rank === "crit" ? theme.gold : rank === "shiny" ? "#8E5BE8" : theme.muted; font(rank ? 700 : 600, 11.5); ctx.fillText(l2, x + w / 2, y + 33);
   ctx.textAlign = "left";
 }
 

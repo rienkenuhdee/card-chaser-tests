@@ -2,36 +2,22 @@
 const canvas = document.getElementById("wall");
 const ctx = canvas.getContext("2d");
 let dpr = 1, theme = {};
-// Type (round 23): a geometric system sans for titles, headers and big numbers (Futura on the phone; no web font, so the
-// file stays self-contained), and a condensed face for names and prices where they have to fit (tiles, pockets, small
-// panels). Where no condensed face is installed, narrow text is set a little tighter instead (narrowK).
-const FONT = '"Futura", "Futura PT", "Avenir Next", "Avenir", "Century Gothic", "URW Gothic", "TeX Gyre Adventor", "Helvetica Neue", Arial, sans-serif';
-const NARROW = '"Avenir Next Condensed", "Futura Condensed", "Roboto Condensed", "sans-serif-condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif';
-let narrowK = 1;
-// Setting a canvas font is slow, so it's only set when it changes (sizes rounded to half a pixel). Weights stop at 700:
-// the geometric faces have no heavier cut.
+const FONT = '"Archivo", "Helvetica Neue", Arial, system-ui, sans-serif';
+// Archivo has a width axis: condensed for names and titles, normal for numbers.
+// Setting a canvas font is slow, so it's only set when it changes (sizes rounded to half a pixel).
 let curFont = "";
 function font(weight, size, narrow = false) {
-  const px = Math.round(size * (narrow ? narrowK : 1) * 2) / 2, key = `${weight}|${px}|${narrow}`;
+  const px = Math.round(size * 2) / 2, key = `${weight}|${px}|${narrow}`;
   if (key === curFont) return;
-  curFont = key; ctx.font = `${weight > 700 ? 700 : weight} ${px}px ${narrow ? NARROW : FONT}`;
-}
-// Is a condensed face installed? Measured once: if the narrow stack sets no narrower than the main one, it isn't.
-function measureNarrow() {
-  const t = "Neo Genesis Prismatic Evolutions";
-  ctx.font = `700 40px ${NARROW}`; const n = ctx.measureText(t).width;
-  ctx.font = '700 40px "Helvetica Neue", Arial, sans-serif'; const f = ctx.measureText(t).width;
-  narrowK = n < f * 0.93 ? 1 : 0.9; curFont = "";
+  curFont = key; ctx.font = `${weight} ${px}px ${FONT}`;
+  if ("fontStretch" in ctx) ctx.fontStretch = narrow ? "semi-condensed" : "normal";
 }
 function readTheme() {
   const cs = getComputedStyle(document.documentElement);
-  for (const k of ["bg", "slot", "slot-line", "ink", "muted", "deal", "gold", "panel", "panel-solid", "paper", "paper-ink", "plaque", "plaque-ink", "plaque-hi", "plaque-lo", "room-bg", "room-bg2", "room-wood", "room-wood-hi", "room-ink", "room-muted", "room-plaque", "room-plaque-ink", "room-plaque-lo", "room-up", "room-down", "c-red", "c-yellow", "c-green", "c-blue", "m-surface", "rule"]) theme[k] = cs.getPropertyValue(`--${k}`).trim();
+  for (const k of ["bg", "slot", "slot-line", "ink", "muted", "deal", "gold", "panel", "panel-solid", "paper", "paper-ink", "plaque", "plaque-ink", "plaque-hi", "plaque-lo", "room-bg", "room-bg2", "room-wood", "room-wood-hi", "room-ink", "room-muted", "room-plaque", "room-plaque-ink", "room-plaque-lo", "room-up", "room-down", "c-red", "c-yellow", "c-green", "c-blue", "m-surface"]) theme[k] = cs.getPropertyValue(`--${k}`).trim();
   theme.panelFill = cs.getPropertyValue("--panel-fill").trim();
-  theme.rule ||= "#121212";
   if (typeof heatCache !== "undefined") heatCache.clear();
   theme.dark = cs.colorScheme === "dark" || matchMedia("(prefers-color-scheme: dark)").matches && document.documentElement.dataset.theme !== "light";
-  TYPE.D[1] = theme.dark ? "#4A4A56" : "#1F1F25"; // Darkness is black in the light, and still seen in the dark
-  if (!measureNarrow.done) { measureNarrow.done = true; measureNarrow(); }
 }
 // A new screen size, or the phone turning on its side (round 22): whatever is moving lands first, then every level
 // lays out again and the view you were in is composed again for the new screen. A set stays framed with the row you
@@ -64,18 +50,25 @@ function resize() {
 const hex = (h) => { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
 const mix = (a, b, t) => { const A = hex(a), B = hex(b); return "#" + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, "0")).join(""); };
 const shade = (h, t) => mix(h, t > 0 ? "#FFFFFF" : "#000000", Math.abs(t));
+let engravingPattern = null;
+function engraving() {
+  if (engravingPattern) return engravingPattern;
+  const c = document.createElement("canvas"); c.width = c.height = 8;
+  const x = c.getContext("2d"); x.strokeStyle = "rgb(255 255 255 / .09)"; x.lineWidth = 1;
+  x.beginPath(); x.moveTo(0, 8); x.lineTo(8, 0); x.moveTo(-4, 4); x.lineTo(4, -4); x.moveTo(4, 12); x.lineTo(12, 4); x.stroke();
+  return (engravingPattern = ctx.createPattern(c, "repeat"));
+}
 const lightCache = new Map();
 const lighter = (h) => { let v = lightCache.get(h); if (!v) { v = shade(h, 0.18); lightCache.set(h, v); } return v; };
 const typeColor = (c) => (TYPE[c.type] || TYPE.C)[1];
-// Color by value: four flat fields, not a gradient. Under a dollar grey, then blue, yellow and red by the decade.
+// Value lens: cheap is cool and quiet, expensive glows gold to hot.
 const heatCache = new Map();
 function heat(p) { const k = Math.round(p * 20); let v = heatCache.get(k); if (!v) { v = heat0(p); heatCache.set(k, v); } return v; }
 function heat0(p) {
-  if (p < 1) return theme.dark ? "#5A5650" : "#BDB6A6";
-  return p < 10 ? theme["c-blue"] || "#1E4C9E" : p < 100 ? theme["c-yellow"] || "#F2C300" : theme["c-red"] || "#D1281D";
+  const t = clamp((Math.log10(Math.max(p, 0.1)) + 1) / 3.9, 0, 1);
+  return t < 0.5 ? mix(theme.dark ? "#5C66A8" : "#9AA5D4", "#E8B53A", t * 2) : mix("#E8B53A", "#FF4F2E", (t - 0.5) * 2);
 }
-// Every corner is a right angle (round 23): what was a rounded rectangle is a plain one. Circles are drawn with arc.
-function rr(x, y, w, h) { ctx.beginPath(); ctx.rect(x, y, w, h); }
+function rr(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, r) : ctx.rect(x, y, w, h); }
 // Fitting a name into a width, remembered per font and width (measuring text every frame is slow).
 const fitCache = new Map();
 function fitText(t, max) {
@@ -103,34 +96,40 @@ function emphasis(c) {
 }
 
 function drawTile(c, sx, sy, w, h, now, mult = 1) {
-  // A deal just landed on this card: a tint, and a square spreading from it so it can be found in a dense wall
-  // (nothing pops or bounces: round 23).
+  // A deal just landed on this card: a flash (a pop, or two pulses for a price drop; still when motion is reduced).
   let fp = 0;
   const f = c.flash;
   if (f) { fp = (now - f.t0) / 1100; if (fp >= 1 || fp < 0) { if (fp >= 1) c.flash = null; fp = 0; } }
+  if (fp && !reduced) {
+    const k = f.drop ? 1 + 0.07 * Math.abs(Math.sin(Math.PI * 2 * fp)) : 1 + 0.12 * Math.sin(Math.PI * Math.min(1, fp * 2));
+    sx += (w - w * k) / 2; sy += (h - h * k) / 2; w *= k; h *= k;
+  }
   drawTile0(c, sx, sy, w, h, now, mult);
   if (c.reg && w >= 34 && view === "set") dexRegionTag(c, sx, sy, w, mult); // the first pocket of a region in the Dex
-  // Inside a set the cards people chase wear a gold triangle in the corner.
+  // Inside a set the cards people chase wear a gold corner.
   if (c.pop && view === "set" && groups[c.g]?.set && w >= 14 && c.e > 0.3 && (!state.focus || state.focus === c)) {
-    const s = clamp(w * 0.36, 4, 18);
-    ctx.globalAlpha = Math.min(1, mult) * c.e * 0.9; ctx.fillStyle = theme.gold;
-    ctx.beginPath(); ctx.moveTo(sx + w - s, sy); ctx.lineTo(sx + w, sy); ctx.lineTo(sx + w, sy + s); ctx.closePath(); ctx.fill();
+    const s = clamp(w * 0.36, 4, 18), r = w >= 26 ? w * 0.045 : 0;
+    ctx.globalAlpha = Math.min(1, mult) * c.e * 0.8; ctx.fillStyle = theme.gold;
+    ctx.beginPath(); ctx.moveTo(sx + w - s, sy); ctx.lineTo(sx + w - r, sy); ctx.lineTo(sx + w, sy + r); ctx.lineTo(sx + w, sy + s); ctx.closePath(); ctx.fill();
     ctx.globalAlpha = 1;
   }
-  // Showing what's missing, the cards you're chasing stand out further still: a gold square (the deal's colour where one waits).
+  // Showing what's missing, the cards you're chasing stand out further still: a gold ring (green where a deal waits).
   if (showNow() === "missing" && !c.owned && w >= 5 && c.e > 0.5 && !c.lift && isChase(c)) {
     ctx.globalAlpha = Math.min(1, mult); ctx.lineWidth = Math.max(1.5, w * 0.07); ctx.strokeStyle = c.deal && !state.time ? theme.deal : theme.gold;
-    ctx.strokeRect(sx + 0.5, sy + 0.5, w - 1, h - 1); ctx.globalAlpha = 1;
+    rr(sx + 0.5, sy + 0.5, w - 1, h - 1, w * 0.09); ctx.stroke(); ctx.globalAlpha = 1;
   }
-  // The flash on the card that changed, and the ripple's tint on its neighbours.
+  // The green: the flash on the card that changed, and the ripple's tint on its neighbours.
   let tint = 0, col = theme.deal;
   if (fp) { tint = 0.55 * (1 - fp); if (f.gold) col = theme.gold; }
   else { const rp = groups[c.g].ripple; if (rp?.live) { const t = (now - rp.t0 - Math.hypot(c.col - rp.col, c.row - rp.row) * 38) / 300; if (t > 0 && t < 1) { tint = 0.3 * Math.sin(Math.PI * t); if (rp.gold) col = theme.gold; } } }
   if (tint < 0.01 || c.e < 0.05) return;
   const a = Math.min(1, mult) * c.e;
   ctx.fillStyle = col; ctx.globalAlpha = a * tint;
-  ctx.fillRect(sx, sy, Math.max(w, 1), Math.max(h, 1));
-  if (fp) { const e = reduced ? 4 : 4 + 10 * fp; ctx.globalAlpha = a * (1 - fp); ctx.lineWidth = 2; ctx.strokeStyle = col; ctx.strokeRect(sx - e, sy - e, w + e * 2, h + e * 2); }
+  if (w < 5) ctx.fillRect(sx, sy, Math.max(w, 1), Math.max(h, 1)); else { rr(sx, sy, w, h, Math.min(w * 0.06, 12)); ctx.fill(); }
+  if (fp) { // a ring spreads from the card, so it can be found in a dense wall
+    const e = 4 + 10 * fp; ctx.globalAlpha = a * (1 - fp); ctx.lineWidth = 2; ctx.strokeStyle = col;
+    rr(sx - e, sy - e, w + e * 2, h + e * 2, Math.min(w * 0.06, 12) + e); ctx.stroke();
+  }
   ctx.globalAlpha = 1;
 }
 function drawTile0(c, sx, sy, w, h, now, mult = 1) {
@@ -176,17 +175,19 @@ function drawTile0(c, sx, sy, w, h, now, mult = 1) {
     return;
   }
   if (w < 26) { // binder at arm's length: shapes and colour (kept cheap: this draws a thousand times a frame)
-    const r = w * 0.09, edge = w >= (foilOff ? 18 : 12); // an empty slot's hairline, where it can be seen (mid-move a thousand strokes cost more than anyone sees)
+    const r = w * 0.09, round = w >= (foilOff ? 18 : 12); // mid-move (a room shrinking to the map) small tiles stay square: rounding a thousand is the costliest part of the frame, and nobody sees corners in motion
     const dealOn = !c.owned && c.deal && isChase(c) && !state.time; // a deal is a property of a chase
     if (flood < 1) {
-      ctx.fillStyle = theme.slot; ctx.fillRect(sx, sy, w, h);
-      if (edge || dealOn) { ctx.lineWidth = 1; ctx.strokeStyle = dealOn ? theme.deal : theme["slot-line"]; ctx.strokeRect(sx + 0.5, sy + 0.5, w - 1, h - 1); }
+      ctx.fillStyle = theme.slot;
+      if (round) { rr(sx, sy, w, h, r); ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = dealOn ? theme.deal : theme["slot-line"]; ctx.stroke(); }
+      else { ctx.fillRect(sx, sy, w, h); if (dealOn) { ctx.strokeStyle = theme.deal; ctx.lineWidth = 1; ctx.strokeRect(sx + 0.5, sy + 0.5, w - 1, h - 1); } }
     }
     if (flood > 0) {
       const col = value ? heat(c.price) : typeColor(c);
       const partial = flood < 1;
       if (partial) { ctx.save(); ctx.beginPath(); ctx.arc(sx + w / 2, sy + h / 2, Math.hypot(w, h) / 2 * flood, 0, Math.PI * 2); ctx.clip(); }
-      ctx.fillStyle = col; ctx.fillRect(sx, sy, w, h);
+      ctx.fillStyle = col;
+      if (round) { rr(sx, sy, w, h, r); ctx.fill(); } else ctx.fillRect(sx, sy, w, h);
       ctx.fillStyle = lighter(col); ctx.fillRect(sx + r * 0.3, sy + r * 0.3, w - r * 0.6, h * 0.22);
       if (w > 12) { ctx.fillStyle = theme.paper; ctx.fillRect(sx + r * 0.3, sy + h * 0.78, w - r * 0.6, h * 0.2); }
       if (partial) ctx.restore();
@@ -222,7 +223,7 @@ function emptyPocket(c, sx, sy, w, h, value) {
   else { ctx.fillStyle = value ? heat(c.price) : theme.muted; font(600, w * 0.08); ctx.fillText(short(c.price), sx + w - pad, sy + pad + w * 0.07); }
   // label, bottom left
   ctx.textAlign = "left"; ctx.fillStyle = theme.muted;
-  fitName(c.name, w - pad * 2, 700, w * 0.088); ctx.fillText(fitText(c.name, w - pad * 2), sx + pad, sy + h - pad - w * 0.075);
+  font(700, w * 0.088, true); ctx.fillText(fitText(c.name, w - pad * 2), sx + pad, sy + h - pad - w * 0.075);
   font(500, w * 0.064); ctx.fillText(fitText(`${sets[c.si].code} ${c.num}/${sets[c.si].printed}${c.tag ? ` ${c.tag}` : ""}`, w - pad * 2), sx + pad, sy + h - pad);
 }
 
@@ -230,26 +231,29 @@ function emptyPocket(c, sx, sy, w, h, value) {
 function cardFace(c, sx, sy, w, h, now, value) {
   const pic = artFor(c, w), k = pic ? artFade(pic, now) : 0;
   if (k < 1) drawnFace(c, sx, sy, w, h, now, value);
+  else if (w > 90) faceShadow(sx, sy, w, h);
   if (pic) artDraw(c, pic, sx, sy, w, h, now, value, k);
   if (state.focus === c) artNote(c, pic);
 }
+function faceShadow(sx, sy, w, h) { ctx.save(); ctx.shadowColor = "rgb(0 0 0 / .32)"; ctx.shadowBlur = w * 0.09; ctx.shadowOffsetY = w * 0.035; rr(sx, sy, w, h, w * 0.045); ctx.fillStyle = "#000"; ctx.fill(); ctx.restore(); }
 const darkCache = new Map();
 const darker = (h) => { let v = darkCache.get(h); if (!v) { v = shade(h, -0.3); darkCache.set(h, v); } return v; };
 // The drawn face: a colour chip with a printed label strip, like a specimen in a catalogue. A card has an art window
 // framed in its type's colour (a holo's window catches the light); a full art (ultra rares and up) is art to its edges;
-// a trainer's window sits over its text, and an energy wears its symbol. All flat (round 23): cards sit flat on the wall
-// with no shadow, a full art is a poster (a flat field and one disc), and foil is a hard band of light.
+// a trainer's window sits over its text, and an energy wears its symbol. All flat fills but the full art's sweep.
 function drawnFace(c, sx, sy, w, h, now, value) {
   const st = sets[c.si];
   const col = value ? heat(c.price) : typeColor(c);
   const r = w * 0.045, full = c.tier >= 4, lh = h * 0.24, ly = sy + h - lh;
+  if (w > 90) faceShadow(sx, sy, w, h);
   ctx.save(); rr(sx, sy, w, h, r); ctx.clip();
   // The art: a window inside the card's frame, or the whole card for a full art.
   const m = w * 0.075, energy = c.type === "e" && !full, trainer = c.type === "t" && !full;
   const ax = full ? sx : sx + m, ay = full ? sy : sy + m, aw = full ? w : w - m * 2, ah = full ? ly - sy : (ly - sy - m * 1.6) * (trainer ? 0.62 : 1);
-  if (full) { // a poster: a flat field with one big disc off its centre
-    ctx.fillStyle = col; ctx.fillRect(sx, sy, w, h);
-    ctx.beginPath(); ctx.arc(sx + w * 0.62, sy + (ly - sy) * 0.42, w * 0.42, 0, Math.PI * 2); ctx.fillStyle = darker(col); ctx.fill();
+  if (full) {
+    const g = ctx.createLinearGradient(sx, sy, sx + w, sy + h);
+    g.addColorStop(0, shade(col, 0.22)); g.addColorStop(0.55, col); g.addColorStop(1, shade(col, -0.3));
+    ctx.fillStyle = g; ctx.fillRect(sx, sy, w, h);
   } else {
     ctx.fillStyle = col; ctx.fillRect(sx, sy, w, h);
     if (energy) { // no window: the energy's symbol, a ring in the middle of the card
@@ -262,6 +266,8 @@ function drawnFace(c, sx, sy, w, h, now, value) {
       if (trainer && w > 34) { ctx.fillStyle = "rgb(255 255 255 / .28)"; for (let i = 0; i < 3; i++) ctx.fillRect(ax, ay + ah + m * (0.9 + i * 0.75), aw * (i === 2 ? 0.55 : 1), Math.max(1, w * 0.018)); } // its text
     }
   }
+  // Fine engraving over the art: a few diagonal hairlines, quieter than a pattern.
+  if (w > 60 && !energy) { ctx.fillStyle = engraving(); ctx.fillRect(ax, ay, aw, ah); }
   // A holo's window carries a sheen at rest; holos and up catch the light as the wall comes to rest under your finger.
   // (Skipped while things are moving: nobody sees foil mid-gesture, and it's the costliest thing on a card.)
   if (c.tier === 3 && !energy && w > 34) {
@@ -272,10 +278,9 @@ function drawnFace(c, sx, sy, w, h, now, value) {
     frameFoil = true;
     const phase = ((now * 0.00005 + (sx + cam.x * cam.s * 0.25) * 0.0011) % 1 + 1) % 1;
     const fx = ax - aw + phase * aw * 3;
-    ctx.save(); ctx.beginPath(); ctx.rect(ax, ay, aw, ah); ctx.clip(); // a hard-edged band of light crossing the window
-    ctx.fillStyle = "rgb(255 255 255 / .26)"; ctx.beginPath();
-    ctx.moveTo(fx + aw * 0.5, ay); ctx.lineTo(fx + aw * 0.78, ay); ctx.lineTo(fx + aw * 0.4, ay + ah); ctx.lineTo(fx + aw * 0.12, ay + ah); ctx.closePath(); ctx.fill();
-    ctx.restore();
+    const fg = ctx.createLinearGradient(fx, ay, fx + aw * 0.9, ay + ah);
+    fg.addColorStop(0, "rgb(255 255 255 / 0)"); fg.addColorStop(0.38, "rgb(150 220 255 / .28)"); fg.addColorStop(0.5, "rgb(255 226 160 / .42)"); fg.addColorStop(0.62, "rgb(160 245 205 / .28)"); fg.addColorStop(1, "rgb(255 255 255 / 0)");
+    ctx.globalCompositeOperation = "screen"; ctx.fillStyle = fg; ctx.fillRect(ax, ay, aw, ah); ctx.globalCompositeOperation = "source-over";
   }
   if (!full && !energy && w > 34) { ctx.lineWidth = 1; ctx.strokeStyle = "rgb(0 0 0 / .22)"; ctx.strokeRect(ax + 0.5, ay + 0.5, aw - 1, ah - 1); } // the window's edge
   // The label strip
@@ -283,11 +288,11 @@ function drawnFace(c, sx, sy, w, h, now, value) {
   ctx.fillStyle = "rgb(0 0 0 / .14)"; ctx.fillRect(sx, ly, w, Math.max(1, w * 0.006));
   ctx.restore();
   // A full art wears a hairline inside its edge; secret and special rares wear it in gold.
-  if (full) { rr(sx + w * 0.03, sy + w * 0.03, w * 0.94, h - lh - w * 0.045, r * 0.7); ctx.lineWidth = Math.max(1, w * 0.012); ctx.strokeStyle = c.tier >= 5 ? theme["c-yellow"] : "rgb(255 255 255 / .5)"; ctx.stroke(); }
+  if (full) { rr(sx + w * 0.03, sy + w * 0.03, w * 0.94, h - lh - w * 0.045, r * 0.7); ctx.lineWidth = Math.max(1, w * 0.012); ctx.strokeStyle = c.tier >= 5 ? "rgb(240 200 110 / .9)" : "rgb(255 255 255 / .45)"; ctx.stroke(); }
   if (w < 40) return;
   const pad = w * 0.075;
   ctx.textBaseline = "alphabetic"; ctx.textAlign = "left"; ctx.fillStyle = theme["paper-ink"];
-  fitName(c.name, w * 0.84, 700, w * 0.092); ctx.fillText(fitText(c.name, w * 0.84), sx + pad, ly + lh * 0.46);
+  font(800, w * 0.092, true); ctx.fillText(fitText(c.name, w * 0.84), sx + pad, ly + lh * 0.46);
   font(500, w * 0.064); ctx.globalAlpha *= 0.7;
   ctx.fillText(fitText(`${st.code} ${c.num}/${st.printed}${c.tag ? ` ${c.tag}` : ""}`, w * 0.62), sx + pad, ly + lh * 0.82);
   ctx.globalAlpha /= 0.7;
@@ -308,7 +313,7 @@ function drawHeader(st, now, C = cam, ox = 0, alpha = 1) {
   // On a phone on its side the title and its line share one line (buttons at its right), and the bar sits close under.
   const flat = landPhone(), title = clamp((flat ? 24 : 34) * k, 16, 64), sub = clamp(14 * k, 10, 24), barY = sy + hh * (flat ? 0.57 : 0.82);
   let roomW = sw; if (flat) for (const b of [st.hdrBtn, st.hdrBtn2]) if (b && b.y < 0) roomW = Math.min(roomW, (b.x - 12) * k);
-  ctx.fillStyle = theme.ink; font(700, title); // a title: the geometric face
+  ctx.fillStyle = theme.ink; font(800, title, true);
   const name = fitText(f ? trophyName(st) : st.name, roomW), nameW = flat ? textW(name) + 10 * k : 0;
   ctx.fillText(name, sx, sy + hh * (flat ? 0.45 : 0.5));
   ctx.fillStyle = theme.muted; font(500, sub); // the count is in the line, and the bar under it shows how far (no percent besides)
@@ -343,8 +348,7 @@ function drawHeader(st, now, C = cam, ox = 0, alpha = 1) {
 const headChrome = (k) => clamp((1.8 - k) / 0.5, 0, 1);
 const ownedNow = (list) => (state.time ? list.filter((c) => c.owned && c.got && c.got <= state.t).length : ownedIn(list));
 
-// A mosaic panel: a field of the painting (round 23). It fills its whole slot and its edge is a rule (neighbours' halves
-// make one rule). Its name, and how it's going in a field of its own in the corner, held in by rules.
+// A mosaic panel: the group's name and how it's going, over a field of its cards.
 function panelStat(g) {
   if (picking()) return "\u2003\u2003"; // the tick's place
   const n = g.cards.length, owned = ownedNow(g.cards);
@@ -355,34 +359,14 @@ function panelStat(g) {
   return `${owned}/${n}`;
 }
 const mr = (r) => ({ x: r.x, y: r.y - mScroll, w: r.w, h: r.h });
-const DS_WR = 4; // the wall's rule
-// The count's field takes a colour only when what it says has one: red when it counts what's left to chase (the Chase
-// lens: Chase is the red room), the deal's colour (or a trophy's yellow) while news beats on the panel, ink for search
-// hits. Otherwise it's the panel's own white, so a colour on the wall always means something.
-function statField(g, stat, beat) {
-  if (beat) return beat.col;
-  if (!stat || picking()) return null;
-  if (state.matches) return theme.ink;
-  if (state.lens === "chase" && stat !== "Nothing to chase") return theme["c-red"];
-  return null;
-}
-// Sets the condensed face for a name in a narrow place: a little smaller (to 85%, never under 10px) before it has to be
-// cut short. Measured through textW, so a frame costs nothing new.
-function fitName(t, room, weight, size) {
-  font(weight, size, true); const w = textW(t);
-  if (w > room && size > 10) font(weight, Math.max(10, size * 0.85, size * room / w), true);
-}
-const onCache = new Map();
-function onField(col) { // type on a field: black on the light ones, white on the dark
-  let v = onCache.get(col); if (v) return v;
-  const [r, g, b] = /^#[0-9a-f]{6}$/i.test(col) ? hex(col) : [0, 0, 0];
-  v = 0.2126 * r + 0.7152 * g + 0.0722 * b > 150 ? "#121212" : "#FFFFFF"; onCache.set(col, v); return v;
-}
 function drawPanel(g, now, alpha = 1, labelAlpha = 1) {
   if (!g.m) return;
   let m = mr(g.m), k = 1;
   const T = state.trans;
-  if (T?.kind === "morph" && g.pm) { const raw = clamp((now - T.t0 - 140) / (T.dur - 520), 0, 1); k = ease(raw); m = lerpL(mr(g.pm), m, raw); } // across, then down
+  if (T?.kind === "morph" && g.pm) {
+    k = ease(clamp((now - T.t0 - 140) / (T.dur - 520), 0, 1)); const a = mr(g.pm);
+    m = { x: a.x + (m.x - a.x) * k, y: a.y + (m.y - a.y) * k, w: a.w + (m.w - a.w) * k, h: a.h + (m.h - a.h) * k };
+  }
   if (m.y > vh || m.y + m.h < 0) return;
   if (inCase(g)) {
     if (room.on) { drawRoomPlaque(g, m, now, alpha, labelAlpha); return; }
@@ -391,30 +375,26 @@ function drawPanel(g, now, alpha = 1, labelAlpha = 1) {
   }
   if (g.done || g.minting) { drawPlaque(g, m, now, alpha, labelAlpha); return; }
   ctx.globalAlpha = alpha;
-  ctx.fillStyle = theme.panelFill; ctx.fillRect(m.x, m.y, m.w, m.h);
+  rr(m.x + PG, m.y + PG, m.w - PG * 2, m.h - PG * 2, 12);
+  ctx.fillStyle = theme.panelFill; ctx.fill();
+  if (state.press?.g === g) { ctx.lineWidth = 1.5; ctx.strokeStyle = theme.ink; ctx.stroke(); }
   if (g.unmint && k < 1) drawPlaque(g, m, now, alpha * (1 - k), 0);
-  const x = m.x + PG + 10, size = clamp(m.w * 0.075, 12, 17), hb = PG + LABEL - 4;
+  ctx.globalAlpha = alpha * labelAlpha;
+  const x = m.x + PG + 10, w = m.w - PG * 2 - 20;
+  const size = clamp(m.w * 0.075, 12, 17);
+  ctx.textBaseline = "alphabetic"; ctx.textAlign = "left"; ctx.fillStyle = theme.ink;
   let beat = null;
   if (g.beat) { const p = (now - g.beat.t0) / 3000; if (p < 1) beat = { text: g.beat.text, col: g.beat.col || theme.deal, a: Math.min(1, p * 10, (1 - p) * 4) }; else g.beat = null; }
   font(beat ? 700 : 600, size * 0.82);
-  const stat = beat ? fitText(beat.text, (m.w - PG * 2 - 20) * 0.72) : panelStat(g), sw = stat ? textW(stat) : 0;
-  const bw = Math.min(m.w * 0.5, Math.max(40, sw + 16)), bx = m.x + m.w - bw, field = statField(g, stat, beat);
-  ctx.globalAlpha = alpha * labelAlpha * (beat && field ? beat.a : 1);
-  if (field) { ctx.fillStyle = field; ctx.fillRect(bx, m.y, bw, hb); }
-  ctx.globalAlpha = alpha * labelAlpha;
-  ctx.fillStyle = theme.rule; ctx.fillRect(bx - DS_WR / 2, m.y, DS_WR, hb); ctx.fillRect(bx, m.y + hb - DS_WR / 2, bw, DS_WR);
-  ctx.textBaseline = "alphabetic"; ctx.textAlign = "left"; ctx.fillStyle = theme.ink;
-  fitName(g.name, bx - x - 6, 700, size); ctx.fillText(fitText(g.name, bx - x - 6), x, m.y + PG + 22); // a name: the condensed face, a size smaller before it's cut short
+  const stat = beat ? fitText(beat.text, w * 0.72) : panelStat(g), sw = stat ? textW(stat) + 8 : 0;
+  font(800, size, true); ctx.fillText(fitText(g.name, w - sw), x, m.y + PG + 22);
   if (stat) {
-    ctx.textAlign = "center"; font(beat ? 700 : 600, size * 0.82); ctx.fillStyle = field ? onField(field) : theme.muted;
+    ctx.textAlign = "right"; font(beat ? 700 : 600, size * 0.82); ctx.fillStyle = beat ? beat.col : theme.muted;
     if (beat) ctx.globalAlpha = alpha * beat.a;
-    ctx.fillText(stat, bx + bw / 2, m.y + PG + 22);
-    ctx.globalAlpha = alpha * labelAlpha; ctx.textAlign = "left";
+    ctx.fillText(stat, x + w, m.y + PG + 22);
+    ctx.globalAlpha = alpha * labelAlpha;
   }
-  drawBar(g, x, m.y + PG + 30, bx - x - 12, 3, now);
-  ctx.globalAlpha = alpha;
-  ctx.lineWidth = DS_WR; ctx.strokeStyle = theme.rule; ctx.strokeRect(m.x, m.y, m.w, m.h); // half in this field, half in the next: one rule
-  if (state.press?.g === g) { ctx.lineWidth = 3; ctx.strokeStyle = theme.ink; ctx.strokeRect(m.x + 4, m.y + 4, m.w - 8, m.h - 8); }
+  drawBar(g, x, m.y + PG + 30, w, 2, now);
   ctx.globalAlpha = 1;
 }
 function drawWall(now, alpha = 1, except = null) {
@@ -450,8 +430,7 @@ function drawMosaic(now, alpha = 1, except = null) {
   mScroll = keep;
   ctx.fillStyle = `rgb(0 0 0 / ${(0.45 * q).toFixed(3)})`; ctx.fillRect(0, 0, vw, vh);
   ctx.save(); ctx.translate(vw * (1 - q), 0);
-  ctx.fillStyle = theme.rule; ctx.fillRect(-DS_WR * 1.5, 0, DS_WR * 1.5, vh); // its leading edge is a rule
-  ctx.fillStyle = theme["room-bg"]; ctx.fillRect(0, 0, vw, vh);
+  ctx.shadowColor = "rgb(0 0 0 / .5)"; ctx.shadowBlur = 30; ctx.fillStyle = theme["room-bg"]; ctx.fillRect(0, 0, vw, vh); ctx.shadowBlur = 0; ctx.shadowColor = "transparent";
   drawRoom(now, alpha, except);
   ctx.restore();
   kick();
@@ -460,12 +439,12 @@ function drawMosaic(now, alpha = 1, except = null) {
 const binderRect = (c, C, ox = 0) => ({ x: (c.x - C.x) * C.s + ox, y: (c.y - C.y) * C.s, w: TW * c.sz * C.s, h: TH * c.sz * C.s });
 function drawSet(g, now, C = cam, ox = 0, alpha = 1) {
   drawHeader(g, now, C, ox, alpha);
-  // The lens changed inside this set: every card travels from its old slot to its new one, across and then down.
+  // The lens changed inside this set: every card travels from its old slot to its new one.
   if (shuffle && shuffle.g === g) {
     for (const c of g.cards) {
       if (c === state.focus) continue;
-      const raw = clamp((now - shuffle.t0 - c.delay) / shuffle.dur, 0, 1), kx = ease(clamp(raw / 0.6, 0, 1)), ky = ease(clamp((raw - 0.4) / 0.6, 0, 1));
-      const x = c.px + (c.x - c.px) * kx, y = c.py + (c.y - c.py) * ky;
+      const k = ease(clamp((now - shuffle.t0 - c.delay) / shuffle.dur, 0, 1));
+      const x = c.px + (c.x - c.px) * k, y = c.py + (c.y - c.py) * k;
       const r = { x: (x - C.x) * C.s + ox, y: (y - C.y) * C.s, w: TW * c.sz * C.s, h: TH * c.sz * C.s };
       if (r.x > vw || r.x + r.w < 0 || r.y > vh || r.y + r.h < 0) continue;
       drawTile(c, r.x, r.y, r.w, r.h, now, alpha);
@@ -496,12 +475,6 @@ function kick() {
   watchdog = setTimeout(() => { if (raf) { cancelAnimationFrame(raf); raf = 0; frame(performance.now()); } }, 120);
 }
 const ease = (p) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
-// Things move along straight lines (round 23): across first, then up or down, the two overlapping a little; sizes
-// follow the whole move. k: 0 to 1, not eased.
-function lerpL(A, B, k) {
-  const kx = ease(clamp(k / 0.6, 0, 1)), ky = ease(clamp((k - 0.4) / 0.6, 0, 1)), ks = ease(k);
-  return { x: A.x + (B.x - A.x) * kx, y: A.y + (B.y - A.y) * ky, w: A.w + (B.w - A.w) * ks, h: A.h + (B.h - A.h) * ks };
-}
 let frameFoil = false;
 function frame(now) {
   raf = 0; frameFoil = false;
@@ -529,18 +502,22 @@ function frame(now) {
       drawHeader(T.g, now, T.cam, 0, clamp((q - 0.6) / 0.4, 0, 1));
       for (const c of T.g.cards) {
         if (c === state.focus) continue;
-        const k = clamp(q * 1.15 - (c.k / T.g.cards.length) * 0.15, 0, 1), r = lerpL(mr(c.m), binderRect(c, T.cam), k);
-        if (r.y > vh + 40 || r.y + r.h < -40) continue;
-        drawTile(c, r.x, r.y, r.w, r.h, now);
+        const k = clamp(q * 1.15 - (c.k / T.g.cards.length) * 0.15, 0, 1);
+        const kk = ease(k), B = binderRect(c, T.cam), A = mr(c.m);
+        const x = A.x + (B.x - A.x) * kk, y = A.y + (B.y - A.y) * kk, w = A.w + (B.w - A.w) * kk, h = A.h + (B.h - A.h) * kk;
+        if (y > vh + 40 || y + h < -40) continue;
+        drawTile(c, x, y, w, h, now);
       }
     } else if (T.kind === "slide") {
       drawSet(T.from, now, T.fromCam, -T.dir * vw * e, 1 - e * 0.6);
       drawSet(T.g, now, cam, T.dir * vw * (1 - e), 0.4 + e * 0.6);
-      const sx = T.dir > 0 ? vw * (1 - e) : vw * e; ctx.globalAlpha = 1; ctx.fillStyle = theme.rule; ctx.fillRect(sx - DS_WR / 2, 0, DS_WR, vh); // the seam between two sets is a rule
     } else if (T.kind === "morph") {
-      // Rearranging: every tile travels to its place in the new mosaic, a beat apart, across and then down.
+      // Rearranging: every tile travels to its place in the new mosaic, a beat apart.
       for (const g of groups) drawPanel(g, now, 1, clamp((p - 0.55) / 0.45, 0, 1));
-      for (const c of drawnCards) { const r = lerpL(mr(c.pm), mr(c.m), clamp((now - T.t0 - c.delay) / (T.dur - 520), 0, 1)); drawTile(c, r.x, r.y, r.w, r.h, now); }
+      for (const c of drawnCards) {
+        const k = ease(clamp((now - T.t0 - c.delay) / (T.dur - 520), 0, 1)), a = mr(c.pm), b2 = mr(c.m);
+        drawTile(c, a.x + (b2.x - a.x) * k, a.y + (b2.y - a.y) * k, a.w + (b2.w - a.w) * k, a.h + (b2.h - a.h) * k, now);
+      }
     }
     if (p >= 1 && (T.kind !== "open" || T.anim)) { const done = T.done; state.trans = null; done?.(T); }
     more = true;
@@ -552,10 +529,10 @@ function frame(now) {
     if (state.g.burst || (state.g.ripple && now - state.g.ripple.t0 < 1600)) more = true;
     for (const c of state.g.cards) if (c.anim) { more = true; break; }
   }
-  // Search hits in the mosaic: a square around each one so they're easy to spot.
+  // Search hits in the mosaic: a ring around each one so they're easy to spot.
   if (state.matches && view === "mosaic" && !T && !bnd.on) {
-    ctx.lineWidth = 2; ctx.strokeStyle = theme.ink;
-    for (const c of state.matches) { const s = Math.max(6, c.m.h * 0.7); ctx.strokeRect(c.m.x + c.m.w / 2 - s, c.m.y - mScroll + c.m.h / 2 - s, s * 2, s * 2); }
+    ctx.lineWidth = 1.5; ctx.strokeStyle = theme.ink;
+    for (const c of state.matches) { ctx.beginPath(); ctx.arc(c.m.x + c.m.w / 2, c.m.y - mScroll + c.m.h / 2, Math.max(6, c.m.h * 0.7), 0, Math.PI * 2); ctx.stroke(); }
   }
   if (state.focus) { const c = state.focus, r = binderRect(c, cam); ctx.globalAlpha = 1; drawTile(c, r.x, r.y, r.w, r.h, now); if (c.anim) more = true; if (c.owned && c.tier >= 3 && !reduced) more = true; }
   ctx.globalAlpha = 1;

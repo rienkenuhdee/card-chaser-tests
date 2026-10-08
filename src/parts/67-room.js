@@ -8,7 +8,7 @@
 // Round 19 moved production's medals in (68-medals.js): the header sums them, then the Showcase, Next up and the
 // filters, then one shelf per set or chase, a finished one's plaque at the head of its shelf with its medals beneath.
 // Round 22 took off the costume (dark wood, lit plates, shadows): the room is the wall's page with hairline panels,
-// the app's type, and the plaques and medals as the only rich colour, in light and dark (round 23: fields in rules). Wide screens (landscape, a tablet)
+// Archivo, and the plaques and medals as the only rich colour, in light and dark. Wide screens (landscape, a tablet)
 // put the shelves in two columns, clear of the notch.
 // The room borrows the wall's scroll: while it is up, mScroll and mMax are the room's, and the wall's scroll is kept
 // to come back to. The plaques are laid out in mosaic coordinates, so a tap, a spread, the open transition, the
@@ -171,17 +171,11 @@ function drawRoom(now, alpha = 1, except = null) {
   // the panels, the header, the Showcase, Next up, the filters, and every shelf's heading and rows of medals (drawn once and kept)
   for (const it of L.items) {
     const y = it.y - mScroll; if (y > vh || y + it.h < 0) continue;
-    if (it.type === "header") {
-      ctx.drawImage(headerImage(R.w, it.h), R.x - PADR, y - PADR, R.w + PADR * 2, it.h + PADR * 2);
-      const sy = y + it.h - 3; // the room's yellow field, as on the map, held between two rules
-      ctx.fillStyle = theme.rule; ctx.fillRect(0, sy, vw, 14); ctx.fillStyle = theme["c-yellow"]; ctx.fillRect(0, sy + 3, vw, 8);
-    } else if (it.type === "row") ctx.drawImage(mdRowImage(it), it.x - PADR, y - PADR, it.w + PADR * 2, it.h + PADR * 2);
+    if (it.type === "header") ctx.drawImage(headerImage(R.w, it.h), R.x - PADR, y - PADR, R.w + PADR * 2, it.h + PADR * 2);
+    else if (it.type === "row") ctx.drawImage(mdRowImage(it), it.x - PADR, y - PADR, it.w + PADR * 2, it.h + PADR * 2);
     else mdDrawItem(it, y, pg && it.blk === pg);
     ctx.globalAlpha = alpha;
   }
-  // the rules carry on inside: every panel is a field held in a rule
-  ctx.lineWidth = 3; ctx.strokeStyle = theme.rule;
-  for (const it of L.items) { if (it.type !== "box") continue; const y = it.y - mScroll; if (y > vh || y + it.h < 0) continue; ctx.strokeRect(it.x + 1.5, y + 1.5, it.w - 3, it.h - 3); }
   for (const g of room.plaques) {
     if (g === except) continue;
     if (g.m.y - mScroll > vh || g.m.y + g.m.h + (g === room.fan ? stackOf(g).length * SUB_H : 0) - mScroll < 0) continue;
@@ -189,14 +183,14 @@ function drawRoom(now, alpha = 1, except = null) {
     for (const c of g.cards) drawTile(c, c.m.x, c.m.y - mScroll, c.m.w, c.m.h, now, alpha);
   }
   // the medal under a finger
-  if (pg?.mdt) for (const h of L.hits) if (h.blk === pg && !h.type) { ctx.lineWidth = 2; ctx.strokeStyle = theme["room-ink"]; ctx.strokeRect(h.x + 2, h.y - mScroll + 2, h.w - 4, h.h - 4); }
+  if (pg?.mdt) for (const h of L.hits) if (h.blk === pg && !h.type) { ctx.lineWidth = 1.5; ctx.strokeStyle = theme["room-ink"]; rr(h.x + 2, h.y - mScroll + 2, h.w - 4, h.h - 4, 9); ctx.stroke(); }
   ctx.globalAlpha = 1;
 }
 // ----- plates, rendered once and kept (a plate is a few fills; drawing the room is a few drawImage calls) -----
 const PADR = 26; // room around a cached plate for the views stacked behind it
-function fontOn(x, weight, size, narrow = false) { x.font = `${weight > 700 ? 700 : weight} ${Math.round(size * (narrow ? narrowK : 1) * 2) / 2}px ${narrow ? NARROW : FONT}`; } // as font() (40-render.js)
+function fontOn(x, weight, size, narrow = false) { x.font = `${weight} ${Math.round(size * 2) / 2}px ${FONT}`; if ("fontStretch" in x) x.fontStretch = narrow ? "semi-condensed" : "normal"; }
 function fitOn(x, t, max) { if (x.measureText(t).width <= max) return t; let s = t; while (s.length > 2 && x.measureText(s + "…").width > max) s = s.slice(0, -1); return s + "…"; }
-function rrOn(x, px, py, w, h) { x.beginPath(); x.rect(px, py, w, h); } // square, as rr()
+function rrOn(x, px, py, w, h, r) { x.beginPath(); x.roundRect ? x.roundRect(px, py, w, h, r) : x.rect(px, py, w, h); }
 function cachedImage(holder, key, w, h, draw) {
   if (holder.img?.key === key) return holder.img.cv;
   const cv = holder.img?.cv || document.createElement("canvas"), W = Math.ceil((w + PADR * 2) * dpr), H = Math.ceil((h + PADR * 2) * dpr); // the same canvas, drawn again: a change never makes a new one
@@ -225,7 +219,7 @@ function headerImage(w, h) {
   const L = medalList(), dn = caseList(), s = dn.length ? room.sum || caseSeries() : null;
   const sum = `${L.earned.length} of ${L.list.length} earned${L.hiddenLeft ? ` · ${L.hiddenLeft} hidden` : ""}`;
   return cachedImage(room, `${Math.round(w)}|${h}|${landPhone() ? 1 : 0}|${sum}|${s ? s.key : ""}|${look()}`, w, h, (x) => {
-    x.textBaseline = "alphabetic"; x.textAlign = "left"; x.fillStyle = theme["room-ink"]; fontOn(x, 700, landPhone() ? 28 : 32); // the size of the other rooms' titles
+    x.textBaseline = "alphabetic"; x.textAlign = "left"; x.fillStyle = theme["room-ink"]; fontOn(x, 800, landPhone() ? 28 : 32, true); // the size of the other rooms' titles
     x.fillText("Trophies", 4, 32);
     fontOn(x, 600, 13.5); x.fillStyle = theme["room-muted"]; x.fillText(sum, 4, 52);
     if (!s) return;

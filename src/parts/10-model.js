@@ -1,8 +1,5 @@
 const RAR = { c: ["Common", 0], u: ["Uncommon", 1], r: ["Rare", 2], h: ["Rare Holo", 3], s: ["Secret Rare", 5], v: ["Rare Holo V", 3], x: ["Rare Holo VMAX", 4], U: ["Ultra Rare", 4], w: ["Rainbow Rare", 5], d: ["Double Rare", 3], i: ["Illustration Rare", 4], S: ["Special Illustration Rare", 6], y: ["Hyper Rare", 5], a: ["ACE SPEC Rare", 3], m: ["Mega Hyper Rare", 6], p: ["Pikachu Rare", 4], f: ["Futuristic Rare", 5] };
-// Type colours (round 23): eleven-plus types need more than three hues, so they come from the Bauhaus's own colour theory,
-// Itten's wheel. The elemental types are the primaries, the next three the secondaries, two more tertiaries, Darkness
-// black (lifted in the dark by readTheme), the colourless ones greys. Flat, as a painter mixes them.
-const TYPE = { F: ["Fire", "#D1281D"], W: ["Water", "#1E4C9E"], G: ["Grass", "#2F8F46"], L: ["Lightning", "#F2C300"], P: ["Psychic", "#6E3F9E"], X: ["Fighting", "#E5731A"], D: ["Darkness", "#1F1F25"], M: ["Metal", "#7C8B99"], N: ["Dragon", "#2E8A86"], Y: ["Fairy", "#C23A78"], C: ["Colorless", "#B3AB97"], t: ["Trainer", "#6B675F"], e: ["Energy", "#999488"] };
+const TYPE = { F: ["Fire", "#D2553A"], W: ["Water", "#2E74C8"], G: ["Grass", "#3B925A"], L: ["Lightning", "#D29E1F"], P: ["Psychic", "#8A50BE"], X: ["Fighting", "#A95F36"], D: ["Darkness", "#373B55"], M: ["Metal", "#768397"], N: ["Dragon", "#A07D22"], Y: ["Fairy", "#C9659D"], C: ["Colorless", "#958F7E"], t: ["Trainer", "#5F6C8A"], e: ["Energy", "#7E879E"] };
 const GLYPH = ["●", "◆", "★", "★", "★★", "★★", "★★★"]; // the rarity mark on a drawn face (a holo's star, and up, is drawn in gold)
 const SET_INK = { base1: "#E8603C", base2: "#45A866", base3: "#A35BD6", base5: "#4A4F72", neo1: "#E9B524", swsh7: "#3D8BE8", sv3pt5: "#E8603C", sv8pt5: "#A35BD6", me5: "#4A4F72", me55: "#E9B524" };
 const OWN_RATE = { base1: 0.62, base2: 0.48, base3: 0.7, base5: 0.36, neo1: 0.28, swsh7: 0.3, sv3pt5: 0.82, sv8pt5: 0.44, me5: 0.16, me55: 0.1 };
