@@ -23,10 +23,16 @@
 1. On the wall, pinch closed slowly and hold it halfway. The wall narrows to its column while Trade and Trophies slide in from the right, then Feed drops in from above and Source rises from below, until the painting is whole. Then spread on the yellow Trophies field and watch the rules ride out to the edges.
 
 ## Gesture contract
-Navigation is unchanged (the same gestures reach the same places). The map move keeps the base's timing, durations and snapping; only the geometry changed from a diagonal scale to two straight-line phases. See the test results for the run.
+All checks pass at dpr 1 and 2. Navigation is unchanged: the same gestures reach the same places. The map move keeps the base's durations and snapping (speed first, then position); only its geometry changed, from a diagonal scale to two straight-line phases. Smoke, memory and landscape pass too. Landscape first failed on two style checks (the trade binder's cover must be a gradient, and the Feed's two columns needed a gap). The cover is now a stepped gradient (the red spine and the black board), the Feed's gaps are 3 px rules, and the landscape rerun passes. In the full run the art test died with "detached Frame" while two other suites ran alongside; run on its own it passes.
 
 ## Frame budget
-See the test results (perf runs inside `npm test`).
+`npm test` (perf), with two other variants' suites running at the same time:
+- mosaic 16.7 ms, held pinch 20.0 ms, held pinch up to the map 24.4 ms
+- binder of 64 pictures at rest 16.7 ms, pinch held into it 17.8 ms; binder mid-turn on its side 16.7 ms, upright 20.0 ms
+- on its side: mosaic 16.7 ms, held pinch 20.0 ms, up to the map 18.9 ms, spread mid-turn 16.7 ms
+- memory: 27.2 MB at dpr 3 after five rounds through every room, flat, 0 new canvases
+
+The rules are a few rectangles per panel and per room, never per tile. The map's fields are the base's baked card pictures, and medals are still painted once and kept.
 
 ## Unsure about
 - Tier as colour (blue, red, yellow, then all three) has no built-in order the way bronze, silver and gold do. Gold as yellow and holo as all three read right; blue below red is a rule you have to learn.
