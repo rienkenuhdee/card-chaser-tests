@@ -172,6 +172,18 @@ for (const dpr of [1, 2]) {
   await p.evaluate(() => document.querySelector("#toast .toast-btn").click()); await wait(300);
   R.push(["undo gives them back exactly", (await snap(ids)) === before]);
   await p.keyboard.press("Escape"); await wait(900); R.push(["escape closes the binder", !(await bd()).on]);
+  // A trade accepted while you're away from the table crosses the wall (round 13); a card you get that you already
+  // have arrives as one more copy (round 17), and the message names it.
+  await p.evaluate(() => __w.goRoom("chase")); await wait(1200);
+  const xname = await p.evaluate(() => {
+    const t = __w.TRADERS.find((x) => x.spares.some((c) => c.owned)), mine = __w.cards.find(__w.isSpare), theirs = t.spares.find((c) => c.owned), at = Date.now();
+    const r = { t: t.id, at, state: "proposed", give: [mine.id], get: [theirs.id], log: [{ by: "you", kind: "offer", give: [mine.id], get: [theirs.id], at }] };
+    __w.trades.push(r); window.__xt = { r, theirs, n: __w.nOf(theirs) }; __w.deliver(r, "accept"); return theirs.name;
+  });
+  const xt = () => p.evaluate(() => ({ st: window.__xt.r.state, n: __w.nOf(window.__xt.theirs), n0: window.__xt.n, toast: document.getElementById("toast").textContent }));
+  for (let k = 0; k < 30 && (await xt()).st !== "done"; k++) await wait(150);
+  const xd = await xt();
+  R.push(["a trade accepted off the table brings a card you have as one more copy, named in the message", xd.st === "done" && xd.n === xd.n0 + 1 && xd.toast.includes(`accepted. ${xname} is yours.`)]);
   // The rooms (round 21): an imported collection chasing every card it's missing. The map one pinch above the wall,
   // the Feed's listings (the wall's deals, seeded, several for some cards), a listing's own sheet, the Chase lens's
   // want list, a flick between rooms, and the trade checker.

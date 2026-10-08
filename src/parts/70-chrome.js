@@ -23,7 +23,7 @@ function placeToast() {
   }
   if (!wide(r)) {
     const q = R(document.getElementById("search")), t = R(document.querySelector(".top .strip"));
-    if (q && q.width > 0 && t) r = { left: q.left, top: t.top + 5, width: t.right - 5 - q.left, height: t.height - 10 }; // filters, settings and about wait under it; Back and Mark stay in reach
+    if (q && q.width > 0 && t) r = { left: q.left, top: t.top + 3, width: t.right - 3 - q.left, height: t.height - 6 }; // filters, settings and about wait under it; Back and Mark stay in reach
   }
   if (!wide(r)) {
     const t = R(document.querySelector(".top .strip")), right = innerWidth - Math.max(10, SAFE.right || 0);

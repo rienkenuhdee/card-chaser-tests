@@ -1329,9 +1329,9 @@ body.trading #pg-trade { opacity: 0; transition: opacity .3s; }
 /* Messages sit in the top bar, over the search and the count, in the bar's own field and rules (placeToast() sets the
    box): never a dark banner over the wall. They don't take taps: a tap meant for the bar reaches it, and the message
    goes. Only the message's own button (Undo, Open) takes one. */
-.toast { box-sizing: border-box; transform: none; max-width: none; width: auto; height: auto; padding: 4px 6px 4px 12px; border-radius: 0; background: var(--panel-solid); color: var(--ink);
-  font: 700 13.5px/1.25 var(--font); box-shadow: none !important; transition: opacity .18s; }
-.toast:not(.act) { padding-right: 12px; }
+.toast { box-sizing: border-box; transform: none; max-width: none; width: auto; height: auto; padding: 1px 4px 1px 10px; border-radius: 0; background: var(--panel-solid); color: var(--ink);
+  font: 700 13px/1.15 var(--font); box-shadow: none !important; transition: opacity .18s; }
+.toast:not(.act) { padding-right: 10px; }
 .toast.show, .toast.act.show { transform: none; pointer-events: none; }
 .toast.act.show .toast-btn { pointer-events: auto; }
 .toast-btn { flex: none; height: 30px; padding: 0 12px; border: 0; border-radius: 0; background: var(--ink); color: var(--bg); font: 800 13px var(--font); cursor: pointer; }

@@ -314,9 +314,20 @@ always been in the way"); they let taps through to the bar and step aside, and f
 under them. The listing sheet's Open on eBay, TCGplayer, Reddit, Craigslist or Marketplace is a real link to a search
 for the card (the listings are made up; the made-up shops say so). Learned: when Ryan loves a variant's look, the
 harvest is the variant; "normalize" applies to how you move through it, not to how it looks. Not verified on an
-iPhone: the tests run with a fallback sans, so Futura is unseen here.
+iPhone: the tests run with a fallback sans, so Futura is unseen here. Before merging, an audit diffed every function
+the painting redefines against what it replaces (nothing dropped) and walked every kept feature of rounds 1 to 23 at
+both sizes, light, dark and reduced motion: one older bug fixed (a trade accepted off the table dropped a card you
+already had instead of adding a copy, round 17's model), with a gesture check.
 
 ## Open questions (next rounds)
+
+- Production parity (audit, round 23). What production has that the Wall doesn't yet, beyond what's out of scope for
+  an on-device prototype (accounts, sync, real push, PSA lookups): most of the Feed's sorts and filters (12 sorts down
+  to 4; raw or slab, grade, lots, too cheap, hide, max price), adding a shop in Source, "Fill your Dex" in the Feed,
+  graded slabs and grade wants, price history and the collection's value over time, savings stats from "I bought it",
+  favourites and priority stars, print placeholders, card reports, the card sheet's Graded tab, and the completion
+  ceremony. Replaced, not lost: the collection grid (the wall, search, Filters, the list view), the card sheet (the
+  card up close), the public trade page (Show mode and Someone new, in person). Online trading stays pinned (round 18).
 
 - A deal arriving off screen: one tap from the line to the offers, and whether the arrival should nudge the wall.
 - Painting past the screen's edge: should a sweep scroll the binder as it goes?
