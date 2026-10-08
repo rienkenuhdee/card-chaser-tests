@@ -325,6 +325,13 @@ the painting redefines against what it replaces (nothing dropped) and walked eve
 both sizes, light, dark and reduced motion: one older bug fixed (a trade accepted off the table dropped a card you
 already had instead of adding a copy, round 17's model), with a gesture check.
 
+**Fix: a frame that throws never freezes the screen.** Ryan's recording: pinching out of the wall stopped half way to
+the map, the Chase room blank, the rest of the painting in pieces. A frame clears its request before it draws, so one
+that threw part way asked for no next frame, and a clip the throw left open kept anything else from drawing. Every
+frame now runs guarded: one that throws resets the canvas and the next comes as usual, so the move lands; the first
+error of a visit is named in the top bar, so a screenshot from the phone says what threw (the tests' browser couldn't
+reproduce it: the phone's own fonts and pictures are the likely difference). A smoke check arms one fault mid-move.
+
 ## Open questions (next rounds)
 
 - Production parity (audit, round 23). What production has that the Wall doesn't yet, beyond what's out of scope for

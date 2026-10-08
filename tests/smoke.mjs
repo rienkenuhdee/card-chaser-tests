@@ -3,7 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { write } from "../scripts/build.mjs";
-import { launch, phone, wait, report } from "./browser.mjs";
+import { launch, phone, wait, report, installTouch } from "./browser.mjs";
 
 const variant = process.argv.includes("--variant") ? process.argv[process.argv.indexOf("--variant") + 1] : null;
 const { file } = write({ variant, debug: true });
@@ -122,6 +122,19 @@ for (const dark of [false, true]) {
     R.push([`${tag}: every nameplate fits its plinth (${plates.n} checked${plates.bad.length ? `; spills: ${plates.bad.join(", ")}` : ""})`, plates.n > 0 && !plates.bad.length]);
   }
   R.push([`${tag}: the move to the map runs without errors${p.errors.length ? ` (${p.errors[0]})` : ""}`, !p.errors.length]);
+  await p.close();
+}
+// A frame that throws part way never freezes the screen: one fault while the wall's pieces are drawn on the way to the
+// map, and the move still lands on the map, the screen keeps drawing, and the top bar names what happened.
+{
+  const p = await phone(browser, file, { motion: true });
+  await p.evaluate(() => { localStorage.setItem("wall-welcomed", "1"); localStorage.setItem("wall-map-seen", "1"); }); await p.reload({ waitUntil: "load" }); await wait(1500);
+  const t = await installTouch(p);
+  await p.evaluate(() => __w.armFault("pieces"));
+  await t.pinch(195, 420, 260, 70, 500); await wait(1500);
+  const s = await p.evaluate(() => ({ map: __w.rooms.map, trans: Boolean(__w.state.trans), err: window.__frameError || "", toast: document.getElementById("toast").textContent }));
+  const px = await p.evaluate(() => { const c = document.getElementById("wall"), x = c.getContext("2d"), d = x.getImageData(Math.round(c.width * 0.25), Math.round(c.height * 0.5), 1, 1).data; return d[0] + d[1] + d[2]; });
+  R.push([`a frame that throws on the way to the map doesn't freeze it: the move lands (${s.map ? "on the map" : "not on the map"}) and the top bar names the snag`, s.map && !s.trans && /test fault in pieces/.test(s.err) && /snag/.test(s.toast) && px > 0 && !p.errors.length]);
   await p.close();
 }
 await browser.close();
