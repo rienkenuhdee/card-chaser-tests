@@ -149,6 +149,25 @@ for (const dark of [false, true]) {
   R.push([`a gradient at a bad number is drawn anyway and named (${s.bad || "not named"}), and the move lands`, s.map && !s.trans && !s.err && /createLinearGradient in drawPieces/.test(s.bad) && /bad number/.test(s.toast) && !p.errors.length]);
   await p.close();
 }
+// A pinch whose fingertips meet (the distance reads 0, as an iPhone reports a fast close) never puts a bad number in
+// the camera: the set closes or stays, and the wall draws.
+{
+  const p = await phone(browser, file, { motion: true });
+  await p.evaluate(() => { localStorage.setItem("wall-welcomed", "1"); localStorage.setItem("wall-map-seen", "1"); }); await p.reload({ waitUntil: "load" }); await wait(1500);
+  const t = await installTouch(p);
+  await t.tap(100, 200); await wait(1300);
+  const opened = await p.evaluate(() => __w.view);
+  await p.evaluate(async () => { // both fingers land on one point, then a single jump with them still together
+    const cv = document.getElementById("wall"), T = (id, x, y) => new Touch({ identifier: id, target: cv, clientX: x, clientY: y });
+    const fire = (type, touches, changed) => cv.dispatchEvent(new TouchEvent(type, { touches, changedTouches: changed, cancelable: true, bubbles: true }));
+    let a = T(1, 200, 400), c = T(2, 200, 400); fire("touchstart", [a], [a]); fire("touchstart", [a, c], [c]);
+    a = T(1, 201, 400); c = T(2, 201, 400); fire("touchmove", [a, c], [a, c]); fire("touchend", [], [a, c]);
+  });
+  await wait(1200);
+  const s = await p.evaluate(() => ({ cam: [__w.cam.x, __w.cam.y, __w.cam.s].every(Number.isFinite), bad: window.__badNumber || "", err: window.__frameError || "", view: __w.view }));
+  R.push([`a pinch whose fingertips meet keeps the camera sound (opened a ${opened}, now the ${s.view}${s.bad ? `; ${s.bad}` : ""})`, opened === "set" && s.cam && !s.bad && !s.err && !p.errors.length]);
+  await p.close();
+}
 await browser.close();
 const bad = report(R);
 console.log(`\nScreenshots: ${path.relative(process.cwd(), out)}`);

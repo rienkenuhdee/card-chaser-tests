@@ -61,7 +61,7 @@ function finishTransition() {
   state.trans = null; T.done?.(T);
 }
 const mid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
-const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+const dist = (a, b) => Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)); // fingertips that meet read as 1px apart: a pinch never divides by zero
 
 function onDown(pts) {
   hideCaption(); fly = null; inertia = false;

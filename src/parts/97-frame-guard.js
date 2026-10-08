@@ -6,6 +6,7 @@
 // what happened.
 let frameErrs = 0, frameErrSeen = false, testFaultArmed = "";
 function safeFrame(now) {
+  saneState();
   try { frame(now); frameErrs = 0; }
   catch (e) {
     raf = 0; frameErrs++;
@@ -16,6 +17,13 @@ function safeFrame(now) {
     if (frameErrs < 30) kick(); // the next frame as usual
     else setTimeout(kick, 250); // a fault on every frame: keep trying, four times a second, so the screen comes back when it clears
   }
+}
+// A bad number that got into the camera or a move (a pinch whose fingers met divided by zero, round 23's glitch) is
+// put right before it's drawn: the camera goes back to the set's fit, a move to where it was going.
+function saneState() {
+  if (![cam.x, cam.y, cam.s].every(Number.isFinite) || cam.s <= 0) { Object.assign(cam, view === "set" && state.g ? fitCam(state.g) : { x: 0, y: 0, s: 1 }); fly = null; inertia = false; noteBad("camera"); }
+  const T = state.trans;
+  if (T && "q" in T && !Number.isFinite(T.q)) { T.q = T.anim && Number.isFinite(T.anim.to) ? T.anim.to : 0; if (T.anim && !Number.isFinite(T.anim.from)) T.anim.from = T.q; noteBad("move"); }
 }
 // The first two of our own functions in a stack ("drawTile < drawWall"), as Safari and Chrome both write them.
 function whereFrom(stack) {
