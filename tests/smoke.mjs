@@ -294,6 +294,39 @@ for (const dark of [false, true]) {
   await p.click("#vsheet [data-vs-close]"); await wait(200);
   await p.close();
 }
+// Add a shop (parity 5): a bare domain becomes a source in Card shops with listings in the Feed (none NEW: the first
+// look only records what's there), its switch hides them, Remove takes it out and Undo brings it back, bad input is
+// refused in plain words, an added shop's listing opens its own search, and Reset clears it.
+{
+  const p = await phone(browser, file, { motion: false });
+  await p.evaluate(() => {
+    const at = Date.now() - 30 * 86400e3, owned = {}, chase = {};
+    for (const c of __w.cards) { if (c.own0) owned[c.id] = { on: true, at }; else chase[c.id] = true; }
+    localStorage.setItem("wall-owned", JSON.stringify(owned)); localStorage.setItem("wall-chase", JSON.stringify(chase));
+    localStorage.setItem("wall-imported", "TCGplayer"); localStorage.setItem("wall-welcomed", "1"); localStorage.setItem("wall-map-seen", "1");
+  });
+  await p.reload({ waitUntil: "load" }); await wait(800);
+  await p.evaluate(() => __w.goRoom("source")); await wait(900);
+  const id = "shop-pokecorner.com", mine = () => p.evaluate((id) => { const all = __w.feedList(); return { n: all.filter((L) => L.src === id).length, fresh: all.filter((L) => L.src === id && __w.isNewL(L)).length, row: Boolean(document.querySelector(`#ps-body [data-row="${id}"]`)), stored: JSON.parse(localStorage.getItem("wall-shops") || "[]").length, msg: document.getElementById("ps-shop-msg")?.textContent || "" }; }, id);
+  const add = async (t) => { await p.$eval("#ps-shop-url", (e) => { e.value = ""; }); await p.type("#ps-shop-url", t); await p.click("#ps-shop button[type=submit]"); await wait(300); };
+  await add("not a website"); const bad1 = await mine();
+  await add("pokecorner"); const bad2 = await mine();
+  await add("https://www.PokeCorner.com/collections/singles"); const added = await mine();
+  const shop = await p.evaluate((id) => { const L = __w.feedList().find((x) => x.src === id); __w.openListing(L.id); const a = document.querySelector("#lsheet a[data-ls-open]"); return { name: document.querySelector(`#ps-body [data-row="${id}"] b`)?.textContent, site: document.querySelector(`#ps-body [data-row="${id}"] .src-acts a`)?.href, open: a?.href || "", label: a?.textContent || "", card: L.c.name }; }, id);
+  await p.keyboard.press("Escape"); await wait(300);
+  R.push([`adding a shop by its website makes a source with listings in the Feed ("${shop.name}", ${added.n} listings, ${added.fresh} NEW; "${added.msg}"), its website a link, and its listing opens its own search (${shop.label}: ${shop.open})`, shop.name === "Pokecorner" && added.row && added.n > 0 && added.fresh === 0 && added.stored === 1 && /first look just records/.test(added.msg) && shop.site === "https://pokecorner.com/" && shop.open === `https://pokecorner.com/search?q=${encodeURIComponent(shop.card)}` && shop.label === "Open on Pokecorner"]);
+  R.push([`bad input is refused in plain words ("${bad1.msg}", "${bad2.msg}")`, !bad1.row && !bad2.row && bad1.stored === 0 && bad2.stored === 0 && /doesn't look like a website/.test(bad1.msg) && /doesn't look like a website/.test(bad2.msg)]);
+  await p.click(`#ps-body [data-src="${id}"]`); await wait(300); const off = await mine();
+  await p.click(`#ps-body [data-src="${id}"]`); await wait(300); const on = await mine();
+  R.push([`switching the added shop off hides its listings (${off.n} off, ${on.n} back on)`, off.n === 0 && on.n === added.n]);
+  await p.click(`#ps-body [data-shop-rm="pokecorner.com"]`); await wait(300); const gone = await mine();
+  await p.click("#toast .toast-btn"); await wait(400); const back = await mine();
+  R.push([`Remove takes the shop out (${gone.row ? "row still there" : "row gone"}, ${gone.n} listings) and Undo brings it back (${back.n} listings)`, !gone.row && gone.n === 0 && gone.stored === 0 && back.row && back.n === added.n && back.stored === 1]);
+  await p.evaluate(() => { document.getElementById("reset").click(); }); await wait(1200);
+  const reset = await p.evaluate(() => ({ stored: localStorage.getItem("wall-shops"), n: __w.myShops.length }));
+  R.push([`Reset clears the added shops (${reset.n} left)`, reset.stored === null && reset.n === 0 && !p.errors.length]);
+  await p.close();
+}
 await browser.close();
 const bad = report(R);
 console.log(`\nScreenshots: ${path.relative(process.cwd(), out)}`);

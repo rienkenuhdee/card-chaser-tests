@@ -386,11 +386,30 @@ days), real TCGplayer prices and eBay asks, and value by chase (here by set). Sm
 with finite points and ends at its market, its ranges switch, Collection at market opens the sheet from Trophies,
 its now is the worth total, and its ranges change the change line.
 
+**Parity 5: add a shop.** No variants, one build. Production's "add any Shopify card shop by its website" and its
+store watcher's first-look rule, in Source. Under Card shops, Add a shop takes a website or a bare domain
+("pokecorner.com", "https://www.PokeCorner.com/collections/singles"), keeps only the domain (https://pokecorner.com)
+and names the shop from it (Pokecorner; card-cove.shop is Card Cove); anything else is refused under the field in plain
+words ("That doesn't look like a website"), and so is a shop you already have. It becomes a source in Card shops after
+the made-up two, with a switch like theirs, its website as a real link, and Remove with Undo. What it has in stock is
+made up, seeded by its domain and the card: about one card you chase in eleven, at 80 to 97% of market and never under
+the card's best listing, so about what Northside gives. Its listings flow into the Feed like the other shops' (the
+switch, the counts, Shops in the Source filter, the map's Shops chip). The first look just records what's there and
+new items show from the next look (production's rule), so its listings are dated from when you added it and are never
+NEW; the page says so on its row and when you add it. Open on the listing's sheet opens the shop's own search for the
+card (https://domain/search?q=name, Shopify's path); the made-up two still open nothing. Kept in `wall-shops`, cleared
+by Reset. "/" no longer jumps to search while you type in a field (a website has slashes). Left out: the real check
+(Shopify's products.json, the homepage fallback for shops that aren't on Shopify) and whether it worked, restocks and
+price drops after the first look, the Chico shops' hours, and adding or removing shops from the list view (it keeps
+their switches). Smoke checks: a bare domain adds a source with listings in the Feed (none NEW) whose sheet opens its
+search, bad input is refused, the switch hides its listings, Remove and Undo, Reset clears it.
+
 ## Open questions (next rounds)
 
 - Production parity (audit, round 23). What production has that the Wall doesn't yet, beyond what's out of scope for
   an on-device prototype (accounts, sync, real push, PSA lookups): the Feed's language, version,
-  lots and too-cheap filters (the made-up listings don't carry them yet), adding a shop in Source, "Fill your Dex" in the Feed,
+  lots and too-cheap filters (the made-up listings don't carry them yet), a real check of an added shop (parity 5 made
+  its stock up, seeded by its domain) and its restocks and price drops after the first look, "Fill your Dex" in the Feed,
   grade wants (the per-set Grade you want) and PSA's population and cert checks (graded slabs landed in parity 2), real price history kept day by day (parity 3 made it up, seeded), value by chase, savings stats from "I bought it" (what the market said when you bought),
   favourites and priority stars, print placeholders, card reports, and the completion
   ceremony. Replaced, not lost: the collection grid (the wall, search, Filters, the list view), the card sheet (the

@@ -22,4 +22,5 @@ canvas.addEventListener("keydown", (e) => {
   else return;
   e.preventDefault(); kick();
 });
-addEventListener("keydown", (e) => { if (e.key === "/" && document.activeElement !== qIn) { e.preventDefault(); qIn.focus(); } });
+// "/" jumps to search, unless you're typing in a field (a shop's website has slashes in it).
+addEventListener("keydown", (e) => { if (e.key === "/" && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || "")) { e.preventDefault(); qIn.focus(); } });

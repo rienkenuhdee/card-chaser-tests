@@ -27,6 +27,32 @@ const srcState = { off: new Set(), alerts: false, ver: 0 };
 try { const s = JSON.parse(localStorage.getItem("wall-sources-off") || "null"); if (s) { srcState.off = new Set(s.off || []); srcState.alerts = Boolean(s.alerts); } } catch { /* fresh */ }
 const saveSources = () => { srcState.ver++; try { localStorage.setItem("wall-sources-off", JSON.stringify({ off: [...srcState.off], alerts: srcState.alerts })); } catch { /* private mode */ } };
 const srcOn = (id) => !srcState.off.has(id);
+// ----- shops you add (parity 5): production's "add any Shopify card shop by its website". Kept on this device in
+// wall-shops ({ domain, at }); each is a source in Card shops after the made-up two, its stock made up and seeded by
+// its domain. Production's store watcher: the first look just records what's there, and new items show from the next
+// look, so what it finds is dated from when you added it and is never NEW. -----
+const shopName = (d) => d.split(".")[0].split("-").filter(Boolean).map((w) => w[0].toUpperCase() + w.slice(1)).join(" ");
+let myShops = [];
+try { const v = JSON.parse(localStorage.getItem("wall-shops") || "[]"); if (Array.isArray(v)) myShops = v.filter((x) => x && typeof x.domain === "string" && /^[a-z0-9.-]+$/.test(x.domain)).map((x) => ({ domain: x.domain, at: Number(x.at) || Date.now() })); } catch { /* fresh */ }
+const saveShops = () => { try { localStorage.setItem("wall-shops", JSON.stringify(myShops)); } catch { /* private mode */ } };
+function syncShopSrc() { // SRC and SRC_BY follow myShops; w 0, so no seeded listing moves to them
+  for (let i = SRC.length - 1; i >= 0; i--) if (SRC[i].domain) { SRC_BY.delete(SRC[i].id); SRC.splice(i, 1); }
+  for (const x of myShops) {
+    const s = { id: `shop-${x.domain}`, name: shopName(x.domain), group: "Card shops", w: 0, line: "Reading their shop. The first look just records what's in stock; new items show from the next look", domain: x.domain, url: `https://${x.domain}`, at: x.at, k: 1000 + Math.floor(h32(`shop|${x.domain}`) * 1e6) };
+    SRC.push(s); SRC_BY.set(s.id, s);
+  }
+}
+syncShopSrc();
+// A website or a bare domain, as https://domain: "" when there's nothing, null when it isn't one.
+function shopDomain(raw) {
+  let t = String(raw || "").trim();
+  if (!t) return "";
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(t)) t = `https://${t}`;
+  let u; try { u = new URL(t); } catch { return null; }
+  if (!/^https?:$/.test(u.protocol) || u.username || u.password || u.port) return null;
+  const h = u.hostname.toLowerCase().replace(/^www\./, "");
+  return /^(?=.{4,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,24}$/.test(h) ? h : null;
+}
 const scan = { last: Date.now(), next: Date.now() + 6000 }; // the looks: when the last was, when the next is (72-live.js)
 const finds = []; // what this visit's looks found, newest first: { L, at }
 
@@ -55,9 +81,9 @@ function slabFor(c, k) {
 }
 const refOf = (L) => (L.grade ? gradeAsk(L.c, L.grade.co, L.grade.grade) : L.c.price); // what a listing is priced against
 const refName = (L) => (L.grade ? `${slabText(L.grade)} ask` : "market price");
-function makeListing(c, k, price) {
-  const r = (x) => h32(`${c.id}|L${k}|${x}`), st = sets[c.si], vintage = st.year < 2003, src = srcFor(c, k);
-  const L = { id: `${c.id}~${k}`, c, k, src, price, how: "", bestOffer: false, fav: false, ship: null, cond: null, seller: "", fb: null, fbN: null, endsAt: 0, bids: 0, sub: "", grade: slabFor(c, k) };
+function makeListing(c, k, price, src0 = null) {
+  const r = (x) => h32(`${c.id}|L${k}|${x}`), st = sets[c.si], vintage = st.year < 2003, src = src0 || srcFor(c, k);
+  const L = { id: `${c.id}~${k}`, c, k, src, price, how: "", bestOffer: false, fav: false, ship: null, cond: null, seller: "", fb: null, fbN: null, endsAt: 0, bids: 0, sub: "", grade: src0 ? null : slabFor(c, k) };
   const cr = r("cond");
   L.cond = L.grade ? null : cr < 0.5 ? "NM" : cr < 0.68 ? "LP" : cr < 0.74 ? "MP" : cr < 0.76 ? "HP" : null; // the condition the title states, if it does (a slab's grade is its condition)
   if (src === "ebay") {
@@ -82,10 +108,10 @@ function makeListing(c, k, price) {
   else L.title = `${c.name} (${num}) [${st.name}]${cw ? ` - ${cw}` : ""}`;
   return L;
 }
-function listingOf(c, k, price) {
+function listingOf(c, k, price, src0 = null) {
   const key = `${c.id}~${k}|${price}`;
   let L = lsMemo.get(key);
-  if (!L) { L = makeListing(c, k, price); if (lsMemo.size > 4000) lsMemo.clear(); lsMemo.set(key, L); }
+  if (!L) { L = makeListing(c, k, price, src0); if (lsMemo.size > 4000) lsMemo.clear(); lsMemo.set(key, L); }
   return L;
 }
 // Every listing for one card you chase: its best (the deal on the wall), and for the deals the wall started with,
@@ -107,7 +133,21 @@ function listingsOf(c) {
       out.push(L);
     }
   }
+  for (const s of SRC) if (s.domain) { const L = shopListing(c, s); if (L) out.push(L); }
   return out;
+}
+// A shop you added (parity 5): about one card you chase in eleven is in stock there (about what Northside gives),
+// at a shop's price (80 to 97% of market), never under the card's best listing, which is the deal on the wall. Seeded
+// by its domain and the card.
+const SHOP_RATE = 0.09;
+function shopListing(c, s) {
+  const r = (x) => h32(`${c.id}|${s.domain}|${x}`);
+  if (r("has") >= SHOP_RATE) return null;
+  const p = round2(c.price * (0.8 + 0.17 * r("p")));
+  if (p <= c.deal + 0.01) return null;
+  const L = listingOf(c, s.k, p, s.id);
+  L.was = null; L.at = L.seen = s.at; L.dropAt = 0; L.base = true;
+  return L;
 }
 // ----- the Feed's own filters and sort (kept on this device): production's condition and damaged rules -----
 // Condition filters by what a listing's title states (a title that doesn't say still shows, as in production). A
@@ -190,7 +230,7 @@ let feedSeenAt = 0;
 try { feedSeenAt = Number(localStorage.getItem("wall-feed-seen")) || 0; } catch { feedSeenAt = 0; }
 let feedFrom = feedSeenAt; // while you're in the Feed: when your last visit ended
 const inFeed = () => rooms.at === "feed" && !rooms.map;
-const isNewL = (L) => L.seen > Math.max(inFeed() ? feedFrom : feedSeenAt, Date.now() - 3 * DAY);
+const isNewL = (L) => !L.base && L.seen > Math.max(inFeed() ? feedFrom : feedSeenAt, Date.now() - 3 * DAY);
 const feedNewCount = () => feedList().filter(isNewL).length;
 function feedEnter() { feedFrom = feedSeenAt; renderFeed(); pgFeed.scrollTop = 0; }
 function feedLeave() { feedSeenAt = Date.now(); feedFrom = feedSeenAt; try { localStorage.setItem("wall-feed-seen", String(feedSeenAt)); } catch { /* private mode */ } syncBadge(); }
@@ -426,9 +466,11 @@ function openListing(id) {
 }
 const agoLeft = (ms) => { const h = Math.floor(ms / 3600e3), m = Math.max(1, Math.round((ms % 3600e3) / 60e3)); return ms <= 0 ? "moments" : h >= 24 ? `${Math.floor(h / 24)} d ${h % 24} h` : h ? `${h} h ${m} min` : `${m} min`; };
 // The listings are made up, so Open goes to the card on the real site: a search for its name (the made-up sets and
-// numbers would find nothing), where its real listings are. The made-up shops have nowhere to go.
+// numbers would find nothing), where its real listings are. A shop you added opens its own search (Shopify's
+// /search?q=); the made-up shops have nowhere to go.
 function listingUrl(L) {
-  const c = L.c, q = encodeURIComponent(c.name);
+  const c = L.c, q = encodeURIComponent(c.name), shop = SRC_BY.get(L.src);
+  if (shop?.domain) return `https://${shop.domain}/search?q=${q}`;
   if (L.src === "ebay") return `https://www.ebay.com/sch/i.html?_nkw=${q}+pokemon+card`;
   if (L.src === "tcgplayer") return `https://www.tcgplayer.com/search/pokemon/product?productLineName=pokemon&q=${q}`;
   if (L.src === "reddit") return `https://www.reddit.com/r/${L.sub}/search/?q=${encodeURIComponent(c.name)}&restrict_sr=1&sort=new`;
