@@ -51,7 +51,7 @@ function focusFor(el, box) {
 const about = document.getElementById("about");
 document.getElementById("info").onclick = () => about.showModal();
 document.getElementById("about-close").onclick = () => about.close();
-document.getElementById("reset").onclick = () => { saved = {}; persist(); try { for (const k of ["wall-chase", "wall-chases", "wall-scope", "wall-done", "wall-spares", "wall-copies", "wall-paid", "wall-trades", "wall-welcomed", "wall-imported", "wall-sets", "wall-lens", "wall-mode", "wall-value", "wall-show", "wall-order", "wall-corder", "wall-feed-view", "wall-medals", "wall-dated", "wall-arrival", "wall-feed-seen", "wall-sources-off", "wall-map-seen", "wall-checker", "wall-tb-hint"]) localStorage.removeItem(k); } catch { /* fine */ } location.reload(); };
+document.getElementById("reset").onclick = () => { saved = {}; persist(); try { for (const k of ["wall-chase", "wall-chases", "wall-scope", "wall-done", "wall-spares", "wall-copies", "wall-paid", "wall-trades", "wall-welcomed", "wall-imported", "wall-sets", "wall-lens", "wall-mode", "wall-value", "wall-show", "wall-order", "wall-corder", "wall-feed-view", "wall-medals", "wall-dated", "wall-arrival", "wall-feed-seen", "wall-sources-off", "wall-map-seen", "wall-checker", "wall-tb-hint", "wall-graded"]) localStorage.removeItem(k); } catch { /* fine */ } location.reload(); };
 
 // ---------- settings: appearance, the list, reset ----------
 const prefs = document.getElementById("prefs");
@@ -136,7 +136,7 @@ function drawList() {
   }
   const row = (c) => {
     const st = sets[c.si];
-    return `<li><button class="lrow" data-i="${c.i}" aria-pressed="${c.owned}"><span class="lname">${c.name}</span><span class="lmeta">${st.name} #${c.num}, ${c.rname}</span><span class="lprice">${!c.owned && c.deal ? `<b class="ldeal">Deal ${money(c.deal)}</b>` : money(c.price)}</span><span class="lstate">${lstateOf(c)}</span></button></li>`;
+    return `<li><button class="lrow" data-i="${c.i}" aria-pressed="${c.owned}"><span class="lname">${c.name}${slabsOf(c).length ? ` <span class="lslab">${slabBadge(slabsOf(c))}</span>` : ""}</span><span class="lmeta">${st.name} #${c.num}, ${c.rname}</span><span class="lprice">${!c.owned && c.deal ? `<b class="ldeal">Deal ${money(c.deal)}</b>` : money(c.price)}</span><span class="lstate">${lstateOf(c)}</span></button></li>`;
   };
   const rows = (items) => `<ul>${items.map(row).join("")}</ul>`;
   // The rooms read as sections: the Feed's listings first, then the wall (its lens, the trophies, the sets), then

@@ -349,13 +349,30 @@ source, format (auctions, Buy It Now, Best Offer), discount, how recently listed
 favorite sellers, ending in 6 hours. A Filters button beside sort and condition opens them under the row and counts
 what's on; Clear brings everything back; what they hide is counted like a source switched off.
 
+**Parity 2: graded slabs.** No variants, one build. Production's graded copies, as far as one device carries them. On
+the card up close, Add a graded copy opens a small form (PSA, BGS, CGC, SGC or TAG; only the grades that company gives;
+an optional cert number). A slab counts as owning the card (marking it the way I have it does), is listed on the card
+with Remove and a Verify link to the company's own lookup (PSA, CGC and TAG with the cert filled in; Beckett and SGC
+open their lookup page), and Undo works through the message; removing the slab that made a card yours takes the card
+out too. Kept in `wall-graded`, cleared by Reset like what you own. Its pocket in the binder wears a white tag in a
+black rule ("PSA 10"), drawn in one pass over the binder once a pocket is 60px wide, and the list row says it too.
+Under the price, what a PSA 10, PSA 9, BGS 9.5 and CGC 10 ask (made up, seeded by card id, from the raw market by
+rarity and age), and for a raw card you own, Worth grading?: the 10 and the 9 after $30 to grade, against keeping it
+raw, with a 10 never guaranteed. Every worth total counts a slab at its grade's ask. In the Feed, about one eBay copy
+in seven is a slab (never a card's best listing, which is the raw deal on the wall), priced against its grade's ask;
+the row, the list and the sheet say the grade, and the score and "under" compare against that ask. Filters gains Raw
+or slab, Grading company and Grade at least; a slab passes Condition, its grade being its condition. Left out: the
+per-set Grade you want, PSA's population and cert API, graded price history. The card's panel scrolls past half the
+screen upright now that it can hold slabs. Smoke checks: a slab owns the card and badges its pocket, Remove and Undo,
+the three filters narrow and clear, a slab passes Near Mint only.
+
 ## Open questions (next rounds)
 
 - Production parity (audit, round 23). What production has that the Wall doesn't yet, beyond what's out of scope for
-  an on-device prototype (accounts, sync, real push, PSA lookups): the Feed's raw or slab, grade, language, version,
+  an on-device prototype (accounts, sync, real push, PSA lookups): the Feed's language, version,
   lots and too-cheap filters (the made-up listings don't carry them yet), adding a shop in Source, "Fill your Dex" in the Feed,
-  graded slabs and grade wants, price history and the collection's value over time, savings stats from "I bought it",
-  favourites and priority stars, print placeholders, card reports, the card sheet's Graded tab, and the completion
+  grade wants (the per-set Grade you want) and PSA's population and cert checks (graded slabs landed in parity 2), price history and the collection's value over time, savings stats from "I bought it",
+  favourites and priority stars, print placeholders, card reports, and the completion
   ceremony. Replaced, not lost: the collection grid (the wall, search, Filters, the list view), the card sheet (the
   card up close), the public trade page (Show mode and Someone new, in person). Online trading stays pinned (round 18).
 

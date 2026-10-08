@@ -129,7 +129,7 @@ function setValue(on, { quiet = false } = {}) {
   if (on === state.value) return;
   state.value = on; markFilters(); tick(5);
   try { localStorage.setItem("wall-value", on ? "1" : ""); } catch { /* fine */ }
-  if (on && !quiet) { const v = cards.reduce((a, c) => a + (c.owned ? c.price : 0), 0); say(`Your collection: about ${money(v)}`); }
+  if (on && !quiet) { const v = worthOf(cards); say(`Your collection: about ${money(v)}`); }
   drawList(); kick();
 }
 function setTime(on) {

@@ -58,6 +58,7 @@ function fillPanel(c, dir) {
     updateFlag(c);
     artPanel(c); // a vintage scan's note (41-art.js)
     fillChips(panelMore, c);
+    gradedPanel(c); // what grades ask, and your slabs (79-graded.js)
   };
   if (dir && !reduced) { swap.classList.add("out"); setTimeout(() => { put(); swap.classList.remove("out"); }, 140); } else put();
 }

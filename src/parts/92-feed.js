@@ -40,13 +40,26 @@ const condOf = (code) => CONDITIONS.find((x) => x[0] === code);
 const round2 = (v) => Math.round(v * 100) / 100;
 const seededAt = (c, k) => FEED_T0 - (0.4 + 150 * Math.pow(h32(`${c.id}|L${k}|age`), 1.3)) * 3600e3; // up to six days ago, most of them recent
 const lsMemo = new Map();
+function srcFor(c, k) { const sr = h32(`${c.id}|L${k}|src`); let acc = 0; for (const s of SRC) { acc += s.w; if (sr < acc) return s.id; } return "ebay"; }
+// ----- slabs (parity 2): some eBay copies are graded, seeded by listing id. Never the card's best listing: that one is
+// the deal on the wall, a raw copy. A slab is priced against what its grade asks (79-graded.js), not the raw market. -----
+const SLAB_RATE = 0.27; // of the dearer eBay copies: about one eBay listing in seven overall
+const SLAB_GRADES = [["PSA", 10, 0.3], ["PSA", 9, 0.22], ["PSA", 8, 0.08], ["BGS", 9.5, 0.1], ["BGS", 9, 0.05], ["CGC", 10, 0.08], ["CGC", 9, 0.05], ["SGC", 10, 0.05], ["SGC", 9, 0.03], ["TAG", 10, 0.04]];
+function slabFor(c, k) {
+  if (k < 1 || srcFor(c, k) !== "ebay") return null;
+  const r = (x) => h32(`${c.id}~${k}|slab|${x}`);
+  if (r("is") >= SLAB_RATE) return null;
+  let acc = 0; const q = r("g");
+  for (const [co, grade, w] of SLAB_GRADES) { acc += w; if (q < acc) return { co, grade }; }
+  return { co: "PSA", grade: 10 };
+}
+const refOf = (L) => (L.grade ? gradeAsk(L.c, L.grade.co, L.grade.grade) : L.c.price); // what a listing is priced against
+const refName = (L) => (L.grade ? `${slabText(L.grade)} ask` : "market price");
 function makeListing(c, k, price) {
-  const r = (x) => h32(`${c.id}|L${k}|${x}`), st = sets[c.si], vintage = st.year < 2003;
-  let acc = 0, src = "ebay";
-  const sr = r("src"); for (const s of SRC) { acc += s.w; if (sr < acc) { src = s.id; break; } }
-  const L = { id: `${c.id}~${k}`, c, k, src, price, how: "", bestOffer: false, fav: false, ship: null, cond: null, seller: "", fb: null, fbN: null, endsAt: 0, bids: 0, sub: "" };
+  const r = (x) => h32(`${c.id}|L${k}|${x}`), st = sets[c.si], vintage = st.year < 2003, src = srcFor(c, k);
+  const L = { id: `${c.id}~${k}`, c, k, src, price, how: "", bestOffer: false, fav: false, ship: null, cond: null, seller: "", fb: null, fbN: null, endsAt: 0, bids: 0, sub: "", grade: slabFor(c, k) };
   const cr = r("cond");
-  L.cond = cr < 0.5 ? "NM" : cr < 0.68 ? "LP" : cr < 0.74 ? "MP" : cr < 0.76 ? "HP" : null; // the condition the title states, if it does
+  L.cond = L.grade ? null : cr < 0.5 ? "NM" : cr < 0.68 ? "LP" : cr < 0.74 ? "MP" : cr < 0.76 ? "HP" : null; // the condition the title states, if it does (a slab's grade is its condition)
   if (src === "ebay") {
     const h = r("how");
     L.how = h < 0.66 ? "Buy It Now" : h < 0.86 ? "Auction" : "Buy It Now";
@@ -61,7 +74,8 @@ function makeListing(c, k, price) {
   else { L.how = "In stock"; L.seller = srcName(src); L.ship = price >= 25 ? 0 : 4.99; }
   // the title, as a seller would write it
   const num = `${c.num}/${st.printed}`, cw = L.cond ? { NM: r("cw") < 0.5 ? "NM" : "Near Mint", LP: r("cw") < 0.5 ? "LP" : "Lightly Played", MP: "MP", HP: "Heavily Played" }[L.cond] : "";
-  if (src === "ebay") L.title = `${r("caps") < 0.3 ? c.name.toUpperCase() : c.name} ${num} ${st.name} ${c.rname}${vintage ? (r("wotc") < 0.6 ? " WOTC" : "") + ` ${st.year}` : ""} Pokemon Card${cw ? ` ${cw}` : ""}`;
+  if (src === "ebay" && L.grade) L.title = `${r("caps") < 0.3 ? c.name.toUpperCase() : c.name} ${num} ${st.name} ${c.rname}${vintage ? ` ${st.year}` : ""} ${slabText(L.grade)}${L.grade.grade === 10 ? (L.grade.co === "PSA" ? " GEM MINT" : " PRISTINE") : ""} Pokemon`;
+  else if (src === "ebay") L.title = `${r("caps") < 0.3 ? c.name.toUpperCase() : c.name} ${num} ${st.name} ${c.rname}${vintage ? (r("wotc") < 0.6 ? " WOTC" : "") + ` ${st.year}` : ""} Pokemon Card${cw ? ` ${cw}` : ""}`;
   else if (src === "tcgplayer") L.title = `${c.name} - ${num} - ${c.rname}`;
   else if (src === "reddit") L.title = `[US-CA] [H] ${c.name} ${st.code} ${num}${cw ? ` ${cw}` : ""} [W] PayPal`;
   else if (src === "local") L.title = `pokemon cards ${c.name.toLowerCase()} ${st.name.toLowerCase()}${r("lot") < 0.5 ? " must go" : ""}`;
@@ -87,8 +101,8 @@ function listingsOf(c) {
   if (c.deal0 != null) {
     const r0 = h32(`${c.id}|Ln`), n = r0 < 0.5 ? 0 : r0 < 0.82 ? 1 : 2;
     for (let k = 1; k <= n; k++) {
-      const p = round2(c.price * (0.7 + 0.26 * h32(`${c.id}|L${k}|p`)));
-      if (p <= c.deal + 0.01 || p >= c.price * 0.97) continue;
+      const gr = slabFor(c, k), ref = gr ? gradeAsk(c, gr.co, gr.grade) : c.price, p = round2(ref * (0.7 + 0.26 * h32(`${c.id}|L${k}|p`)));
+      if (gr ? p >= ref * 0.97 : p <= c.deal + 0.01 || p >= c.price * 0.97) continue;
       const L = listingOf(c, k, p); L.was = null; L.at = L.seen = seededAt(c, k); L.dropAt = 0;
       out.push(L);
     }
@@ -101,7 +115,7 @@ function listingsOf(c) {
 // matters with any condition, so it's the last choice of the same picker). The filter counts everywhere the Feed is
 // counted (the rooms button, the map), like a source switched off. The sort is only how the page reads.
 const FEED_SORT_IDS = ["newest", "best", "ending", "price", "priceDesc", "pct", "savings", "shops", "local", "seller", "freeShip", "card"];
-const FEED_F0 = { src: "", how: "", off: "", fresh: "", max: "", free: false, fav: false, soon: false }; // the Filters panel (production's, where the listings carry it)
+const FEED_F0 = { src: "", how: "", slab: "", gco: "", gmin: "", off: "", fresh: "", max: "", free: false, fav: false, soon: false }; // the Filters panel (production's, where the listings carry it)
 const feedView = { sort: "newest", cond: "", ...FEED_F0, v: 0 }; // cond: "" any but damaged, NM, LP or MP and better, "any" damaged too
 try {
   const v = JSON.parse(localStorage.getItem("wall-feed-view") || "null");
@@ -116,7 +130,12 @@ const totalOf = (L) => L.price + (typeof L.ship === "number" ? L.ship : 0);
 const feedFiltersOn = () => Object.keys(FEED_F0).filter((k) => feedView[k] !== FEED_F0[k]).length;
 function feedPass(L) {
   const f = feedView, now = Date.now();
-  if (!(f.cond === "any" || (f.cond ? !L.cond || COND_RANK[L.cond] <= COND_RANK[f.cond] : !damagedL(L)))) return false;
+  if (!L.grade && !(f.cond === "any" || (f.cond ? !L.cond || COND_RANK[L.cond] <= COND_RANK[f.cond] : !damagedL(L)))) return false; // a slab's grade is its condition
+  if (f.slab === "raw" && L.grade) return false;
+  if (f.slab === "graded" && !L.grade) return false;
+  if ((f.gco || f.gmin) && !L.grade) return false;
+  if (f.gco && L.grade.co !== f.gco) return false;
+  if (f.gmin && L.grade.grade < +f.gmin) return false;
   if (f.src && (f.src === "shops" ? !L.src.startsWith("shop") : L.src !== f.src)) return false;
   if (f.how === "auction" && L.how !== "Auction") return false;
   if (f.how === "fixed" && L.how === "Auction") return false;
@@ -136,7 +155,7 @@ const FEED_SORTS = {
   price: (a, b) => a.price - b.price, // the price the row shows
   priceDesc: (a, b) => b.price - a.price,
   pct: (a, b) => pctOf(b) - pctOf(a),
-  savings: (a, b) => (b.c.price - b.price) - (a.c.price - a.price),
+  savings: (a, b) => (refOf(b) - b.price) - (refOf(a) - a.price),
   shops: (a, b) => b.src.startsWith("shop") - a.src.startsWith("shop") || byScoreL(a, b),
   local: (a, b) => ["local", "reddit"].includes(b.src) - ["local", "reddit"].includes(a.src) || byScoreL(a, b),
   seller: (a, b) => (b.fb ?? -1) - (a.fb ?? -1) || byScoreL(a, b),
@@ -164,7 +183,7 @@ function feedData() { // once a frame at most, for the map's cards
   feedMemo = { key, v: { list, counts, chased, fresh: list.filter(isNewL).length } };
   return feedMemo.v;
 }
-const pctOf = (L) => Math.round((1 - L.price / L.c.price) * 100);
+const pctOf = (L) => Math.round((1 - L.price / refOf(L)) * 100);
 
 // ----- NEW: listed (or dropped) since your last visit, and never more than three days old -----
 let feedSeenAt = 0;
@@ -181,7 +200,7 @@ addEventListener("pagehide", () => { if (inFeed()) feedLeave(); });
 function scoreOf(L) {
   const ageH = Math.floor((Date.now() - L.at) / 3600e3), key = `${L.price}|${ageH}|${srcOn(L.src)}`;
   if (L.sc?.key === key) return L.sc;
-  const M = marketOf(L.c), pct = pctOf(L), parts = [{ key: "start", label: "Starting point", pts: 40, note: "Every listing starts here: about the market price." }];
+  const M = marketL(L), pct = pctOf(L), parts = [{ key: "start", label: "Starting point", pts: 40, note: "Every listing starts here: about the market price." }];
   let score = 40;
   const add = (k, label, pts, note) => { score += pts; parts.push({ key: k, label, pts, note }); };
   const shaky = M.conf === "low", why = [];
@@ -190,7 +209,7 @@ function scoreOf(L) {
   if (L.src === "tcgplayer") why.push("TCGplayer's lowest listing can be any condition (counts 60%)");
   const weight = (L.how === "Auction" ? 0.6 : 1) * (shaky ? 0.5 : 1) * (L.src === "tcgplayer" ? 0.6 : 1);
   const deal = pct >= 0 ? 48 * (1 - Math.exp(-pct / 40)) : Math.max(-35, pct * 0.7);
-  add("deal", pct >= 5 ? `${pct}% under market` : `Within ${Math.max(pct, 1)}% of market`, deal * weight, why.length ? `The full discount is reduced because ${why.join(", and ")}.` : "Bigger discounts earn more, on a curve with a ceiling.");
+  add("deal", pct >= 5 ? `${pct}% under ${L.grade ? `the ${slabText(L.grade)} ask` : "market"}` : `Within ${Math.max(pct, 1)}% of market`, deal * weight, why.length ? `The full discount is reduced because ${why.join(", and ")}.` : "Bigger discounts earn more, on a curve with a ceiling.");
   if (L.how === "Auction") { const left = L.endsAt - Date.now(); if (left > 0 && left < 2 * 3600e3 && L.bids <= 2) add("ending", `Ends soon, ${plural1(L.bids, "bid")}`, 12, "Ending within 2 hours with few bids."); else if (left > 0 && left < 12 * 3600e3 && L.bids <= 3) add("ending", "Ends today", 5, "Ending within 12 hours with few bids."); }
   if (ageH < 6) add("fresh", "Just listed", 7, "Listed in the last 6 hours. Fresh listings are the ones you can still win.");
   else if (ageH < 24) add("fresh", "Listed today", 3);
@@ -223,8 +242,15 @@ function marketOf(c) {
   for (const s of src.slice(1)) { const ratio = Math.max(s.value / c.price, c.price / s.value); if (ratio <= 1.6) pts += s.n ? (s.n >= 6 ? 1 : 0.5) : 1; else if (ratio > 2.5) pts -= 1; }
   return (c.mk = { p: c.price, value: c.price, src, age, conf: pts >= 3 ? "high" : pts >= 1.5 ? "medium" : "low" });
 }
+// A slab's market is what its grade asks (never above medium confidence: asks, not sales), with raw beside it.
+function marketL(L) {
+  if (!L.grade) return marketOf(L.c);
+  const ask = refOf(L), t = slabText(L.grade);
+  if (L.mk?.p === ask) return L.mk;
+  return (L.mk = { p: ask, value: ask, age: 0, conf: "medium", src: [{ name: `${t} asks`, value: ask, n: 3 + Math.floor(h32(`${L.id}|gn`) * 10), note: `What ${t} copies of this card ask on eBay, the typical one over the last 45 days. Asking prices, not sales.` }, { name: "Raw", value: L.c.price, note: "The raw (ungraded) market price, for comparison. A slab is priced against its grade, not this." }] });
+}
 function priceVerdict(L) {
-  const pct = pctOf(L), M = marketOf(L.c);
+  const pct = pctOf(L), M = marketL(L);
   if (pct >= 75 && M.conf !== "low" && L.src !== "tcgplayer") return { tone: "warn", head: "Too good to be true?" };
   if (pct >= 25) return M.conf === "low" ? { tone: "ok", head: "Looks cheap, but the market price is shaky" } : { tone: "good", head: "A good price" };
   if (pct >= 10) return { tone: "good", head: "A little under market" };
@@ -233,7 +259,7 @@ function priceVerdict(L) {
 }
 // A line with the market sources marked on it and this listing's price pinned above (production's ruler).
 function priceRuler(L) {
-  const M = marketOf(L.c), src = M.src, hi = Math.max(L.price, M.value, ...src.map((x) => x.value)) * 1.22;
+  const M = marketL(L), src = M.src, hi = Math.max(L.price, M.value, ...src.map((x) => x.value)) * 1.22;
   const W = 340, l = 14, r = W - 14, y = 62, ROW = 17, x = (v) => l + (Math.max(0, v) / hi) * (r - l), rows = [], placed0 = [];
   // Each label goes in the first row where it overlaps no other label and its leader line runs through none above it.
   const placed = [...src].sort((a, b) => a.value - b.value).map((p) => {
@@ -259,10 +285,10 @@ const cardFaceHTML = (c, extra = "", size = 58) => `<span class="cface${c.tier >
 // ----- the Feed, as a page -----
 const pfList = document.getElementById("pf-list"), pfSub = document.getElementById("pf-sub"), pfCount = document.getElementById("pf-count"), pfNote = document.getElementById("pf-note");
 function feedRowHTML(L, slide) {
-  const c = L.c, st = sets[c.si], n = isNewL(L), sc = scoreOf(L), pct = pctOf(L), now = Date.now();
-  return `<li class="fd${n ? " is-new" : ""}${slide && !reduced ? " fd-in" : ""}"><button type="button" class="fd-row" data-l="${esc(L.id)}" aria-label="${esc(`${n ? "New. " : ""}${c.name}, ${st.name} number ${c.num}. ${money(L.price)} on ${whereText(L)}, ${pct}% under its ${money(c.price)} market price. Score ${sc.score}. ${L.dropAt ? "Dropped" : "Listed"} ${agoText(L.seen, now)}.`)}">
-    ${cardFaceHTML(c)}<span class="fd-name">${n ? '<b class="fd-new">NEW</b>' : ""}<span>${esc(c.name)}</span></span><span class="fd-set">${esc(st.name)} #${esc(c.num)}${L.cond ? `, ${condOf(L.cond)[1]}` : ""}</span>
-    <b class="fd-price">${money(L.price)}${L.was ? ` <s>${money(L.was)}</s>` : ""}</b><span class="fd-mkt">Market ${money(c.price)} · <em>${pct}% under</em></span>
+  const c = L.c, st = sets[c.si], n = isNewL(L), sc = scoreOf(L), pct = pctOf(L), now = Date.now(), ref = refOf(L), gt = L.grade ? slabText(L.grade) : "";
+  return `<li class="fd${n ? " is-new" : ""}${slide && !reduced ? " fd-in" : ""}"><button type="button" class="fd-row" data-l="${esc(L.id)}" aria-label="${esc(`${n ? "New. " : ""}${c.name}${gt ? `, graded ${gt}` : ""}, ${st.name} number ${c.num}. ${money(L.price)} on ${whereText(L)}, ${pct}% under its ${money(ref)} ${refName(L)}. Score ${sc.score}. ${L.dropAt ? "Dropped" : "Listed"} ${agoText(L.seen, now)}.`)}">
+    ${cardFaceHTML(c)}<span class="fd-name">${n ? '<b class="fd-new">NEW</b>' : ""}${gt ? `<b class="fd-gr">${gt}</b>` : ""}<span>${esc(c.name)}</span></span><span class="fd-set">${esc(st.name)} #${esc(c.num)}${L.cond ? `, ${condOf(L.cond)[1]}` : ""}</span>
+    <b class="fd-price">${money(L.price)}${L.was ? ` <s>${money(L.was)}</s>` : ""}</b><span class="fd-mkt">${gt ? `${gt} ask` : "Market"} ${money(ref)} · <em>${pct}% under</em></span>
     <span class="fd-src"><b>${esc(whereText(L))}</b> · ${L.dropAt ? "dropped " : ""}${agoText(L.seen, now)}</span>
     <span class="slab ${slabClass(sc.score)}"><b>${sc.score}</b><small>score</small></span></button></li>`;
 }
@@ -287,7 +313,7 @@ function renderFeed(slideId = null) {
 // listings here carry it). A line under it says what the filters hide, with Show all.
 const pfSort = document.getElementById("pf-sort"), pfCond = document.getElementById("pf-cond"), pfHidden = document.getElementById("pf-hidden");
 const pfMoreBtn = document.getElementById("pf-more-btn"), pfMore = document.getElementById("pf-more");
-const PF_FIELDS = { "pf-src": "src", "pf-how": "how", "pf-off": "off", "pf-fresh": "fresh", "pf-max": "max", "pf-free": "free", "pf-fav": "fav", "pf-soon": "soon" };
+const PF_FIELDS = { "pf-src": "src", "pf-how": "how", "pf-slab": "slab", "pf-gco": "gco", "pf-gmin": "gmin", "pf-off": "off", "pf-fresh": "fresh", "pf-max": "max", "pf-free": "free", "pf-fav": "fav", "pf-soon": "soon" };
 function syncFeedTools(hidden) {
   pfSort.value = feedView.sort; pfCond.value = feedView.cond;
   pfCond.classList.toggle("on", Boolean(feedView.cond));
@@ -337,7 +363,7 @@ function feedListHTML() {
   const list = feedSorted(feedList()), now = Date.now(), order = FEED_ORDER[feedView.sort];
   return `<section data-sec="feed"><h2>Feed</h2><p class="lsub">${list.length ? `${plural1(list.length, "listing")} for the cards you chase, ${order}.` : "Every listing found for the cards you chase lands here. Nothing yet."}</p><ul>${list.map((L) => {
     const c = L.c, st = sets[c.si];
-    return `<li><button class="lrow" data-listing="${esc(L.id)}"><span class="lname">${isNewL(L) ? "NEW. " : ""}${esc(c.name)}</span><span class="lmeta">${esc(st.name)} #${esc(c.num)}. ${esc(whereText(L))}, ${agoText(L.seen, now)}. Score ${scoreOf(L).score}.</span><span class="lprice"><b class="ldeal">${money(L.price)}</b></span><span class="lstate">Market ${money(c.price)}, ${pctOf(L)}% under</span></button></li>`;
+    return `<li><button class="lrow" data-listing="${esc(L.id)}"><span class="lname">${isNewL(L) ? "NEW. " : ""}${esc(c.name)}${L.grade ? ` <span class="lslab">${slabText(L.grade)}</span>` : ""}</span><span class="lmeta">${esc(st.name)} #${esc(c.num)}. ${esc(whereText(L))}, ${agoText(L.seen, now)}. Score ${scoreOf(L).score}.</span><span class="lprice"><b class="ldeal">${money(L.price)}</b></span><span class="lstate">${L.grade ? `${slabText(L.grade)} ask` : "Market"} ${money(refOf(L))}, ${pctOf(L)}% under</span></button></li>`;
   }).join("")}</ul></section>`;
 }
 listEl.addEventListener("click", (e) => { const b = e.target.closest("[data-listing]"); if (b) openListing(b.dataset.listing); });
@@ -349,11 +375,11 @@ function findListing(id) { const cid = id.split("~")[0], c = cards.find((x) => x
 function openListing(id) {
   const L = findListing(id); if (!L) return;
   lsOpen = L;
-  const c = L.c, st = sets[c.si], M = marketOf(c), v = priceVerdict(L), sc = scoreOf(L), pct = pctOf(L), diff = Math.abs(c.price - L.price), now = Date.now();
+  const c = L.c, st = sets[c.si], M = marketL(L), v = priceVerdict(L), sc = scoreOf(L), pct = pctOf(L), ref = refOf(L), rn = refName(L), gt = L.grade ? slabText(L.grade) : "", diff = Math.abs(ref - L.price), now = Date.now();
   const r = (x) => h32(`${L.id}|ph|${x}`), mats = ["#2F4A3C", "#3A3550", "#4B3527", "#24394F", "#55443A"], tilt = (r("t") * 8 - 4).toFixed(1);
-  const sentence = Math.abs(pct) < 3 ? `Right at the <b>${money(c.price)}</b> market price.` : pct > 0 ? `<b>${pct}% under</b> the <b>${money(c.price)}</b> market price, ${money(diff)} less.` : `<b>${-pct}% over</b> the <b>${money(c.price)}</b> market price.`;
+  const sentence = Math.abs(pct) < 3 ? `Right at the <b>${money(ref)}</b> ${rn}.` : pct > 0 ? `<b>${pct}% under</b> the <b>${money(ref)}</b> ${rn}, ${money(diff)} less.` : `<b>${-pct}% over</b> the <b>${money(ref)}</b> ${rn}.`;
   const conf = CONFIDENCE_TEXT[M.conf];
-  const others = listingsOf(c).filter((x) => x !== L && srcOn(x.src)).sort((a, b) => a.price - b.price), cheaper = others.filter((x) => x.price < L.price);
+  const others = listingsOf(c).filter((x) => x !== L && srcOn(x.src) && (x.grade ? slabText(x.grade) : "") === gt).sort((a, b) => a.price - b.price), cheaper = others.filter((x) => x.price < L.price);
   const inc = [];
   if (L.how === "Auction") inc.push(`This is the <b>current bid</b> (${plural1(L.bids, "bid")}), ending in ${agoLeft(L.endsAt - now)}. Auctions usually climb, so the discount counts for 60% in the score. Decide your top price before you bid.`);
   if (L.ship === 0) inc.push("Shipping is free, so the price shown is the price delivered.");
@@ -363,6 +389,7 @@ function openListing(id) {
   if (L.bestOffer) inc.push("The seller takes <b>offers</b>, so you may get it for less.");
   const ci = L.cond && condOf(L.cond);
   if (ci && L.cond !== "NM") { const adj = c.price * ci[2], ap = Math.round((1 - L.price / adj) * 100); inc.push(`The title says <b>${ci[1]}</b>. Market prices are for Near Mint, and a ${ci[1]} copy usually sells for about <b>${Math.round((1 - ci[2]) * 100)}% less</b> (around ${money(adj)}). Against that, this is ${ap >= 0 ? `${ap}% under` : `${-ap}% above`}. It's an estimate, so check the photos.`); }
+  else if (L.grade) inc.push(`A graded copy, sealed in a ${L.grade.co} slab at <b>${L.grade.grade}</b>. Its grade is its condition, so it's priced against what ${gt} copies ask (${money(ref)}), not the raw market (${money(c.price)}).`);
   else if (!L.cond && L.src !== "tcgplayer") inc.push("The title doesn't give a condition. Market prices are for Near Mint, so check the photos.");
   if (L.src === "tcgplayer") inc.push("This is TCGplayer's <b>lowest listing</b>, which can be in any condition.");
   if (L.src === "reddit") inc.push("A Reddit trade post: message the seller, and pay with PayPal Goods &amp; Services so you're protected.");
@@ -371,18 +398,19 @@ function openListing(id) {
   if (v.tone === "warn") watch.push("<b>Far below market usually means a reprint, a fake or the wrong card.</b> Check the photos, the set symbol and the seller's history before you pay.");
   if (M.conf === "low") watch.push("The market price is <b>shaky</b>, so the discount could be an illusion. Glance at TCGplayer or another listing first.");
   if (L.fb != null && L.fb < 97) watch.push(`The seller's feedback is ${L.fb}% over ${L.fbN.toLocaleString()} sales.`);
+  if (L.grade) watch.push(`Ask for the cert number and look it up with ${L.grade.co === "BGS" ? "Beckett" : L.grade.co} before you pay: fake slabs exist.`);
   if (st.year < 2003) watch.push("1st Edition and Shadowless cards are often mislabeled. The stamp or the missing shadow should be visible in the photos.");
   watch.push("Make sure the photos show the actual card (not a stock image), and read the return policy.");
   const fmt = (n) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : "0");
   const mine = isChase(c) ? `<p class="ls-mine">You chase this card. Pay up to ${money(capOf(c))}. <button type="button" class="linklike" data-mine>See your card ›</button></p>` : "";
   lsheet.innerHTML = `<div class="ls-scroll">
     <div class="ls-photo" style="--mat:${mats[Math.floor(r("m") * mats.length)]};--tilt:${tilt}deg">${cardFaceHTML(c, r("s") < 0.5 ? " slv" : "", 118)}<small class="ls-cap">The seller's photo</small><small class="ls-cap-pic">${artStamped(c) ? "Pictured: a 1st Edition print" : "A stock picture"}. The seller's photos are on ${esc(openOn(L))}.</small><button type="button" class="ib ls-x" data-ls-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
-    <div class="ls-head"><span class="ls-verdict ${v.tone}">${v.head}</span><h2 id="ls-name">${esc(c.name)} <span>#${esc(c.num)}</span></h2><p class="ls-meta">${esc(st.name)}${ci ? ` · ${ci[1]}` : L.src === "tcgplayer" ? " · Any condition" : ""}</p><p class="ls-title">“${esc(L.title)}”</p></div>
+    <div class="ls-head"><span class="ls-verdict ${v.tone}">${v.head}</span><h2 id="ls-name">${esc(c.name)} <span>#${esc(c.num)}</span></h2><p class="ls-meta">${esc(st.name)}${gt ? ` · Graded ${gt}` : ci ? ` · ${ci[1]}` : L.src === "tcgplayer" ? " · Any condition" : ""}</p><p class="ls-title">“${esc(L.title)}”</p></div>
     <div class="ls-price"><b>${money(L.price)}</b>${L.was ? `<s>${money(L.was)}</s>` : ""}<span>${shipText(L)}</span></div>
     <div class="ls-row"><span class="slab ${slabClass(sc.score)}"><b>${sc.score}</b><small>score</small></span><p>${L.src === "ebay" ? `Sold by ${esc(L.seller)} (${L.fb}%, ${L.fbN.toLocaleString()} sales) on eBay` : L.src === "reddit" ? `Posted by ${esc(L.seller)} on r/${L.sub}` : L.src === "local" ? `${esc(L.seller)}` : L.src === "tcgplayer" ? `Sold by ${esc(L.seller)} on TCGplayer` : `Sold by ${esc(srcName(L.src))}`}<small>${esc(howText(L))} · ${L.dropAt ? `dropped ${agoText(L.dropAt, now)}, listed ${agoText(L.at, now)}` : `listed ${agoText(L.at, now)}`}</small></p></div>
     <p class="ls-sentence">${sentence}</p>
-    ${priceRuler(L)}<p class="ls-legend"><i></i>within 10% of market</p>
-    <section class="ls-sec"><h3>How we worked out the market price</h3><ul>${M.src.map((s) => `<li><b>${s.name} ${money(s.value)}</b>${s.name === "TCGplayer" ? ` <span class="ls-age">(${s.age === 0 ? "updated today" : `updated ${plural1(s.age, "day")} ago`})</span>` : s.n ? ` <span class="ls-age">(${s.n} listings)</span>` : ""}<small>${SOURCE_TEXT[s.name]}</small></li>`).join("")}</ul><p class="ls-conf ${M.conf}"><b>${conf[0]} confidence.</b> ${conf[1]}</p></section>
+    ${priceRuler(L)}<p class="ls-legend"><i></i>within 10% of ${gt ? `the ${gt} ask` : "market"}</p>
+    <section class="ls-sec"><h3>${gt ? `How we priced a ${gt}` : "How we worked out the market price"}</h3><ul>${M.src.map((s) => `<li><b>${s.name} ${money(s.value)}</b>${s.name === "TCGplayer" ? ` <span class="ls-age">(${s.age === 0 ? "updated today" : `updated ${plural1(s.age, "day")} ago`})</span>` : s.n ? ` <span class="ls-age">(${s.n} listings)</span>` : ""}<small>${s.note || SOURCE_TEXT[s.name]}</small></li>`).join("")}</ul><p class="ls-conf ${M.conf}"><b>${conf[0]} confidence.</b> ${conf[1]}</p></section>
     <section class="ls-sec"><h3>Against other copies</h3><p>${!others.length ? "This is the only listing we've found for this card." : !cheaper.length ? `The cheapest of the <b>${others.length + 1}</b> listings we're tracking for this card. The next lowest is <b>${money(others[0].price)}</b>, on ${openOn(others[0])}.` : `${others.length === 1 ? "The other listing is" : `<b>${cheaper.length}</b> of the other ${others.length} listings ${cheaper.length === 1 ? "is" : "are"}`} cheaper: <button type="button" class="linklike" data-other="${esc(cheaper[0].id)}">${money(cheaper[0].price)} on ${openOn(cheaper[0])}</button>.`}</p></section>
     <section class="ls-sec"><h3>What's in the price</h3><ul>${inc.map((t) => `<li>${t}</li>`).join("")}</ul></section>
     <section class="ls-sec"><h3>What moved the score</h3><ul class="points">${sc.lines.map((p) => `<li><span class="pts ${p.key === "start" ? "" : p.pts > 0 ? "up" : p.pts < 0 ? "down" : ""}">${p.key === "start" ? p.pts : fmt(p.pts)}</span><span><b>${esc(p.label)}</b>${p.note ? `<small>${esc(p.note)}</small>` : ""}</span></li>`).join("")}<li class="pts-total"><span class="pts">${sc.score}</span><span><b>Score</b><small>${sc.capped ? `Capped at ${sc.capped === "high" ? 100 : 0}. ` : ""}40 is a fair price, 65 and up a good deal, 80 and up a standout.</small></span></li></ul></section>

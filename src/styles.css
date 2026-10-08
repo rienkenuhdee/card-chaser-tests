@@ -1352,3 +1352,39 @@ a.mbtn { display: inline-flex; align-items: center; justify-content: center; box
 .fd-check { display: flex; align-items: center; gap: 8px; min-height: 32px; font: 600 14px var(--font); color: var(--ink); }
 .fd-check input { width: 20px; height: 20px; margin: 0; accent-color: var(--ink); }
 .fd-more #pf-clear { justify-self: start; }
+
+/* ===== Parity 2: graded slabs. A slab is a white tag held in a black rule, in both lights (it's the slab's label). ===== */
+.gr-asks { width: 100%; margin: 2px 0 0; border-collapse: collapse; table-layout: fixed; border: 2px solid var(--rule); font-variant-numeric: tabular-nums; }
+.gr-asks caption { caption-side: top; text-align: left; padding: 0 0 4px; font: 700 12px var(--font); color: var(--muted); }
+.gr-asks th, .gr-asks td { padding: 4px 6px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gr-asks th { font: 700 11.5px var(--font); color: var(--muted); padding-bottom: 0; }
+.gr-asks td { font: 700 15px var(--font); color: var(--ink); padding-top: 1px; }
+.gr-asks th + th, .gr-asks td + td { border-left: 2px solid var(--rule); }
+.gr-worth { margin: 8px 0 0; font-size: 13px; line-height: 1.38; color: var(--muted); }
+.gr-worth b { color: var(--ink); }
+.gr-worth b.up { color: var(--deal); }
+.gr-worth b.down { color: var(--c-red); }
+.graded { display: grid; gap: 8px; }
+.gr-slabs { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.gr-slabs[hidden] { display: none; }
+.gr-slabs li { display: flex; align-items: center; gap: 10px; min-height: 36px; font-size: 13.5px; }
+.gr-tag, .fd-gr, .lslab { flex: none; padding: 2px 6px; border: 2px solid #121212; background: #fff; color: #121212; font: 700 12px/1.3 var(--font); letter-spacing: .02em; white-space: nowrap; }
+.lslab { display: inline-block; margin-left: 6px; font-size: 11px; vertical-align: 2px; }
+.fd-gr { font-size: 10.5px; padding: 0 5px; }
+.gr-line { flex: 1; min-width: 0; display: grid; color: var(--muted); }
+.gr-line small { font: 700 13px var(--font); color: var(--ink); font-variant-numeric: tabular-nums; }
+.gr-slabs a, .gr-slabs button, .gr-add { flex: none; padding: 0; border: 0; background: none; color: var(--ink); font: 700 13.5px var(--font); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.gr-slabs a { color: var(--c-blue); }
+.gr-add { justify-self: start; min-height: 32px; }
+.gr-add[hidden], .gr-form[hidden] { display: none; }
+.gr-form { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px; border: 2px solid var(--rule); }
+.gr-form .fd-pick, .gr-cert { display: flex; flex-direction: column; gap: 4px; }
+.gr-form .fd-pick > span, .gr-cert > span { font: 700 12px var(--font); color: var(--muted); }
+.gr-form .fd-pick::after { top: auto; bottom: 16px; }
+.gr-form select, .gr-cert input { border: 2px solid var(--rule); border-radius: 0; }
+.gr-cert { grid-column: 1 / -1; }
+.gr-cert input { box-sizing: border-box; width: 100%; height: 40px; padding: 0 12px; background: var(--panel-solid); color: var(--ink); font: 600 16px var(--font); }
+.gr-fbtns { grid-column: 1 / -1; display: flex; gap: 8px; justify-content: flex-end; }
+.gr-fbtns .mbtn { flex: 1; }
+/* The card's panel grows with your slabs and the form: upright it scrolls past half the screen, so the card stays clear. */
+@media (orientation: portrait), (max-width: 699px) { .panel { max-height: 50vh; overflow-y: auto; overscroll-behavior: contain; } }

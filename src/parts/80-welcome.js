@@ -164,7 +164,7 @@ function togglePick(g) {
 }
 // The ticks on the panels while you pick, drawn over the mosaic after everything else.
 function drawPicks() {
-  drawCopies();
+  drawCopies(); drawSlabs();
   if (!picking()) return;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1; ctx.lineCap = "round"; ctx.lineJoin = "round";
   for (const g of groups) {

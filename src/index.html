@@ -75,6 +75,9 @@
     <div class="fd-more" id="pf-more" hidden>
       <label class="fd-pick"><span>Source</span><select id="pf-src"><option value="">All sources</option><option value="ebay">eBay</option><option value="tcgplayer">TCGplayer lowest</option><option value="reddit">Reddit trades</option><option value="local">Local</option><option value="shops">Shops</option></select></label>
       <label class="fd-pick"><span>Format</span><select id="pf-how"><option value="">Any format</option><option value="auction">Auctions</option><option value="fixed">Buy It Now</option><option value="offer">Best Offer</option></select></label>
+      <label class="fd-pick"><span>Raw or slab</span><select id="pf-slab"><option value="">Raw cards and slabs</option><option value="raw">Raw only</option><option value="graded">Slabs only</option></select></label>
+      <label class="fd-pick"><span>Grading company</span><select id="pf-gco"><option value="">Any company</option><option value="PSA">PSA</option><option value="BGS">BGS</option><option value="CGC">CGC</option><option value="SGC">SGC</option><option value="TAG">TAG</option></select></label>
+      <label class="fd-pick"><span>Grade at least</span><select id="pf-gmin"><option value="">Any</option><option value="10">10</option><option value="9.5">9.5</option><option value="9">9</option><option value="8">8</option><option value="7">7</option></select></label>
       <label class="fd-pick"><span>Discount</span><select id="pf-off"><option value="">Any</option><option value="10">10% under market or more</option><option value="20">20% or more</option><option value="30">30% or more</option><option value="50">50% or more</option></select></label>
       <label class="fd-pick"><span>Listed</span><select id="pf-fresh"><option value="">Any time</option><option value="1">Last hour</option><option value="6">Last 6 hours</option><option value="24">Last day</option><option value="168">Last week</option></select></label>
       <label class="fd-pick fd-num"><span>Max total price</span><input type="number" id="pf-max" inputmode="decimal" min="0" placeholder="No limit"></label>
@@ -148,8 +151,20 @@
   <div class="swap" id="swap">
     <div class="row"><div><h1 id="p-name">Card</h1><p class="meta" id="p-meta"></p></div><div class="price" id="p-price"></div></div>
     <p class="deal" id="p-deal" hidden></p>
+    <table class="gr-asks" id="p-asks"></table>
+    <p class="gr-worth" id="p-worth" hidden></p>
   </div>
   <div class="acts"><button class="act primary" id="p-own">I have it</button><button class="act want" id="p-want" aria-pressed="false">Chase it</button><button class="act" id="p-buy">Find a copy</button></div>
+  <div class="graded" id="p-graded">
+    <ul class="gr-slabs" id="p-slabs" aria-label="Your graded copies" hidden></ul>
+    <button type="button" class="gr-add" id="p-gadd" aria-expanded="false" aria-controls="p-gform">Add a graded copy</button>
+    <form class="gr-form" id="p-gform" hidden>
+      <label class="fd-pick"><span>Company</span><select id="p-gco"></select></label>
+      <label class="fd-pick"><span>Grade</span><select id="p-ggr"></select></label>
+      <label class="gr-cert"><span>Cert number (optional)</span><input id="p-gcert" inputmode="numeric" autocomplete="off" maxlength="24" enterkeyhint="done"></label>
+      <div class="gr-fbtns"><button type="button" class="mbtn" id="p-gcancel">Cancel</button><button type="submit" class="mbtn primary" id="p-gsave">Add</button></div>
+    </form>
+  </div>
   <p class="hint" hidden>Flick the card to move along the set. Drag the wall to leave.</p>
 </section>
 <div class="toast" id="toast" role="status"></div>
