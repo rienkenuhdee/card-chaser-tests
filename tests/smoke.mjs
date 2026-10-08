@@ -168,6 +168,27 @@ for (const dark of [false, true]) {
   R.push([`a pinch whose fingertips meet keeps the camera sound (opened a ${opened}, now the ${s.view}${s.bad ? `; ${s.bad}` : ""})`, opened === "set" && s.cam && !s.bad && !s.err && !p.errors.length]);
   await p.close();
 }
+// After a pinch, the finger still down rests: moving it neither scrolls nor breaks the scroll (it used to set it from
+// a start it didn't have, and the wall went blank).
+{
+  const p = await phone(browser, file, { motion: true });
+  await p.evaluate(() => { localStorage.setItem("wall-welcomed", "1"); localStorage.setItem("wall-map-seen", "1"); }); await p.reload({ waitUntil: "load" }); await wait(1500);
+  const before = await p.evaluate(() => __w.mScroll);
+  await p.evaluate(async () => {
+    const cv = document.getElementById("wall"), T = (id, x, y) => new Touch({ identifier: id, target: cv, clientX: x, clientY: y });
+    const fire = (type, touches, changed) => cv.dispatchEvent(new TouchEvent(type, { touches, changedTouches: changed, cancelable: true, bubbles: true }));
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    let a = T(1, 150, 400), c = T(2, 250, 400); fire("touchstart", [a], [a]); fire("touchstart", [a, c], [c]);
+    a = T(1, 152, 400); c = T(2, 248, 400); fire("touchmove", [a, c], [a, c]); await sleep(20);
+    fire("touchend", [c], [a]); // one finger lifts; the other stays and moves
+    for (let i = 1; i <= 6; i++) { c = T(2, 248, 400 - i * 40); fire("touchmove", [c], [c]); await sleep(16); }
+    fire("touchend", [], [c]);
+  });
+  await wait(600);
+  const s = await p.evaluate(() => ({ scroll: __w.mScroll, bad: window.__badNumber || "" }));
+  R.push([`after a pinch the finger left down rests: the wall doesn't scroll (${before} then ${s.scroll}) and no bad number turns up${s.bad ? ` (${s.bad})` : ""}`, Number.isFinite(s.scroll) && s.scroll === before && !s.bad && !p.errors.length]);
+  await p.close();
+}
 await browser.close();
 const bad = report(R);
 console.log(`\nScreenshots: ${path.relative(process.cwd(), out)}`);

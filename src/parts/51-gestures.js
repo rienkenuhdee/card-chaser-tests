@@ -112,6 +112,7 @@ function onMove(pts) {
   if (!gesture) { if (pts.length) onDown(pts); return; }
   if (gesture.kind === "one" && pts.length >= 2) return startTwo(pts);
   if (gesture.kind === "two") { if (pts.length >= 2) pinchMove(pts[0], pts[1]); return; }
+  if (gesture.kind === "rest") { if (pts.length >= 2) startTwo(pts); return; } // the finger left down after a pinch rests: it has no start to scroll from (it made the scroll NaN)
   const p = pts[0]; if (!p) return;
   const g = gesture, now = performance.now();
   if (g.stroke) { paintTo(p); return; }
