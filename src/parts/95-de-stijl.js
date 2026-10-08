@@ -5,13 +5,52 @@
 // panels, the trophy room's shelves and the pages are fields cut by the same black rules. Trophies are Bauhaus
 // primitives. Type is a geometric system sans. Nothing moves on a diagonal, nothing bounces.
 
-// ----- type: a geometric system sans, no web fonts; one width (the geometry is the point) -----
+// ----- type: a geometric system sans, no web fonts; one width (the geometry is the point), but a name that would be cut short steps down first -----
 const DS_FONT = '"Futura", "Futura PT", "Avenir Next", "Avenir", "Century Gothic", "URW Gothic", "TeX Gyre Adventor", "Helvetica Neue", Arial, sans-serif';
-function font(weight, size) {
+// A narrower setting, only for a name that would otherwise be cut short.
+const DS_NARROW = `"Avenir Next Condensed", "Futura Condensed", "Roboto Condensed", "sans-serif-condensed", "Arial Narrow", ${DS_FONT}`;
+let dsReq = null; // a name's font (font(w, size, true)): fitText steps down from it before it cuts the name short
+function font(weight, size, name = false) {
   const px = Math.round(size * 2) / 2, key = `${weight}|${px}`;
+  dsReq = name && px <= 17 ? { weight: weight > 700 ? 700 : weight, px, key } : null; // big headers stay as they are
   if (key === curFont) return;
   curFont = key; ctx.font = `${weight > 700 ? 700 : weight} ${px}px ${DS_FONT}`;
 }
+// A name that doesn't fit at its size steps down a little (to 85%), then takes the narrower setting (down to 80%),
+// and only then is cut short. A name that fits is drawn exactly as before. Decided once per name, size and width.
+const dsFits = new Map();
+function fitText(t, max) {
+  const R = dsReq;
+  if (!R) return fitPlain(t, max);
+  const key = `${R.key}|${Math.round(max)}|${t}`;
+  let v = dsFits.get(key);
+  if (!v) {
+    const at = (fam, px, n) => { const k = `${R.weight}|${px}${n ? "|n" : ""}`; ctx.font = `${R.weight} ${px}px ${fam}`; curFont = k; return { k, f: ctx.font }; };
+    const fits = () => ctx.measureText(t).width <= max;
+    v = { t, ...at(DS_FONT, R.px, false) };
+    if (!fits()) {
+      let ok = false;
+      const lo = Math.max(8, Math.round(R.px * 0.85 * 2) / 2), lo2 = Math.max(8, Math.round(R.px * 0.8 * 2) / 2);
+      for (let px = R.px - 0.5; px >= lo && !ok; px -= 0.5) { v = { t, ...at(DS_FONT, px, false) }; ok = fits(); }
+      for (let px = lo; px >= lo2 && !ok; px -= 0.5) { v = { t, ...at(DS_NARROW, px, true) }; ok = fits(); }
+      if (!ok) v.t = fitPlain(t, max).replace(/\s+…$/, "…");
+    }
+    if (dsFits.size > 4000) dsFits.clear();
+    dsFits.set(key, v);
+  }
+  if (curFont !== v.k) { ctx.font = v.f; curFont = v.k; }
+  return v.t;
+}
+function fitPlain(t, max) { // the base's fit: cut short with an ellipsis, in the font that's set
+  const key = `${curFont}|${Math.round(max)}|${t}`;
+  let v = fitCache.get(key);
+  if (v != null) return v;
+  if (ctx.measureText(t).width <= max) v = t;
+  else { let s = t; while (s.length > 2 && ctx.measureText(s + "…").width > max) s = s.slice(0, -1); v = s + "…"; }
+  if (fitCache.size > 6000) fitCache.clear();
+  fitCache.set(key, v); return v;
+}
+document.fonts?.ready.then(() => { dsFits.clear(); fitCache.clear(); dsPlates.clear(); });
 function fontOn(x, weight, size) { x.font = `${weight > 700 ? 700 : weight} ${Math.round(size * 2) / 2}px ${DS_FONT}`; }
 
 // ----- every corner a right angle (circles stay circles: they're drawn with arc) -----
@@ -90,7 +129,7 @@ function drawPanel(g, now, alpha = 1, labelAlpha = 1) {
   if (field) { ctx.fillStyle = theme[field]; ctx.fillRect(bx, m.y, bw, hb); }
   ctx.fillStyle = theme.rule; ctx.fillRect(bx - DS_WR / 2, m.y, DS_WR, hb); ctx.fillRect(bx, m.y + hb - DS_WR / 2, bw, DS_WR);
   ctx.textBaseline = "alphabetic"; ctx.textAlign = "left"; ctx.fillStyle = theme.ink;
-  font(700, size); ctx.fillText(fitText(g.name, bx - x - 8), x, m.y + PG + 22);
+  font(700, size, true); ctx.fillText(fitText(g.name, bx - x - 8), x, m.y + PG + 22);
   if (stat) {
     ctx.textAlign = "center"; font(beat ? 700 : 600, size * 0.82); ctx.fillStyle = beat ? beat.col : field ? dsOn(field) : theme.muted;
     if (beat) ctx.globalAlpha = alpha * beat.a;
@@ -257,21 +296,42 @@ function drawRoom(now, alpha = 1, except = null) {
 }
 
 // ---------- trophies: Bauhaus primitives ----------
-// The kind is the shape (Kandinsky's three): a set, a region or everything is a square; a Pokémon, the Dex or a chase
-// of your own is a circle; an artist, a type or a rarity is a triangle. The tier is the colour: blue, red, yellow,
-// and a holo is all three. Each sits on a white plate in a black rule, on a black plinth with its short name. Luck
-// changes the plate: Critical cuts a black corner, Shiny turns the ground black. A signature trophy wears a red block.
-const DS_PRIM = { set: "square", region: "square", global: "square", dex: "circle", pokemon: "circle", custom: "circle", artist: "triangle", type: "triangle", rarity: "triangle" };
+// The role is the shape (Kandinsky's three), so every shelf has a mix: a signature trophy, one only that set or chase
+// has, is a square; a milestone as it fills (half, 75%, the last three, complete) is a circle; a goal inside it (Holo
+// hunter, Chase cards, Clean sweep) and anything else is a triangle. The tier is the colour, blue, red, yellow, and a
+// holo is all three, and it's counted in notches under the shape: one, two, three, four. Each sits on a white plate in
+// a black rule, on a black plinth with its short name. Luck changes the plate: Critical cuts a black corner, Shiny
+// turns the ground black. A signature trophy wears a red block.
+const dsShapeOf = (t) => (t.sig ? "square" : t.mile ? "circle" : "triangle");
 const DS_TIER = { bronze: "c-blue", silver: "c-red", gold: "c-yellow" };
+const DS_NOTCH = { bronze: 1, silver: 2, gold: 3, holo: 4 };
+const DS_TIER_NAME = { bronze: "bronze", silver: "silver", gold: "gold", holo: "holo" };
+// each notch's x: 6 square, 3 apart, centred under the shape at y 76 (clear of its foot, inside the plate)
+const dsNotches = (t) => { const n = DS_NOTCH[t.tier] || 1, w = n * 6 + (n - 1) * 3; return Array.from({ length: n }, (_, i) => 50 - w / 2 + i * 9); };
 function dsPrim(x, shape, cx, cy, s) {
   x.beginPath();
   if (shape === "circle") x.arc(cx, cy, s, 0, Math.PI * 2);
   else if (shape === "square") x.rect(cx - s * 0.9, cy - s * 0.9, s * 1.8, s * 1.8);
   else { x.moveTo(cx, cy - s * 1.1); x.lineTo(cx + s * 1.1, cy + s * 0.8); x.lineTo(cx - s * 1.1, cy + s * 0.8); x.closePath(); }
 }
+// The plinth's short name, fitted: as before when it fits (11, in a plinth 60 wide); else a smaller size (down to 9),
+// then a wider plinth (up to the plate's width), then the narrower setting, and only then cut short. Measured once.
+const dsPlates = new Map();
+let dsPlateX = null;
+function dsPlate(text) {
+  let v = dsPlates.get(text); if (v) return v;
+  const x = (dsPlateX ||= document.createElement("canvas").getContext("2d"));
+  const W = (px, fam = DS_FONT) => { x.font = `700 ${px}px ${fam}`; return x.measureText(text).width; };
+  const mk = (px, w, fam = DS_FONT, t = text) => ({ px, w, fam, narrow: fam !== DS_FONT, t, y: px === 11 ? 108.5 : 104 + px * 0.41 });
+  for (let px = 11; px >= 9 && !v; px -= 0.5) if (W(px) <= 54) v = mk(px, 60);
+  if (!v) { const w = W(9); if (w <= 82) v = mk(9, Math.min(88, 2 * Math.ceil((w + 6) / 2))); }
+  if (!v) { const w = W(9, DS_NARROW); if (w <= 82) v = mk(9, Math.min(88, 2 * Math.ceil((w + 6) / 2)), DS_NARROW); }
+  if (!v) { x.font = `700 9px ${DS_NARROW}`; v = mk(9, 88, DS_NARROW, fitOn(x, text, 82)); }
+  dsPlates.set(text, v); return v;
+}
 function paintMedal(x, t, mode) {
   const locked = mode === "locked", C = (h) => (locked ? mdGrey(h) : h);
-  const shape = DS_PRIM[t.kind] || "circle", rank = mode ? "" : MD_RANK[t.rank] ? t.rank : "", ink = "#121212";
+  const shape = dsShapeOf(t), rank = mode ? "" : MD_RANK[t.rank] ? t.rank : "", ink = "#121212";
   const red = C(theme["c-red"] || "#D1281D"), yel = C(theme["c-yellow"] || "#F2C300"), blu = C(theme["c-blue"] || "#1E4C9E");
   const ground = rank === "shiny" ? ink : C(theme["m-surface"] || "#FBFAF6");
   x.globalAlpha = locked ? 0.38 : mode === "lit" ? 0.78 : 1;
@@ -282,27 +342,32 @@ function paintMedal(x, t, mode) {
     x.fillStyle = red; x.fillRect(20, 20, 20, 60); x.fillStyle = yel; x.fillRect(40, 20, 20, 60); x.fillStyle = blu; x.fillRect(60, 20, 20, 60);
     x.restore();
   } else { x.fillStyle = { "c-blue": blu, "c-red": red, "c-yellow": yel }[DS_TIER[t.tier] || "c-blue"]; dsPrim(x, shape, 50, 50, 23); x.fill(); }
-  if (rank === "crit") { x.fillStyle = rank === "shiny" ? "#fff" : ink; x.beginPath(); x.moveTo(62, 13); x.lineTo(87, 13); x.lineTo(87, 38); x.closePath(); x.fill(); }
+  x.fillStyle = rank === "shiny" ? "#FFFFFF" : ink; for (const nx of dsNotches(t)) x.fillRect(nx, 76, 6, 6); // the tier, counted
+  if (rank === "crit") { x.fillStyle = ink; x.beginPath(); x.moveTo(62, 13); x.lineTo(87, 13); x.lineTo(87, 38); x.closePath(); x.fill(); }
   // the plinth, with its short name
   x.fillStyle = ink;
   if (t.plate) {
-    x.fillRect(20, 94, 60, 20);
-    x.fillStyle = "#fff"; fontOn(x, 700, 11); x.textAlign = "center"; x.textBaseline = "alphabetic"; x.fillText(fitOn(x, String(t.plate), 54), 50, 108.5);
+    const P = dsPlate(String(t.plate));
+    x.fillRect(50 - P.w / 2, 94, P.w, 20);
+    x.fillStyle = "#fff"; x.font = `700 ${P.px}px ${P.fam}`; x.textAlign = "center"; x.textBaseline = "alphabetic"; x.fillText(P.t, 50, P.y);
   } else x.fillRect(40, 94, 20, 12);
   if (t.hidden) { x.beginPath(); x.arc(18, 18, 11, 0, Math.PI * 2); x.fillStyle = ink; x.fill(); x.fillStyle = "#fff"; fontOn(x, 700, 14); x.textAlign = "center"; x.textBaseline = "alphabetic"; x.fillText("?", 18, 23); }
   if (t.sig) { x.fillStyle = red; x.fillRect(38, -4, 24, 12); x.lineWidth = 2; x.strokeStyle = ink; x.strokeRect(38, -4, 24, 12); }
   x.globalAlpha = 1; x.textAlign = "left";
 }
 function medalSvg(t, { locked = false, cls = "" } = {}) {
-  const shape = DS_PRIM[t.kind] || "circle", rank = locked ? "" : MD_RANK[t.rank] ? t.rank : "", g = `md${++mdSvgN}`;
+  const shape = dsShapeOf(t), rank = locked ? "" : MD_RANK[t.rank] ? t.rank : "", g = `md${++mdSvgN}`;
   const prim = (f, extra = "") => (shape === "circle" ? `<circle cx="50" cy="50" r="23" fill="${f}"${extra}/>` : shape === "square" ? `<rect x="29.3" y="29.3" width="41.4" height="41.4" fill="${f}"${extra}/>` : `<path d="M50 24.7 L75.3 68.4 L24.7 68.4 Z" fill="${f}"${extra}/>`);
   const body = t.tier === "holo"
     ? `<clipPath id="${g}c">${prim("#000")}</clipPath><g clip-path="url(#${g}c)"><rect x="20" y="20" width="20" height="60" fill="var(--c-red)"/><rect x="40" y="20" width="20" height="60" fill="var(--c-yellow)"/><rect x="60" y="20" width="20" height="60" fill="var(--c-blue)"/></g>`
     : prim(`var(--${DS_TIER[t.tier] || "c-blue"})`);
-  const plate = t.plate ? `<rect x="20" y="94" width="60" height="20" fill="#121212"/><text x="50" y="108.5" text-anchor="middle" fill="#fff" font-size="11" font-weight="700" style="font-family:var(--font)">${mdEsc(t.plate)}</text>` : `<rect x="40" y="94" width="20" height="12" fill="#121212"/>`;
-  return `<svg class="medal ${cls} ${locked ? "locked" : ""} tier-${t.tier} ${rank ? `rank-${rank}` : ""}" viewBox="0 0 100 124" role="img" aria-label="${mdEsc(t.name)} ${locked ? "(not yet earned)" : `trophy${rank ? `, ${MD_RANK[rank]}` : ""}`}">
+  const notches = dsNotches(t).map((nx) => `<rect x="${nx}" y="76" width="6" height="6" fill="${rank === "shiny" ? "#FFFFFF" : "#121212"}"/>`).join("");
+  const P = t.plate ? dsPlate(String(t.plate)) : null;
+  const plate = P ? `<rect x="${50 - P.w / 2}" y="94" width="${P.w}" height="20" fill="#121212"/><text x="50" y="${P.y.toFixed(2)}" text-anchor="middle" fill="#fff" font-size="${P.px}" font-weight="700" style="font-family:var(${P.narrow ? "--font-narrow" : "--font"})">${mdEsc(P.t)}</text>` : `<rect x="40" y="94" width="20" height="12" fill="#121212"/>`;
+  const tier = DS_TIER_NAME[t.tier] || "";
+  return `<svg class="medal ${cls} ${locked ? "locked" : ""} tier-${t.tier} ${rank ? `rank-${rank}` : ""}" viewBox="0 0 100 124" role="img" aria-label="${mdEsc(t.name)}, ${tier} trophy${locked ? " (not yet earned)" : rank ? `, ${MD_RANK[rank]}` : ""}">
     <rect x="6" y="6" width="88" height="88" fill="#121212"/><rect x="13" y="13" width="74" height="74" fill="${rank === "shiny" ? "#121212" : "var(--m-surface)"}"/>
-    ${body}
+    ${body}${notches}
     ${rank === "crit" ? `<path d="M62 13 L87 13 L87 38 Z" fill="#121212"/>` : ""}
     ${plate}
     ${t.hidden ? `<circle cx="18" cy="18" r="11" fill="#121212"/><text x="18" y="23" text-anchor="middle" font-size="14" font-weight="700" fill="#fff" style="font-family:var(--font)">?</text>` : ""}
@@ -565,27 +630,55 @@ function drawMap(now) {
 }
 
 // ----- moving between a room and the map, along straight lines -----
-// q: 0 the room, 1 the map. Up to the map the room narrows to its column first (the rooms beside it slide in
-// sideways), then to its row (the rooms above and below slide in vertically); into a room it's the reverse. Every
-// field carries its own rules, so the rules ride out to the screen's edges with it. A room that already spans the
-// screen one way moves in one phase.
+// q: 0 the room, 1 the map. Up to the map the room narrows to its column first, then closes to its row; into a room
+// it's the reverse (a room that already spans the screen one way moves in one phase). Every field carries its own
+// rules, so the rules ride out to the screen's edges with it. The painting is never empty part way: while the room
+// narrows it keeps its full size, cut by its edges like a window, and only shrinks into its card as it closes to its
+// row; and the rest of the painting is cut along the room's column (dsPieces), so whatever stands beside the column
+// arrives whole in the first phase, at its own height, and what is above and below the room comes in with its edges in
+// the second.
 function dsAxes(q, A) {
   if (reduced) { const s = q < 0.5 ? 0 : 1; return [s, s]; }
   if (A.w >= vw * 0.9 || A.h >= vh * 0.7) { const e = ease(q); return [e, e]; }
   return [ease(clamp(q / 0.6, 0, 1)), ease(clamp((q - 0.4) / 0.6, 0, 1))];
 }
+// The geometry of a move at q: the room's field R (the screen, narrowing, then closing to its card), what's drawn into
+// it (D: the room at its own size until it closes, then shrinking to the card's width), and how far the card's own face
+// has come up (fb).
 function mapGeom(T, use) {
   const L = mapLayout(), A = L.r[T.room], q = clamp(T.q, 0, 1), [ex, ey] = dsAxes(q, A);
   const R = { x: A.x * ex, y: A.y * ey, w: dsLerp(vw, A.w, ex), h: dsLerp(vh, A.h, ey) };
-  const k = R.w / vw, k1 = A.w / vw, D = { x: R.x, y: R.y - (topPad() - 8) * k1 * ey, w: R.w, h: vh * k };
+  const k = dsLerp(1, A.w / vw, ey), D = { x: R.x, y: R.y - (topPad() - 8) * k * ey, w: vw * k, h: vh * k };
   const fb = reduced ? (q < 0.5 ? 0 : 1) : clamp((q - 0.55) / 0.4, 0, 1);
   use(R, D, fb, ease(q), L, A, ex, ey);
 }
-// Where another room stands while one moves: held to the moving room's edge on its side, so the rule between them
-// stays a rule.
-function dsBeside(r, A, R) {
-  if (r.x < A.x + A.w - 1 && r.x + r.w > A.x + 1) return { x: r.x, y: r.y < A.y ? R.y + (r.y - A.y) : R.y + R.h + (r.y - A.y - A.h), w: r.w, h: r.h }; // above or below
-  return { x: r.x < A.x ? R.x + (r.x - A.x) : R.x + R.w + (r.x - A.x - A.w), y: r.y, w: r.w, h: r.h }; // beside
+// Where another room stands while one moves (A its place on the map, R where it is now), as up to three pieces cut
+// along A's column: the piece in the column moves up or down with R's edge, the pieces beside it sideways with R's
+// sides. Each: the strip [x0, x1] of the room's frame on the map, and how far it has moved.
+function dsPieces(r, A, R, RW) {
+  const c0 = A.x - RW / 2, c1 = A.x + A.w + RW / 2, l = r.x - RW, rt = r.x + r.w + RW, out = [];
+  const dxL = R.x - A.x, dxR = R.x + R.w - A.x - A.w, dy = r.y + r.h <= A.y ? R.y - A.y : R.y + R.h - A.y - A.h;
+  if (l < c0) out.push({ x0: l, x1: Math.min(rt, c0), dx: dxL, dy: 0, w0: 0 });
+  if (rt > c0 && l < c1) out.push({ x0: Math.max(l, c0), x1: Math.min(rt, c1), dx: dxL, dy, w0: rt > c1 ? R.w - A.w : 0 }); // stretched to R's width while it's still narrowing
+  if (rt > c1) out.push({ x0: Math.max(l, c1), x1: rt, dx: dxR, dy: 0, w0: 0 });
+  return out;
+}
+function drawPieces(k, r, A, R, RW, now) {
+  const P = dsPieces(r, A, R, RW);
+  for (const p of P) {
+    const x0 = p.x0 + p.dx, x1 = p.x1 + p.dx + p.w0, y0 = r.y - RW + p.dy, y1 = r.y + r.h + RW + p.dy;
+    if (x0 > vw || x1 < 0 || y0 > vh || y1 < 0) continue;
+    const f = { x: r.x + p.dx, y: r.y + p.dy, w: r.w, h: r.h };
+    ctx.save(); ctx.beginPath(); ctx.rect(x0, y0, x1 - x0, y1 - y0); ctx.clip();
+    dsFrame(f, RW); drawCard(k, f, now, 1);
+    ctx.restore(); curFont = "";
+  }
+  // Where two pieces of one room have parted, the cut between them is a rule.
+  ctx.fillStyle = theme.rule;
+  for (let i = 1; i < P.length; i++) {
+    const a = P[i - 1], b = P[i]; if (Math.abs(a.dy - b.dy) < 0.5) continue;
+    ctx.fillRect(b.x0 + b.dx - RW / 2, r.y - RW + Math.min(a.dy, b.dy), RW, r.h + RW * 2 + Math.abs(a.dy - b.dy));
+  }
 }
 function drawMapTrans(now, T) {
   prepCards();
@@ -593,17 +686,11 @@ function drawMapTrans(now, T) {
     const id = T.room, RW = L.RW, q = clamp(T.q, 0, 1);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1;
     ctx.fillStyle = theme.bg; ctx.fillRect(0, 0, vw, vh);
-    if (q > 0.005) for (const k of ROOMS) {
-      if (k === id) continue;
-      const p = dsBeside(L.r[k], A, R);
-      if (p.x > vw + RW || p.x + p.w < -RW || p.y > vh + RW || p.y + p.h < -RW) continue;
-      dsFrame(p, RW); drawCard(k, p, now, 1);
-    }
+    if (q > 0.005) for (const k of ROOMS) if (k !== id) drawPieces(k, L.r[k], A, R, RW, now);
     drawMapHint(clamp((q - 0.75) / 0.25, 0, 1));
     dsFrame(R, RW);
     if (id === "chase") { // the wall becomes the card's picture; its red field comes down from above and its lenses ride its foot
-      const B = wallBand(), asp = B.w / B.h, Wd = { x: dsLerp(B.x, L.thumb.x, ex), w: dsLerp(B.w, L.thumb.w, ex) };
-      Wd.h = Wd.w / asp; Wd.y = dsLerp(B.y, L.thumb.y, ey);
+      const B = wallBand(), s = dsLerp(1, L.thumb.w / B.w, ey), Wd = { x: R.x + dsLerp(B.x, L.thumb.x - A.x, ey), y: dsLerp(B.y, L.thumb.y, ey), w: B.w * s, h: B.h * s };
       ctx.fillStyle = theme["panel-solid"]; ctx.fillRect(R.x, R.y, R.w, R.h);
       ctx.save(); ctx.beginPath(); ctx.rect(R.x, R.y, R.w, R.h); ctx.clip();
       ctx.save(); ctx.beginPath(); ctx.rect(Wd.x, Wd.y, Wd.w, Wd.h); ctx.clip();
@@ -616,7 +703,7 @@ function drawMapTrans(now, T) {
     // Another room: it narrows into its field, and the field's face comes up through it.
     ctx.save(); ctx.beginPath(); ctx.rect(R.x, R.y, R.w, R.h); ctx.clip();
     ctx.fillStyle = id === "medal" ? theme["room-bg"] : theme.bg; ctx.fillRect(R.x, R.y, R.w, R.h);
-    if (fb > 0 || PAGES[id]) { const kk = R.w / A.w; ctx.setTransform(dpr * kk, 0, 0, dpr * kk, dpr * R.x, dpr * R.y); drawCard(id, { x: 0, y: 0, w: A.w, h: A.h }, now, 1); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
+    if (fb > 0 || PAGES[id]) { const kk = R.w / A.w; ctx.fillStyle = theme["panel-solid"]; ctx.fillRect(R.x, R.y, R.w, R.h); ctx.setTransform(dpr * kk, 0, 0, dpr * kk, dpr * R.x, dpr * R.y); drawCard(id, { x: 0, y: 0, w: A.w, h: A.h }, now, 1); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
     if (id === "medal" && fb < 1) { ctx.globalAlpha = 1 - fb; drawRoomAt("medal", SCREEN(), D, now); }
     ctx.restore(); curFont = ""; ctx.globalAlpha = 1;
     if (PAGES[id]) pageAt(PAGES[id], R, D, 1 - fb);
@@ -641,3 +728,5 @@ function drawHop(now, T) {
   const sx = T.dir > 0 ? vw * (1 - e) : vw * e, RW = dsRW();
   ctx.fillStyle = theme.rule; ctx.fillRect(sx - RW / 2, 0, RW, vh);
 }
+// Debug builds only: the tests check every nameplate fits its plinth.
+setTimeout(() => { if (window.__w) Object.defineProperties(window.__w, { medalSvg: { value: medalSvg }, dsPlate: { value: dsPlate } }); }, 0);

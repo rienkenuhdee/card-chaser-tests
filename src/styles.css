@@ -1213,20 +1213,21 @@ body.trading #pg-trade { opacity: 0; transition: opacity .3s; }
 /* ===== Round 23: De Stijl (radical, as previewed) ===== */
 /* ---------- Round 23, radical: De Stijl. The app is one painting. ----------
    Black rules, flat primary fields, square corners, a geometric sans, and motion along straight lines only.
-   Light: a gallery wall, white fields, black rules. Dark: the lights go down. The fields go charcoal, the rules
-   go pure black so they read as cuts, and the primaries stay at full strength as the only light. */
+   Light: a gallery wall, white fields, black rules. Dark: the lights go down. The fields go charcoal, the rules turn
+   a warm light grey so the painting still reads, and the primaries stay at full strength. */
 :root {
   --rule: #121212; --rw: 3px;
   --bg: #F1EEE6; --slot: #E6E2D8; --slot-line: #C9C3B6; --ink: #121212; --muted: #5C5850; --panel: #FBFAF6; --panel-solid: #FBFAF6; --line: rgb(18 18 18 / .14);
   --panel-fill: #FBFAF6; --paper: #FBFAF6; --paper-ink: #121212; --deal: #0A7F4F; --gold: #C99A00; --shadow: none;
   --font: "Futura", "Futura PT", "Avenir Next", "Avenir", "Century Gothic", "URW Gothic", "TeX Gyre Adventor", "Helvetica Neue", Arial, sans-serif;
+  --font-narrow: "Avenir Next Condensed", "Futura Condensed", "Roboto Condensed", "sans-serif-condensed", "Arial Narrow", var(--font); /* only for a nameplate that won't fit */
   --c-red: #D1281D; --c-yellow: #F2C300; --c-green: #121212; --c-blue: #1E4C9E; --m-surface: #FBFAF6;
   --plaque: #F2C300; --plaque-ink: #121212; --plaque-hi: rgb(255 255 255 / 0); --plaque-lo: rgb(18 18 18 / .9);
   --room-down: #D1281D;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --rule: #000000;
+    --rule: #CFC8BA;
     --bg: #141414; --slot: #232323; --slot-line: #3A3A3A; --ink: #F1EDE4; --muted: #A39E93; --panel: #1E1E1E; --panel-solid: #1E1E1E; --line: rgb(241 237 228 / .12);
     --panel-fill: #1E1E1E; --paper: #EFEBE2; --paper-ink: #121212; --deal: #35C98A; --gold: #F5C800; --shadow: none;
     --c-red: #E5342A; --c-yellow: #F5C800; --c-green: #F1EDE4; --c-blue: #3B72D9; --m-surface: #EFEBE2;
@@ -1234,7 +1235,7 @@ body.trading #pg-trade { opacity: 0; transition: opacity .3s; }
   }
 }
 :root[data-theme="dark"] {
-  --rule: #000000;
+  --rule: #CFC8BA;
   --bg: #141414; --slot: #232323; --slot-line: #3A3A3A; --ink: #F1EDE4; --muted: #A39E93; --panel: #1E1E1E; --panel-solid: #1E1E1E; --line: rgb(241 237 228 / .12);
   --panel-fill: #1E1E1E; --paper: #EFEBE2; --paper-ink: #121212; --deal: #35C98A; --gold: #F5C800; --shadow: none;
   --c-red: #E5342A; --c-yellow: #F5C800; --c-green: #F1EDE4; --c-blue: #3B72D9; --m-surface: #EFEBE2;

@@ -217,7 +217,7 @@ function medalList() {
   if (mdCache?.sig === sig) return mdCache;
   const live = mdCompute(), ids = new Set(live.map((t) => t.id));
   for (const t of live) { const s = mdStore[t.id]; t.rank = s ? s.rank : ""; t.at = s ? s.at : null; if (s) t.earned = true; }
-  for (const [id, s] of Object.entries(mdStore)) if (!ids.has(id)) live.push({ id, name: s.name, chase: s.chase, sec: s.sec || "global", kind: s.kind || "custom", color: s.color || "blue", plate: s.plate || "", tier: s.tier, sig: Boolean(s.sig), hidden: Boolean(s.hidden), earned: true, at: s.at, rank: s.rank, desc: "Earned earlier.", have: 1, goal: 1, noCards: true, ord: 1e5 });
+  for (const [id, s] of Object.entries(mdStore)) if (!ids.has(id)) live.push({ id, name: s.name, chase: s.chase, sec: s.sec || "global", kind: s.kind || "custom", color: s.color || "blue", plate: s.plate || "", tier: s.tier, sig: Boolean(s.sig), mile: Boolean(s.mile), hidden: Boolean(s.hidden), earned: true, at: s.at, rank: s.rank, desc: "Earned earlier.", have: 1, goal: 1, noCards: true, ord: 1e5 });
   const list = live.filter((t) => !t.hidden || t.earned); // hidden ones stay out of sight until earned
   const earned = list.filter((t) => t.earned).sort((a, b) => mdScore(b) - mdScore(a) || (b.at || 0) - (a.at || 0));
   mdCache = { sig, list, earned, hiddenLeft: live.length - list.length, byId: new Map(list.map((t) => [t.id, t])) };
@@ -248,7 +248,7 @@ function checkMedals(quiet) {
     const now = medalList().list.filter((t) => t.earned && !mdStore[t.id]);
     if (!now.length) break;
     for (const t of now) {
-      mdStore[t.id] = { at: quiet ? mdWhen(t) : Date.now(), rank: mdRoll(t.id), name: t.name, chase: t.chase, sec: t.sec, kind: t.kind, color: t.color, plate: t.plate, tier: t.tier, sig: Boolean(t.sig), hidden: Boolean(t.hidden) };
+      mdStore[t.id] = { at: quiet ? mdWhen(t) : Date.now(), rank: mdRoll(t.id), name: t.name, chase: t.chase, sec: t.sec, kind: t.kind, color: t.color, plate: t.plate, tier: t.tier, sig: Boolean(t.sig), mile: Boolean(t.mile), hidden: Boolean(t.hidden) };
       fresh.push(t.id);
     }
   }
@@ -355,7 +355,7 @@ function paintMedal(x, t, mode, W = 100) {
   x.globalAlpha = 1;
 }
 const mdArt = new Map();
-const mdLookKey = (t, mode) => `${t.kind}|${t.tier}|${t.color}|${t.plate || ""}|${t.sig ? 1 : 0}|${t.hidden ? 1 : 0}|${mode ? "" : MD_RANK[t.rank] ? t.rank : ""}|${mode}`;
+const mdLookKey = (t, mode) => `${t.kind}|${t.tier}|${t.color}|${t.plate || ""}|${t.sig ? 1 : 0}|${t.mile ? 1 : 0}|${t.hidden ? 1 : 0}|${mode ? "" : MD_RANK[t.rank] ? t.rank : ""}|${mode}`;
 function medalArt(t, w, mode = "") {
   const W = Math.max(8, Math.round(w)), key = `${mdLookKey(t, mode)}|${W}|${dpr}|${theme["m-surface"]}|${theme[`c-${t.color}`]}`;
   let e = mdArt.get(key); if (e) return e;
@@ -871,7 +871,7 @@ function mdToRoom() {
 
 // ----- the list: a medal as a row a screen reader can read -----
 let mdListOpen = false;
-const mdListRow = (t, svg = false) => `<li><button type="button" class="lmrow${t.earned ? "" : " locked"}" data-medal="${mdEsc(t.id)}">${svg ? medalSvg(t, { locked: !t.earned }) : `<i class="lm-dot tier-${t.tier}" aria-hidden="true"></i>`}<span class="lm-name">${mdEsc(t.name)}${t.sig ? ' <span class="lm-sig">signature</span>' : ""}</span><span class="lm-meta">${mdEsc(t.chase)}</span><span class="lm-state">${mdLucky(t) ? `<i class="rank-tag ${t.rank}">${MD_RANK[t.rank]}</i> ` : ""}${t.earned ? `Earned ${t.at ? mdDate(t.at) : ""}` : t.goal > 1 ? `${t.goal - t.have} to go` : "Not earned yet"}</span></button></li>`;
+const mdListRow = (t, svg = false) => `<li><button type="button" class="lmrow${t.earned ? "" : " locked"}" data-medal="${mdEsc(t.id)}">${svg ? medalSvg(t, { locked: !t.earned }) : `<i class="lm-dot tier-${t.tier}" role="img" aria-label="${t.tier}"></i>`}<span class="lm-name">${mdEsc(t.name)}${t.sig ? ' <span class="lm-sig">signature</span>' : ""}</span><span class="lm-meta">${mdEsc(t.chase)}</span><span class="lm-state">${mdLucky(t) ? `<i class="rank-tag ${t.rank}">${MD_RANK[t.rank]}</i> ` : ""}${t.earned ? `Earned ${t.at ? mdDate(t.at) : ""}` : t.goal > 1 ? `${t.goal - t.have} to go` : "Not earned yet"}</span></button></li>`;
 document.getElementById("list").addEventListener("click", (e) => { const b = e.target.closest("[data-medal]"); if (b) openMedal(b.dataset.medal); });
 document.getElementById("list").addEventListener("toggle", (e) => { if (e.target.classList?.contains("lmed-later")) mdListOpen = e.target.open; }, true);
 // Debug builds only: the tests' hook sees the medals.
