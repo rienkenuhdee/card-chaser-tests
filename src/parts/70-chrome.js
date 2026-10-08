@@ -136,12 +136,12 @@ function drawList() {
   }
   const row = (c) => {
     const st = sets[c.si];
-    return `<li><button class="lrow" data-i="${c.i}" aria-pressed="${c.owned}"><span class="lname">${c.name}${slabsOf(c).length ? ` <span class="lslab">${slabBadge(slabsOf(c))}</span>` : ""}</span><span class="lmeta">${st.name} #${c.num}, ${c.rname}</span><span class="lprice">${!c.owned && c.deal ? `<b class="ldeal">Deal ${money(c.deal)}</b>` : money(c.price)}</span><span class="lstate">${lstateOf(c)}</span></button></li>`;
+    return `<li><button class="lrow" data-i="${c.i}" aria-pressed="${c.owned}"><span class="lname">${c.name}${slabsOf(c).length ? ` <span class="lslab">${slabBadge(slabsOf(c))}</span>` : ""}</span><span class="lmeta">${st.name} #${c.num}, ${c.rname}</span><span class="lprice">${!c.owned && c.deal ? `<b class="ldeal">Deal ${money(c.deal)}</b>` : money(c.price)}</span><span class="lstate">${lstateOf(c)}. ${trendText(c, 90)}</span></button></li>`;
   };
   const rows = (items) => `<ul>${items.map(row).join("")}</ul>`;
   // The rooms read as sections: the Feed's listings first, then the wall (its lens, the trophies, the sets), then
   // Trade (the binder and who wants what) and Source (its switches work here too).
-  listEl.querySelector("#list-body").innerHTML = feedListHTML() + top + trophyListHTML(show, rows) + (groups.map((g) => {
+  listEl.querySelector("#list-body").innerHTML = feedListHTML() + top + valueListHTML() + trophyListHTML(show, rows) + (groups.map((g) => {
     if (g.done) return "";
     const items = g.cards.filter((c) => !c.ph && show(c)); // a Dex pocket with no card isn't a row
     if (!items.length) return "";

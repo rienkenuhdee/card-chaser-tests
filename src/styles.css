@@ -1388,3 +1388,69 @@ a.mbtn { display: inline-flex; align-items: center; justify-content: center; box
 .gr-fbtns .mbtn { flex: 1; }
 /* The card's panel grows with your slabs and the form: upright it scrolls past half the screen, so the card stays clear. */
 @media (orientation: portrait), (max-width: 699px) { .panel { max-height: 50vh; overflow-y: auto; overscroll-behavior: contain; } }
+
+/* ===== Parity 3: price history and collection value. A chart is drawn in the painting: a black rule for its
+   baseline, the market in ink, the lowest ask a thin red line, a graded copy's ask a thin blue one; a day's price
+   holds across, then steps up or down. Today is a small square. No gradients, no fills. ===== */
+.ph { display: grid; gap: 6px; margin: 10px 0 2px; }
+.ph[hidden] { display: none; }
+.ph-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.ph-line { margin: 0; font: 700 14.5px var(--font); color: var(--ink); }
+.ph-seg { display: flex; border: 2px solid var(--rule); }
+.ph-seg button, .vs-seg button { height: 30px; padding: 0 10px; border: 0; background: var(--panel-solid); color: var(--ink); font: 700 12.5px var(--font); cursor: pointer; white-space: nowrap; }
+.ph-seg button + button, .vs-seg button + button { border-left: 2px solid var(--rule); }
+.hc { position: relative; height: 76px; border-bottom: var(--rw, 3px) solid var(--rule); }
+.hc svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.hc path { fill: none; stroke-linejoin: miter; stroke-linecap: square; }
+.hc .hc-mkt { stroke: var(--ink); stroke-width: 2px; }
+.hc .hc-ask { stroke: var(--c-red); stroke-width: 1.25px; }
+.hc .hc-gr { stroke: var(--c-blue); stroke-width: 1.5px; }
+.hc-now { position: absolute; width: 8px; height: 8px; margin: -4px 0 0 -4px; background: var(--ink); box-shadow: 0 0 0 2px var(--panel-solid); }
+.hc-axis { display: flex; justify-content: space-between; margin-top: 2px; font: 600 11.5px var(--font); color: var(--muted); font-variant-numeric: tabular-nums; }
+.ph-key { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0; font: 600 12px var(--font); color: var(--muted); }
+.ph-key span { display: inline-flex; align-items: center; gap: 6px; }
+.ph-key i { display: inline-block; width: 14px; height: 0; border-top: 2px solid var(--ink); }
+.ph-key i.k-ask { border-top: 1.5px solid var(--c-red); }
+.ph-key i.k-gr { border-top: 2px solid var(--c-blue); }
+.ph-key .ph-which { margin-left: auto; }
+.ph-key .ph-which button { height: 26px; padding: 0 8px; font-size: 12px; }
+.vs-added { margin: -4px 0 0; font: 600 12.5px var(--font); color: var(--muted); }
+
+/* The Collection value sheet: the listing sheet's frame, the Trophies room's yellow under its title. */
+.vsheet .vs-scroll { padding-bottom: 12px; }
+.vs-head { padding: 18px 18px 12px; border-bottom: var(--rw) solid var(--rule); box-shadow: 0 8px 0 var(--c-yellow), 0 11px 0 var(--rule); margin-bottom: 11px; }
+.vs-head h2 { margin: 0; font: 700 25px/1.1 var(--font); letter-spacing: -0.01em; }
+.vs-now { margin: 6px 0 0; display: grid; gap: 2px; }
+.vs-now b { font: 700 34px/1.05 var(--font); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.vs-now small { font: 600 13px var(--font); color: var(--muted); }
+.vs-body { display: grid; gap: 8px; padding: 14px 18px 0; }
+.vs-seg { display: flex; justify-self: start; border: 2px solid var(--rule); }
+.vs-seg button { height: 34px; padding: 0 14px; font-size: 13.5px; }
+.ph-seg button[aria-pressed="true"], .vs-seg button[aria-pressed="true"] { background: var(--c-yellow); color: #121212; }
+.vs-change { margin: 2px 0 0; font: 700 15px var(--font); color: var(--ink); font-variant-numeric: tabular-nums; }
+.vs-change.up, .vs-tiles .up b, .vs-buys em.up { color: var(--deal); }
+.vs-change.down, .vs-tiles .down b, .vs-buys em.down { color: var(--c-red); }
+.hc.vs-chart { height: 150px; }
+.vs-note { margin: 2px 0 0; font: 500 12.5px/1.4 var(--font); color: var(--muted); }
+.vs-sec { border-top: 2px solid var(--rule); }
+.vs-tiles { display: grid; grid-template-columns: repeat(3, 1fr); border: 2px solid var(--rule); margin-bottom: 10px; }
+.vs-tiles p { display: grid; gap: 2px; padding: 8px 10px; margin: 0; min-width: 0; }
+.vs-tiles p + p { border-left: 2px solid var(--rule); }
+.vs-tiles b { font: 700 16px var(--font); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vs-tiles small { font: 600 12px var(--font); color: var(--muted); }
+.ls-sec ul.vs-buys { gap: 0; }
+.vs-buys li { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-top: 1px solid var(--line); }
+.vs-buys li:first-child { border-top: 0; }
+.vs-buys li > span { display: grid; min-width: 0; }
+.vs-buys b { font-weight: 700; }
+.vs-num { text-align: right; flex: none; font-variant-numeric: tabular-nums; }
+.vs-buys em { font-style: normal; font-weight: 700; }
+.vs-more { margin-top: 4px !important; color: var(--muted); }
+.ls-sec ul.vs-bars { gap: 8px; }
+.vs-bars li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 4px 10px; }
+.vs-bars .vb-name { font-weight: 700; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vs-bars .vb-name small { display: inline; font-weight: 500; color: var(--muted); }
+.vb-bar { grid-column: 1 / -1; height: 16px; }
+.vb-bar i { display: block; height: 100%; border: 2px solid var(--rule); box-sizing: border-box; }
+.vs-bars b { font-variant-numeric: tabular-nums; }
+.vs-foot .mbtn, .vs-foot .mbtn:first-child { flex: 1; }

@@ -253,6 +253,47 @@ for (const dark of [false, true]) {
   R.push([`a slab passes "Near Mint only" (${slabsIn.filter((x) => nm.some((y) => y.id === x.id)).length} of ${slabsIn.length} slabs stay, ${nm.length} listings in all)`, slabsIn.length > 0 && slabsIn.every((x) => nm.some((y) => y.id === x.id)) && nm.length <= all.length && !p.errors.length]);
   await p.close();
 }
+// Price history and collection value (parity 3): a card's chart draws with finite points ending at its market, its
+// ranges switch; Trophies' Collection at market opens Collection value, whose now is the worth total, and whose
+// ranges change the change line.
+{
+  const p = await phone(browser, file, { motion: false });
+  await p.evaluate(() => {
+    const owned = {}, chase = {}, pd = {};
+    for (const c of __w.cards) { if (c.own0) { owned[c.id] = { on: true }; if (c.i % 9 === 0) pd[c.id] = Math.round(c.price * 80) / 100; } else chase[c.id] = true; } // no date: the import's own spread of dates
+    localStorage.setItem("wall-owned", JSON.stringify(owned)); localStorage.setItem("wall-chase", JSON.stringify(chase)); localStorage.setItem("wall-paid", JSON.stringify(pd));
+    localStorage.setItem("wall-imported", "TCGplayer"); localStorage.setItem("wall-welcomed", "1"); localStorage.setItem("wall-map-seen", "1");
+  });
+  await p.reload({ waitUntil: "load" }); await wait(800);
+  await p.evaluate(() => __w.enterGroup(__w.groups[0])); await wait(900);
+  const k = await p.evaluate(() => { const g = __w.groups[0], k = g.cards.findIndex((c) => c.owned && !c.ph); __w.focus(g.cards[k]); return k; }); await wait(700);
+  const chart = () => p.evaluate((k) => {
+    const c = __w.groups[0].cards[k], svg = document.querySelector("#p-chart svg"), nums = [...(svg?.querySelectorAll("path") || [])].flatMap((x) => (x.getAttribute("d").match(/-?[\d.]+(e-?\d+)?|NaN|Infinity/g) || []).map(Number));
+    const dot = document.querySelector("#p-chart .hc-now");
+    return { n: nums.length, finite: nums.length > 60 && nums.every(Number.isFinite) && [dot?.style.left, dot?.style.top].every((v) => Number.isFinite(parseFloat(v))), now: Number(svg?.dataset.now), price: c.price, last: __w.histOf(c).p[365], trend: document.getElementById("p-trend").textContent, from: document.querySelector("#p-chart .hc-axis span")?.textContent, range: __w.histRange, visible: !document.getElementById("p-hist").hidden };
+  }, k);
+  const a = await chart();
+  R.push([`a card's price chart draws with finite points (${a.n}) and today's point is its market (${a.now} chart, ${a.last} history, ${a.price} market): "${a.trend}"`, a.visible && a.finite && a.now === a.price && a.last === a.price && /^(Up|Down) \d+% in 90 days$|^Steady in 90 days$/.test(a.trend)]);
+  await p.click('#p-hist [data-hr="30"]'); await wait(150); const b30 = await chart();
+  await p.click('#p-hist [data-hr="365"]'); await wait(150); const b365 = await chart();
+  R.push([`the card's ranges switch (${a.from}, ${b30.from}, ${b365.from}; "${b30.trend}", "${b365.trend}")`, b30.range === 30 && b365.range === 365 && a.from !== b30.from && b30.from !== b365.from && /30 days|since it came out/.test(b30.trend) && /a year|since it came out/.test(b365.trend) && b30.finite && b365.finite && b365.now === a.price]);
+  await p.evaluate(() => __w.unfocus()); await wait(300);
+  await p.evaluate(() => __w.goRoom("medal")); await wait(1200);
+  const row = await p.evaluate(() => { const it = __w.roomL?.items.find((x) => x.type === "value"); return it ? { x: it.x + it.w / 2, y: it.y + it.h / 2 - __w.mScroll } : null; });
+  if (row) { await p.mouse.click(row.x, row.y); await wait(500); }
+  const sheet = () => p.evaluate(() => {
+    const m = (v) => `$${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, w = __w.worthOf(__w.cards), v = __w.valueSeries();
+    const nums = [...document.querySelectorAll("#vsheet .hc path")].flatMap((x) => (x.getAttribute("d").match(/-?[\d.]+(e-?\d+)?|NaN|Infinity/g) || []).map(Number));
+    return { open: document.getElementById("vsheet").open, now: document.getElementById("vs-now")?.textContent, want: m(w), last: v.pts[365] === w, change: document.getElementById("vs-change")?.textContent, finite: nums.length > 4 && nums.every(Number.isFinite), buys: document.querySelectorAll("#vsheet .vs-buys li").length, bars: document.querySelectorAll("#vsheet .vs-bars li").length };
+  });
+  const s90 = await sheet();
+  R.push([`Collection at market in Trophies opens Collection value (${row ? "row found" : "no row"}, ${s90.open ? "open" : "closed"}), its now is the worth total (${s90.now} against ${s90.want}, last point ${s90.last ? "equal" : "not equal"}), with purchases (${s90.buys}) and sets (${s90.bars})`, Boolean(row) && s90.open && s90.now === s90.want && s90.last && s90.finite && s90.buys > 0 && s90.bars > 0]);
+  await p.click('#vsheet [data-vr="30"]'); await wait(150); const s30 = await sheet();
+  await p.click('#vsheet [data-vr="all"]'); await wait(150); const sAll = await sheet();
+  R.push([`the sheet's ranges change the change line ("${s30.change}", "${s90.change}", "${sAll.change}")`, s30.change !== s90.change && s90.change !== sAll.change && /in 30 days/.test(s30.change) && /in 90 days/.test(s90.change) && /since /.test(sAll.change) && s30.finite && sAll.finite && !p.errors.length]);
+  await p.click("#vsheet [data-vs-close]"); await wait(200);
+  await p.close();
+}
 await browser.close();
 const bad = report(R);
 console.log(`\nScreenshots: ${path.relative(process.cwd(), out)}`);

@@ -112,6 +112,7 @@
   </div>
 </section>
 <dialog class="lsheet" id="lsheet" aria-labelledby="ls-name"></dialog>
+<dialog class="lsheet vsheet" id="vsheet" aria-labelledby="vs-h"></dialog>
 <dialog class="tcadd" id="tc-add" aria-labelledby="tca-h">
   <div class="tca-top"><b id="tca-h">Add a card</b><button type="button" class="ib" data-tca-close aria-label="Done"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
   <input type="search" id="tca-q" placeholder="Search by name, set or number" autocomplete="off" enterkeyhint="search">
@@ -151,6 +152,11 @@
   <div class="swap" id="swap">
     <div class="row"><div><h1 id="p-name">Card</h1><p class="meta" id="p-meta"></p></div><div class="price" id="p-price"></div></div>
     <p class="deal" id="p-deal" hidden></p>
+    <div class="ph" id="p-hist">
+      <div class="ph-head"><p class="ph-line" id="p-trend"></p><div class="seg ph-seg" role="group" aria-label="Price history range"><button type="button" data-hr="30" aria-pressed="false">30 days</button><button type="button" data-hr="90" aria-pressed="true">90 days</button><button type="button" data-hr="365" aria-pressed="false">1 year</button></div></div>
+      <div class="ph-chart" id="p-chart"></div>
+      <p class="ph-key" id="p-key"></p>
+    </div>
     <table class="gr-asks" id="p-asks"></table>
     <p class="gr-worth" id="p-worth" hidden></p>
   </div>
