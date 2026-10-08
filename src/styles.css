@@ -1209,3 +1209,10 @@ body.trading #pg-trade { opacity: 0; transition: opacity .3s; }
   .tradebar .mbtn { max-width: none; }
 }
 
+/* Messages sit in the top bar, over the search and the count, in the bar's own colours (placeToast() sets the box): no
+   black banner over the wall. Two lines at most before it grows down; tap it and the bar comes back. */
+.toast { box-sizing: border-box; transform: none; max-width: none; width: auto; padding: 4px 6px 4px 12px; border-radius: 10px; background: var(--panel-solid); color: var(--ink);
+  font: 600 13.5px/1.25 var(--font); box-shadow: 0 0 0 1px var(--line); transition: opacity .18s; }
+.toast:not(.act) { padding-right: 12px; }
+.toast.show { transform: none; pointer-events: auto; cursor: pointer; }
+.toast-btn { height: 30px; padding: 0 12px; background: var(--ink); color: var(--bg); font: 700 13px var(--font); }
