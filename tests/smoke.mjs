@@ -65,6 +65,65 @@ for (const [dark, width, height] of [[false, 390, 844], [true, 390, 844], [false
   R.push([`${tag}: every layout and lens renders${p.errors.length ? ` (${p.errors[0]})` : ""}`, !p.errors.length]);
   await p.close();
 }
+// Round 23 (De Stijl): pinching to the map leaves no large empty field part way, and every nameplate fits its plinth.
+// An empty field is the largest connected patch of the page's background (in 10px cells); part way it may be no bigger
+// than at rest on the map (plus a little), never the 9% the across-then-down move used to leave beside the room.
+for (const dark of [false, true]) {
+  const tag = `phone-${dark ? "dark" : "light"}`, p = await phone(browser, file, { dark, motion: true, width: 390, height: 844 });
+  await p.evaluate(() => {
+    const at = Date.now() - 30 * 86400e3, owned = {}, chase = {};
+    for (const c of __w.cards) { if (c.own0) owned[c.id] = { on: true, at }; else if (c.i % 3 === 0) chase[c.id] = true; }
+    localStorage.setItem("wall-owned", JSON.stringify(owned)); localStorage.setItem("wall-chase", JSON.stringify(chase)); localStorage.setItem("wall-imported", "TCGplayer"); localStorage.setItem("wall-welcomed", "1"); localStorage.setItem("wall-map-seen", "1");
+  });
+  await p.reload({ waitUntil: "load" }); await wait(3500);
+  const emptiest = async () => {
+    const png = await p.screenshot({ encoding: "base64" });
+    return p.evaluate(async (png) => {
+      const i = new Image(); await new Promise((r) => { i.onload = r; i.src = `data:image/png;base64,${png}`; });
+      const k = document.createElement("canvas"); k.width = i.width; k.height = i.height; const x = k.getContext("2d"); x.drawImage(i, 0, 0);
+      const d = x.getImageData(0, 0, i.width, i.height).data, bg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
+      const B = [1, 3, 5].map((o) => parseInt(bg.slice(o, o + 2), 16)), S = 10, cw = Math.floor(i.width / S), ch = Math.floor(i.height / S);
+      const isBg = (px, py) => { const o = (py * i.width + px) * 4; return Math.abs(d[o] - B[0]) + Math.abs(d[o + 1] - B[1]) + Math.abs(d[o + 2] - B[2]) < 12; };
+      const cell = new Uint8Array(cw * ch);
+      for (let cy = 0; cy < ch; cy++) for (let cx = 0; cx < cw; cx++) cell[cy * cw + cx] = [[1, 1], [8, 1], [1, 8], [8, 8], [5, 5]].every(([a, b]) => isBg(cx * S + a, cy * S + b)) ? 1 : 0;
+      let best = 0;
+      for (let s0 = 0; s0 < cell.length; s0++) {
+        if (cell[s0] !== 1) continue;
+        let n = 0; const st = [s0]; cell[s0] = 2;
+        while (st.length) { const c = st.pop(); n++; const cx = c % cw, cy = (c - cx) / cw; for (const [nx, ny] of [[cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]]) if (nx >= 0 && ny >= 0 && nx < cw && ny < ch && cell[ny * cw + nx] === 1) { cell[ny * cw + nx] = 2; st.push(ny * cw + nx); } }
+        best = Math.max(best, n);
+      }
+      return best / (cw * ch);
+    }, png);
+  };
+  await p.click("#rooms"); await wait(1500);
+  const rest = await emptiest();
+  await p.evaluate(() => __w.goRoom("chase")); await wait(1500);
+  const mid = [];
+  for (const q of [0.2, 0.4, 0.6, 0.8]) { await p.evaluate((q) => { if (!__w.state.trans) __w.beginMap("chase", "out"); __w.state.trans.q = q; __w.kick(); }, q); await wait(250); mid.push([q, await emptiest()]); }
+  await p.evaluate(() => { __w.state.trans.q = 0; __w.state.trans.anim = { from: 0, to: 0, t0: performance.now(), dur: 1 }; __w.kick(); }); await wait(400);
+  const worst = Math.max(...mid.map((m) => m[1]));
+  R.push([`${tag}: no large empty field part way to the map (largest ${(worst * 100).toFixed(1)}% of the screen; ${(rest * 100).toFixed(1)}% at rest)`, worst <= Math.max(rest + 0.02, 0.05)]);
+  if (!dark) {
+    const plates = await p.evaluate(() => {
+      const box = document.createElement("div"); box.style.cssText = "position:fixed;left:0;top:0;width:200px;opacity:0;pointer-events:none"; document.body.append(box);
+      const list = __w.medalList().list.filter((t) => t.plate), extra = ["RAINBOW", "WWWWWWWW", "MMMMMMMMMMMMMM", "CHAMPION"].map((plate, i) => ({ ...list[0], id: `x${i}`, plate }));
+      const bad = [];
+      for (const t of [...list, ...extra]) {
+        box.innerHTML = __w.medalSvg(t);
+        const svg = box.querySelector("svg"), txt = [...svg.querySelectorAll("text")].find((e) => e.textContent !== "?"), r = [...svg.querySelectorAll("rect")].find((e) => e.getAttribute("y") === "94");
+        if (!txt || !r) continue;
+        const b = txt.getBBox(), x0 = Number(r.getAttribute("x")), x1 = x0 + Number(r.getAttribute("width"));
+        if (b.x < x0 + 1 || b.x + b.width > x1 - 1 || x0 < 6 || x1 > 94) bad.push(t.plate);
+      }
+      box.remove();
+      return { n: list.length + extra.length, bad };
+    });
+    R.push([`${tag}: every nameplate fits its plinth (${plates.n} checked${plates.bad.length ? `; spills: ${plates.bad.join(", ")}` : ""})`, plates.n > 0 && !plates.bad.length]);
+  }
+  R.push([`${tag}: the move to the map runs without errors${p.errors.length ? ` (${p.errors[0]})` : ""}`, !p.errors.length]);
+  await p.close();
+}
 await browser.close();
 const bad = report(R);
 console.log(`\nScreenshots: ${path.relative(process.cwd(), out)}`);
