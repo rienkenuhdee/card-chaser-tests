@@ -307,7 +307,13 @@ parts and fixed the critic's weak spots in its own terms (light rules in dark mo
 tier notches, an ink lens, neutral count fields, a condensed face for names), and added safe's poster full art and
 bold's Mondrian binder cover. Ryan: "Not a fan of how it was integrated. I liked how radical looked exactly." So the
 Wall is radical's own part (`95-de-stijl.js`) and stylesheet, pixel-identical to the preview on the wall, the map and
-every room, light, dark and on its side; the critic's points are open questions instead. Dropped: bold's set-title
+every room, light, dark and on its side. Then, at Ryan's ask ("Let's fix them all"), the critic's weak spots were
+fixed in radical's own terms and nothing else: rules in dark mode are a warm light grey (black on charcoal hid the
+painting); a held pinch to the map keeps the room whole while it narrows and brings the rest in cut along its column,
+so no empty field shows; trophy tiers keep their colours and add one to four notches; nameplates fit their plinth
+(smaller, then wider, then narrower); a name steps down a size before it's cut short. And trophies take their shape
+from their role, not their chase ("too many squares"): a square is a signature trophy, a circle a milestone as the
+chase fills, a triangle a goal inside it, so every shelf is a mix. Dropped: bold's set-title
 progress fields (Ryan: "cool theory but distracting appearance"), and everything else from safe and bold. Also on this
 branch: messages sit inside the top bar, in its field and rules, instead of a black banner over the wall (Ryan: "it's
 always been in the way"); they let taps through to the bar and step aside, and follow the search when the bar changes
@@ -338,4 +344,4 @@ already had instead of adding a copy, round 17's model), with a gesture check.
 - A chase's twins: should a custom panel's cards also lead in the Chase lens, or only their set's copy? And should a chase hide from the wall once it's complete?
 - Trophies: the worth line is a made-up year; real data would start at the finish date ("Up $27 since you finished"). Medals: whether Undo after a mint should take a medal back (production keeps it), the full-screen completion ceremony production plays, and the server-side luck roll when the two merge. Sharing a trophy (safe's picture card), and whether a sub-chase of a finished set should fold into the set's plaque. The room hides the lenses; Value could recolour the engravings.
 - Bringing the wall into the real app: the rooms map is the navigation model (round 21); production's tabs sit at the top, and a merge would put the map where they are.
-- The painting (round 23), the critic's points, offered rather than applied: in dark mode the rules are black on charcoal, so the wall's painting fades; a held pinch to the map shows empty fields mid-way (across, then down); trophy tiers as hues (bronze blue, silver red, gold yellow) have no order to read; the yellow active lens shares yellow with earned; the count fields take the set's nearest primary; Futura's width cuts set names sooner ("Neo G…"). Also: gold still marks a chased card while red is the Chase room, card scans come in full colour inside the painting, and some motion outside the map still arcs (the trade table's lifts, the reply flights).
+- The painting (round 23): gold still marks a chased card while red is the Chase room; the yellow active lens shares yellow with earned; the count fields take the set's nearest primary; card scans come in full colour inside the painting; some motion outside the map still arcs (the trade table's lifts, the reply flights). The binder held mid-turn upright with pictures runs close to the 34 ms budget on the test machine (it did before round 23 too).
