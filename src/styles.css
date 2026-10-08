@@ -1454,3 +1454,15 @@ a.mbtn { display: inline-flex; align-items: center; justify-content: center; box
 .vb-bar i { display: block; height: 100%; border: 2px solid var(--rule); box-sizing: border-box; }
 .vs-bars b { font-variant-numeric: tabular-nums; }
 .vs-foot .mbtn, .vs-foot .mbtn:first-child { flex: 1; }
+
+/* Parity 6: the completion ceremony. Full screen over everything, the painting's own ground; the moment is drawn on
+   its canvas, the two buttons sit under it in the chrome's ruled squares and come up once the plate has landed. */
+.cer { position: fixed; inset: 0; z-index: 20; background: var(--bg); touch-action: none; overscroll-behavior: contain; }
+.cer[hidden] { display: none; }
+.cer canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.cer-say { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.cer-acts { position: absolute; display: flex; gap: 12px; opacity: 0; pointer-events: none; transition: opacity .25s; }
+.cer.in .cer-acts { opacity: 1; pointer-events: auto; }
+.cer-acts .act { flex: 1; height: 100%; }
+.cer-acts .act:not(.primary) { background: var(--panel-solid); color: var(--ink); }
+@media (prefers-reduced-motion: reduce) { .cer-acts { transition: none; } }

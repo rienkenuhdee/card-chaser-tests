@@ -294,6 +294,63 @@ for (const dark of [false, true]) {
   await p.click("#vsheet [data-vs-close]"); await wait(200);
   await p.close();
 }
+// Parity 6: the completion ceremony. The last card of the smallest set, marked by hand, plays it full screen while the
+// trophy flow waits (its message, its medal); Done ends it and the flow carries on; Share hands a PNG of the final
+// frame to the share sheet; Undo and the same card again don't play it twice; under reduced motion it's a still.
+for (const motion of [true, false]) {
+  const p = await phone(browser, file, { motion, dpr: 2 });
+  const sm = await p.evaluate(() => {
+    const g = __w.groups.filter((x) => x.set).sort((a, b) => a.base.length - b.base.length)[0], at = Date.now() - 5 * 86400e3, owned = {};
+    g.base.slice(0, -1).forEach((c) => { owned[(c.base || c).id] = { on: true, at }; });
+    localStorage.setItem("wall-owned", JSON.stringify(owned)); localStorage.setItem("wall-welcomed", "1"); localStorage.setItem("wall-map-seen", "1");
+    return g.name;
+  });
+  await p.reload({ waitUntil: "load" }); await wait(motion ? 3200 : 900);
+  await p.evaluate((n) => __w.enterGroup(__w.groups.find((x) => x.name === n)), sm); await wait(1200);
+  const last = () => p.evaluate((n) => { const g = __w.groups.find((x) => x.name === n), c = g.base[g.base.length - 1]; return { id: c.id, owned: c.owned }; }, sm);
+  const own = (on, undo = false) => p.evaluate((n, on, undo) => { const g = __w.groups.find((x) => x.name === n), c = g.base[g.base.length - 1]; __w.setOwned(c, on, undo ? { undo: () => __w.setOwned(c, !on, { quiet: true }) } : {}); }, sm, on, undo);
+  const st = () => p.evaluate((n) => {
+    const g = __w.groups.find((x) => x.name === n), el = document.getElementById("cer"), t = document.getElementById("toast"), sec = __w.mdSecOf(g);
+    return { on: __w.cer.on, shown: !el.hidden, in: el.classList.contains("in"), still: __w.cer.still, raf: __w.cer.raf, said: el.querySelector("#cer-say").textContent, held: __w.cer.toast?.[0] || "", toast: t.classList.contains("show") ? t.textContent : "", undo: Boolean(t.querySelector(".toast-btn")), done: Boolean(__w.done[`${g.set.id}|set`]), seen: Boolean(__w.cerSeen[`${g.set.id}|set`]), mint: __w.mintsOn.length > 0, pop: document.getElementById("mpop").classList.contains("show"), earned: Boolean(__w.medals[`${sec}:complete`]) };
+  }, sm);
+  await own(true, true); await wait(motion ? 700 : 400);
+  const a = await st();
+  R.push([`${motion ? "" : "reduced motion: "}finishing ${sm} by hand plays the ceremony ("${a.said}"), the message and the medal waiting under it (${a.held ? "message held" : "no message"}, ${a.earned ? "medal earned" : "no medal yet"}, ${a.mint || a.pop ? "medal shown" : "medal not shown"})`, a.on && a.shown && a.done && a.seen && new RegExp(`^${sm} complete\\. (\\d+) of \\1 · `).test(a.said) && /finished/.test(a.held) && !a.toast && !a.mint && !a.pop && !p.errors.length]);
+  if (motion) {
+    await p.evaluate(() => { __w.cer.hold = 1300; }); await wait(200); // the plate landed, the title coming in, the confetti falling
+    await p.screenshot({ path: path.join(out, "phone-light-ceremony-mid.png") });
+    await p.evaluate(() => { __w.cer.hold = null; }); await wait(3600);
+    const f = await st();
+    R.push([`the ceremony lands on its final frame and stops (buttons ${f.in ? "up" : "not up"}, ${f.raf ? "still drawing" : "no more frames"})`, f.on && f.in && !f.raf]);
+  } else {
+    const snap = () => p.evaluate(() => document.querySelector("#cer canvas").toDataURL().length + ":" + __w.cer.raf);
+    const s1 = await snap(); await wait(500); const s2 = await snap();
+    R.push([`under reduced motion the ceremony is a still: the final frame at once, the buttons up, nothing drawing (${s1 === s2 ? "same picture" : "changed"})`, a.still && a.in && !a.raf && s1 === s2 && /:0$/.test(s1)]);
+  }
+  await p.screenshot({ path: path.join(out, `phone-light-ceremony-final${motion ? "" : "-still"}.png`) });
+  // Share: the picture goes to the share sheet as a PNG file (a stand-in for the phone's).
+  await p.evaluate(() => { window.__shared = null; Object.defineProperty(navigator, "canShare", { value: (d) => Boolean(d?.files?.length), configurable: true }); Object.defineProperty(navigator, "share", { value: async (d) => { window.__shared = d; }, configurable: true }); });
+  await p.click("#cer-share");
+  for (let i = 0; i < 25 && !(await p.evaluate(() => Boolean(window.__shared))); i++) await wait(200);
+  const sh = await p.evaluate(async () => {
+    const f = window.__shared?.files?.[0]; if (!f) return null;
+    const b = new Uint8Array(await f.arrayBuffer()), dv = new DataView(b.buffer);
+    let bin = ""; for (let i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode(...b.subarray(i, i + 0x8000));
+    return { name: f.name, type: f.type, size: b.length, png: b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47, w: dv.getUint32(16), h: dv.getUint32(20), b64: btoa(bin), on: __w.cer.on };
+  });
+  if (sh) fs.writeFileSync(path.join(out, `phone-light-ceremony-share${motion ? "" : "-still"}.png`), Buffer.from(sh.b64, "base64"));
+  R.push([`${motion ? "" : "reduced motion: "}Share hands the share sheet a PNG of the final frame (${sh ? `${sh.name}, ${sh.type}, ${sh.w}×${sh.h}, ${Math.round(sh.size / 1024)} KB` : "nothing shared"})`, Boolean(sh) && sh.png && sh.type === "image/png" && sh.w === 1170 && sh.h > 1200 && sh.size > 5000 && sh.on]);
+  await p.click("#cer-done"); await wait(1500);
+  const d = await st();
+  R.push([`${motion ? "" : "reduced motion: "}Done ends it and the trophy flow carries on: the message with its Undo ("${d.toast.replace(/\s*Undo$/, "")}"), the medal (${d.mint || d.pop ? "shown" : "not shown"})`, !d.on && !d.shown && d.done && /finished/.test(d.toast) && d.undo && (d.mint || d.pop) && !p.errors.length]);
+  // Undo, then the same card again: finished again, no second ceremony.
+  await p.evaluate(() => document.querySelector("#toast .toast-btn")?.click()); await wait(600);
+  const u = { ...(await st()), ...(await last()) };
+  await own(true, true); await wait(600);
+  const r = await st();
+  R.push([`${motion ? "" : "reduced motion: "}Undo takes the finish back (${u.owned ? "card still owned" : "card out"}, ${u.done ? "still finished" : "not finished"}) and the same card again finishes it without a second ceremony (${r.on ? "it played again" : "no ceremony"}; "${r.toast.replace(/\s*Undo$/, "")}")`, !u.owned && !u.done && r.done && !r.on && !r.shown && /finished/.test(r.toast) && !p.errors.length]);
+  await p.close();
+}
 await browser.close();
 const bad = report(R);
 console.log(`\nScreenshots: ${path.relative(process.cwd(), out)}`);

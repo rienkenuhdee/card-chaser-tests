@@ -703,7 +703,7 @@ const mdOut3 = (t) => 1 - Math.pow(1 - t, 3);
 function drawMints(now) {
   if (!mintQ.length && !mintsOn.length) return false;
   if (document.body.classList.contains("listmode")) { mintQ.length = 0; mintsOn.length = 0; return false; }
-  const can = !tbl.on && !wel.on && !bnd.on && !room.on;
+  const can = !tbl.on && !wel.on && !bnd.on && !room.on && !cer.on; // nor under the completion ceremony: they follow it
   if (!can && !mintsOn.length) return false; // waiting for the room or the table to close
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   if (can) while (mintQ.length && mintQ[0].at <= now) mintsOn.push(startMint(mintQ.shift(), now));
@@ -848,7 +848,7 @@ const mdQueue = [];
 let mdPopT = 0, mdPopList = [];
 function mdCelebrateSoon() {
   clearTimeout(mdCelebrateSoon.t);
-  if (wel.on || tbl.on || revealing() || document.body.classList.contains("welcoming")) { mdCelebrateSoon.t = setTimeout(mdCelebrateSoon, 1200); return; } // nor over the import's story or summary
+  if (wel.on || tbl.on || cer.on || revealing() || document.body.classList.contains("welcoming")) { mdCelebrateSoon.t = setTimeout(mdCelebrateSoon, 1200); return; } // nor over the import's story or summary
   const list = mdQueue.splice(0), via = mdQueue.via; mdQueue.via = "";
   if (list.length) mdCelebrate(list, via);
 }
