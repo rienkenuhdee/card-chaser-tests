@@ -1338,3 +1338,17 @@ body.trading #pg-trade { opacity: 0; transition: opacity .3s; }
 .toast-btn { flex: none; height: 30px; padding: 0 12px; border: 0; border-radius: 0; background: var(--ink); color: var(--bg); font: 800 13px var(--font); cursor: pointer; }
 /* Open on eBay (and the rest) is a real link, dressed as the button it sits beside. */
 a.mbtn { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; }
+/* The Feed's Filters: a button beside sort and condition, opening production's other filters under the row. */
+.fd-tools { max-width: 560px; }
+.fd-more-btn { flex: none; height: 38px; padding: 0 14px; border: 2px solid var(--rule); border-radius: 0; background: var(--panel-solid); color: var(--ink); font: 700 14px var(--font); cursor: pointer; }
+.fd-more-btn.on { background: var(--ink); color: var(--bg); }
+.fd-more { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px 8px; max-width: 560px; margin: 10px 0 0; padding: 12px; border: var(--rw, 2px) solid var(--rule); background: var(--panel-solid); }
+.fd-more[hidden] { display: none; }
+.fd-more .fd-pick { display: flex; flex-direction: column; gap: 4px; }
+.fd-more .fd-pick > span { font: 700 12px var(--font); color: var(--muted); }
+.fd-more .fd-pick::after { top: auto; bottom: 16px; }
+.fd-more .fd-num::after { display: none; }
+.fd-more .fd-num input { box-sizing: border-box; width: 100%; height: 38px; padding: 0 12px; border: 1px solid var(--line); border-radius: 0; background: var(--panel-solid); color: var(--ink); font: 600 16px var(--font); }
+.fd-check { display: flex; align-items: center; gap: 8px; min-height: 32px; font: 600 14px var(--font); color: var(--ink); }
+.fd-check input { width: 20px; height: 20px; margin: 0; accent-color: var(--ink); }
+.fd-more #pf-clear { justify-self: start; }

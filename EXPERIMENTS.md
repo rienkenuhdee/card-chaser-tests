@@ -337,14 +337,23 @@ frame drawn by the watchdog can be stamped after the next one, so the time step 
 emphasis grow instead of settle until it was NaN: the step is clamped at 0. Before every frame the guard puts right a
 bad camera, scroll, layout, emphasis or move, names it in the top bar, and has kept pictures drawn again; a gradient
 at a bad number is made at 0. Learned: a phone finds the numbers a test's tidy fingers never make, so every division
-by a gesture needs a floor, and the screen should say what broke. Smoke checks: a fault mid-move, a bad gradient,
-fingertips that meet.
+by a gesture needs a floor, and the screen should say what broke. The guard's own report then named the last one
+("scroll"): after a pinch the finger still down rests, but moving it still ran the scroll code from a start it didn't
+have, so the wall's scroll became NaN; a resting finger's moves now do nothing. Smoke checks: a fault mid-move, a bad
+gradient, fingertips that meet, a finger left down after a pinch.
+
+**Parity 1: the Feed's sorts and filters.** No variants (Ryan: "one at a time as lean as possible"). Production's
+twelve sorts (best deals, newest, ending soonest, price both ways, biggest discount and savings, shops first, local and
+trades first, seller feedback, free shipping, card name) and its Filters panel, as far as the listings here carry it:
+source, format (auctions, Buy It Now, Best Offer), discount, how recently listed, max total price, free shipping,
+favorite sellers, ending in 6 hours. A Filters button beside sort and condition opens them under the row and counts
+what's on; Clear brings everything back; what they hide is counted like a source switched off.
 
 ## Open questions (next rounds)
 
 - Production parity (audit, round 23). What production has that the Wall doesn't yet, beyond what's out of scope for
-  an on-device prototype (accounts, sync, real push, PSA lookups): most of the Feed's sorts and filters (12 sorts down
-  to 4; raw or slab, grade, lots, too cheap, hide, max price), adding a shop in Source, "Fill your Dex" in the Feed,
+  an on-device prototype (accounts, sync, real push, PSA lookups): the Feed's raw or slab, grade, language, version,
+  lots and too-cheap filters (the made-up listings don't carry them yet), adding a shop in Source, "Fill your Dex" in the Feed,
   graded slabs and grade wants, price history and the collection's value over time, savings stats from "I bought it",
   favourites and priority stars, print placeholders, card reports, the card sheet's Graded tab, and the completion
   ceremony. Replaced, not lost: the collection grid (the wall, search, Filters, the list view), the card sheet (the

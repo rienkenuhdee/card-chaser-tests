@@ -189,6 +189,24 @@ for (const dark of [false, true]) {
   R.push([`after a pinch the finger left down rests: the wall doesn't scroll (${before} then ${s.scroll}) and no bad number turns up${s.bad ? ` (${s.bad})` : ""}`, Number.isFinite(s.scroll) && s.scroll === before && !s.bad && !p.errors.length]);
   await p.close();
 }
+// The Feed's sorts and Filters (production's, as far as the listings carry them): each filter narrows the list to
+// listings that pass it, the button counts what's on, and Clear brings every listing back.
+{
+  const p = await phone(browser, file, { motion: false });
+  await p.evaluate(() => { localStorage.setItem("wall-welcomed", "1"); localStorage.setItem("wall-map-seen", "1"); }); await p.reload({ waitUntil: "load" }); await wait(1500);
+  await p.click("#rooms"); await wait(500); await p.evaluate(() => __w.openPlace("feed")); await wait(800);
+  const rows = () => p.evaluate(() => [...document.querySelectorAll("#pf-list [data-l]")].map((b) => b.dataset.l));
+  const all = await rows();
+  await p.click("#pf-more-btn"); await wait(150);
+  await p.select("#pf-src", "ebay"); await wait(200);
+  const ebay = await rows();
+  await p.select("#pf-how", "auction"); await wait(200);
+  const auc = await rows(), label = await p.$eval("#pf-more-btn", (e) => e.textContent);
+  await p.click("#pf-clear"); await wait(200);
+  const back = await rows();
+  R.push([`the Feed's Filters narrow it (${all.length} listings, ${ebay.length} on eBay, ${auc.length} eBay auctions), count what's on ("${label}"), and Clear brings them all back`, all.length > 0 && ebay.length < all.length && auc.length <= ebay.length && auc.every((id) => ebay.includes(id)) && label === "Filters (2)" && back.length >= all.length && !p.errors.length]);
+  await p.close();
+}
 await browser.close();
 const bad = report(R);
 console.log(`\nScreenshots: ${path.relative(process.cwd(), out)}`);
