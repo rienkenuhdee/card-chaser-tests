@@ -133,8 +133,8 @@ const byScoreL = (a, b) => scoreOf(b).score - scoreOf(a).score;
 const FEED_SORTS = {
   best: byScoreL,
   ending: (a, b) => (a.endsAt || Infinity) - (b.endsAt || Infinity) || byScoreL(a, b),
-  price: (a, b) => totalOf(a) - totalOf(b),
-  priceDesc: (a, b) => totalOf(b) - totalOf(a),
+  price: (a, b) => a.price - b.price, // the price the row shows
+  priceDesc: (a, b) => b.price - a.price,
   pct: (a, b) => pctOf(b) - pctOf(a),
   savings: (a, b) => (b.c.price - b.price) - (a.c.price - a.price),
   shops: (a, b) => b.src.startsWith("shop") - a.src.startsWith("shop") || byScoreL(a, b),
@@ -296,7 +296,7 @@ function syncFeedTools(hidden) {
   pfMoreBtn.textContent = n ? `Filters (${n})` : "Filters"; pfMoreBtn.classList.toggle("on", Boolean(n));
   document.getElementById("pf-clear").hidden = !n;
   pfHidden.hidden = !hidden;
-  if (hidden) pfHidden.innerHTML = `${n || feedView.cond ? `${plural1(hidden, "listing")} hidden by your filters` : `${plural1(hidden, "damaged listing")} hidden`}. <button type="button" class="linklike" data-fd-all>Show ${hidden === 1 ? "it" : "them"}</button>`;
+  if (hidden) pfHidden.innerHTML = `${n ? `${plural1(hidden, "listing")} hidden by your filters` : feedView.cond ? `${plural1(hidden, "listing")} hidden by the condition you picked` : `${plural1(hidden, "damaged listing")} hidden`}. <button type="button" class="linklike" data-fd-all>Show ${hidden === 1 ? "it" : "them"}</button>`;
 }
 function setFeedView(patch) {
   Object.assign(feedView, patch); feedView.v++; tick(4);
