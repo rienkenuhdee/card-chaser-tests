@@ -1,0 +1,82 @@
+/* Round 23, bold: the Mondrian grid. Primaries and black on off-white, a geometric sans, square corners, and heavy
+   black rules as the structure. Dark mode turns it over: off-white rules on near-black, the primaries a touch brighter. */
+:root {
+  --bg: #F2EFE7; --slot: #E3DED2; --slot-line: #CFC8B8; --ink: #111111; --muted: #5C5850; --line: rgb(17 17 17 / .16);
+  --panel: #F8F6F0; --panel-solid: #F8F6F0; --panel-fill: #F8F6F0; --paper: #F8F6F0; --paper-ink: #111111;
+  --hole: #EAE6DC; --rule: #111111; --m-red: #D2251C; --m-yellow: #F1BE00; --m-blue: #1C4DA1; --m-on: #F8F6F0; --m-on-yellow: #111111;
+  --c-red: #D2251C; --c-yellow: #E0AE00; --c-green: #2F8F55; --c-blue: #1C4DA1; --m-surface: #F8F6F0;
+  --deal: #0E8A4F; --gold: #C99A00; --shadow: none;
+  --font: "Futura", "Jost", "Avenir Next", "Century Gothic", "Trebuchet MS", system-ui, sans-serif;
+  --rw: 3px; /* the chrome's rule */
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0D0D0D; --slot: #1E1E1D; --slot-line: #3A3936; --ink: #EEEAE0; --muted: #A29D92; --line: rgb(238 234 224 / .16);
+    --panel: #151515; --panel-solid: #151515; --panel-fill: #151515; --paper: #ECE8DE; --paper-ink: #111111;
+    --hole: #1A1A19; --rule: #EEEAE0; --m-red: #E5392E; --m-yellow: #F5C518; --m-blue: #3A6FD0; --m-on: #F8F6F0; --m-on-yellow: #111111;
+    --c-red: #E5392E; --c-yellow: #F5C518; --c-green: #4CBF86; --c-blue: #5B8BE6; --m-surface: #151515;
+    --deal: #3BD597; --gold: #F5C518;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0D0D0D; --slot: #1E1E1D; --slot-line: #3A3936; --ink: #EEEAE0; --muted: #A29D92; --line: rgb(238 234 224 / .16);
+  --panel: #151515; --panel-solid: #151515; --panel-fill: #151515; --paper: #ECE8DE; --paper-ink: #111111;
+  --hole: #1A1A19; --rule: #EEEAE0; --m-red: #E5392E; --m-yellow: #F5C518; --m-blue: #3A6FD0; --m-on: #F8F6F0; --m-on-yellow: #111111;
+  --c-red: #E5392E; --c-yellow: #F5C518; --c-green: #4CBF86; --c-blue: #5B8BE6; --m-surface: #151515;
+  --deal: #3BD597; --gold: #F5C518;
+}
+
+/* Square corners everywhere; the one circle kept is the slider's knob. */
+*, *::before, *::after { border-radius: 0 !important; }
+.timebar input[type=range]::-webkit-slider-thumb, .timebar input[type=range]::-moz-range-thumb { border-radius: 50% !important; }
+
+/* Every floating surface is a flat off-white field inside a black rule: no blur, no shadow. */
+.glass { background: var(--panel-solid); -webkit-backdrop-filter: none; backdrop-filter: none; border: var(--rw) solid var(--rule); box-shadow: none; }
+body, button, input, select, textarea { font-family: var(--font); }
+h1, h2, .cs-title, .panel h1, #list h1, #list h2 { font-stretch: 100% !important; letter-spacing: 0 !important; }
+
+/* The top strip: the search a field between two rules. */
+.strip { height: 52px; }
+.search, .top .ib:not([hidden]) ~ .search, .top .mark:not([hidden]) ~ .search { border-color: var(--rule); border-width: 0 2px; }
+.ib:hover, .ib[aria-expanded="true"] { background: var(--slot); }
+
+/* The lens bar: the lens you're in is a black block. */
+.lens .ink { background: var(--ink); top: 0; bottom: 0; }
+.lens { padding: 0; }
+.lens button { height: 44px; font-weight: 600; }
+.lens button[aria-pressed="true"] { color: var(--bg); }
+.lens button + button { border-left: 2px solid var(--rule); }
+.lens .fchip { border-left: var(--rw) solid var(--rule); margin-left: 0; padding-left: 0; }
+.lens .fchip button { height: 44px; background: var(--m-red); color: var(--m-on); }
+
+/* Buttons: ruled boxes; the primary one a solid black block. */
+.act { border: 2px solid var(--rule); font-weight: 700; }
+.act.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.act.owned { border-color: var(--rule); background: var(--m-yellow); color: #111; }
+.chip { border: 2px solid var(--rule); }
+
+/* The card's sheet and the other sheets rise with a heavy rule along their top. */
+.panel { border-width: var(--rw) 0 0; }
+@media (min-width: 720px) { .panel { border-width: var(--rw); } }
+
+/* The pages (Feed, Trade, Source): the room's colour is a block, not a stripe. */
+.rp-stripe { height: 12px; background: var(--m-blue); }
+#pg-trade .rp-stripe { background: var(--rule); }
+#rooms svg rect:nth-child(1), #rooms svg rect:nth-child(5) { fill: var(--m-blue); }
+#rooms svg rect:nth-child(2) { fill: var(--m-red); }
+#rooms svg rect:nth-child(3) { fill: var(--ink); }
+#rooms svg rect:nth-child(4) { fill: var(--m-yellow); }
+.rbadge { background: var(--m-blue); }
+.fd-new { background: var(--m-blue); }
+.fd.is-new .fd-row { box-shadow: inset 6px 0 0 var(--m-blue); }
+.sw input:checked + span { background: var(--ink); }
+
+/* The time slider's track: a black rule, the knob a circle. */
+.timebar input[type=range]::-webkit-slider-runnable-track { height: 4px; background: linear-gradient(90deg, var(--ink) var(--p, 100%), var(--slot-line) var(--p, 100%)); }
+#list ul { border-top: var(--rw) solid var(--rule); }
+.lrow { border-bottom: 1px solid var(--rule); }
+#list h2 { border-bottom: 0; }
+:focus-visible { outline: 3px solid var(--m-blue); }
+/* A listing in the Feed: a ruled box, its new mark a blue block down its side. */
+.fd-row { border: 2px solid var(--rule); }
+.fd.is-new .fd-row { border-color: var(--rule); }

@@ -172,6 +172,18 @@ for (const dpr of [1, 2]) {
   await p.evaluate(() => document.querySelector("#toast .toast-btn").click()); await wait(300);
   R.push(["undo gives them back exactly", (await snap(ids)) === before]);
   await p.keyboard.press("Escape"); await wait(900); R.push(["escape closes the binder", !(await bd()).on]);
+  // A trade accepted while you're away from the table crosses the wall (round 13); a card you get that you already
+  // have arrives as one more copy (round 17), and the message names it.
+  await p.evaluate(() => __w.goRoom("chase")); await wait(1200);
+  const xname = await p.evaluate(() => {
+    const t = __w.TRADERS.find((x) => x.spares.some((c) => c.owned)), mine = __w.cards.find(__w.isSpare), theirs = t.spares.find((c) => c.owned), at = Date.now();
+    const r = { t: t.id, at, state: "proposed", give: [mine.id], get: [theirs.id], log: [{ by: "you", kind: "offer", give: [mine.id], get: [theirs.id], at }] };
+    __w.trades.push(r); window.__xt = { r, theirs, n: __w.nOf(theirs) }; __w.deliver(r, "accept"); return theirs.name;
+  });
+  const xt = () => p.evaluate(() => ({ st: window.__xt.r.state, n: __w.nOf(window.__xt.theirs), n0: window.__xt.n, toast: document.getElementById("toast").textContent }));
+  for (let k = 0; k < 30 && (await xt()).st !== "done"; k++) await wait(150);
+  const xd = await xt();
+  R.push(["a trade accepted off the table brings a card you have as one more copy, named in the message", xd.st === "done" && xd.n === xd.n0 + 1 && xd.toast.includes(`accepted. ${xname} is yours.`)]);
   // The rooms (round 21): an imported collection chasing every card it's missing. The map one pinch above the wall,
   // the Feed's listings (the wall's deals, seeded, several for some cards), a listing's own sheet, the Chase lens's
   // want list, a flick between rooms, and the trade checker.
@@ -203,6 +215,10 @@ for (const dpr of [1, 2]) {
   await p.click('[data-lens="chase"]'); await wait(1600);
   const lens = await p.evaluate(() => { const lead = new Set(__w.groupsNow.flatMap((g) => (g.done ? [] : (g.lead || []).map((c) => c.base || c)))), chased = __w.cards.filter(__w.isChase).length; return { lead: lead.size, chased, toast: document.getElementById("toast").textContent }; });
   R.push(["the Chase lens still lifts the want list, every card you chase", lens.lead > 0 && lens.lead === lens.chased && /Your chase list/.test(lens.toast) && /Feed/.test(lens.toast)]);
+  // Messages sit in the top bar, in its colours, not as a dark banner over the wall.
+  const msg = await p.evaluate(() => { const t = document.getElementById("toast"), r = t.getBoundingClientRect(), s = document.querySelector(".top .strip").getBoundingClientRect(), cs = getComputedStyle(t);
+    return { inBar: r.top >= s.top - 1 && r.bottom <= s.bottom + 1 && r.left >= s.left - 1 && r.right <= s.right + 1, bg: cs.backgroundColor, bar: getComputedStyle(document.querySelector(".top .strip")).backgroundColor }; });
+  R.push(["a message sits inside the top bar, in the bar's colours, not over the wall", msg.inBar && msg.bg === msg.bar]); // round 23: the same field as the bar, never a dark banner
   await p.click('[data-lens="have"]'); await wait(1600);
   await f.drag(100, 450, 460, 120, 200); await wait(900); R.push(["a sideways flick on the wall the other way goes to the Feed", (await where()).at === "feed"]);
   await f.pageDrag(300, 450, 455, 120, -200); await wait(900); R.push(["a sideways flick on the Feed's page comes back to Chase", (await where()).at === "chase" && (await where()).pages.length === 0]);
@@ -241,7 +257,7 @@ for (const dpr of [1, 2]) {
     });
     await p.reload({ waitUntil: "load" }); await wait(1200);
     const fl = () => p.evaluate(() => ({ lens: __w.state.lens, show: __w.state.show, value: __w.state.value, time: __w.state.time, mode: __w.mode, order: __w.state.order, corder: __w.state.corder, on: __w.filtersOn(), chip: document.getElementById("fchip").hidden ? null : document.getElementById("fchip-open").textContent, lit: document.getElementById("filter").getAttribute("aria-pressed") === "true", trans: __w.state.trans?.kind || null, view: __w.view, sheet: !document.getElementById("filter-menu").hidden, toast: document.getElementById("toast").textContent }));
-    const sheet = async (sel) => { if (!(await fl()).sheet) { await p.click("#filter"); await wait(150); } await p.click(sel); await wait(120); };
+    const sheet = async (sel) => { if (!(await fl()).sheet) { await p.evaluate(() => document.getElementById("toast").classList.remove("show")); await p.click("#filter"); await wait(150); } await p.click(sel); await wait(120); }; // a message in the bar covers Filters until it's tapped away (round 23)
     const done = async () => { if ((await fl()).sheet) { await p.click("#f-done"); await wait(150); } };
     const bar = await p.evaluate(() => [...document.querySelectorAll(".lens [data-lens]")].map((b) => `${b.dataset.lens}:${b.textContent}`).join(","));
     let s = await fl();

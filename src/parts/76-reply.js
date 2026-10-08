@@ -100,12 +100,13 @@ function completeTrade(rec, t, landAt = 0) {
 const tradedText = (get, give, t) => `${names(get)} ${get.length === 1 ? "is" : "are"} yours. ${names(give)} went to ${t.name}.`;
 
 // ----- the crossing in the wall: yours lift out through the top edge, theirs fly in and land in their pockets -----
-let crossing = null; // { rec, t, give, get, n }
+let crossing = null; // { rec, t, give, get, got, still, n }: get are the cards new to you, got everything you get
 const flights = []; // { c, out, edge, slot, last, t0, dur, then }
 function crossOnWall(rec, t) {
-  const give = toCards(rec.give).filter((c) => c.owned), get = toCards(rec.get).filter((c) => !c.owned);
+  // A card you get that you already have arrives as one more copy (round 17), as it does at the table.
+  const give = toCards(rec.give).filter((c) => c.owned), got = toCards(rec.get), get = got.filter((c) => !c.owned), more = got.filter((c) => c.owned);
   if (reduced || document.body.classList.contains("listmode") || crossing || bnd.on) { completeTrade(rec, t); if (lifted) liftLayout(true); kick(); return; }
-  crossing = { rec, t, give, get, still: [], n: give.length + get.length };
+  crossing = { rec, t, give, get, got, still: [], n: give.length + got.length };
   const now = performance.now(), step = () => { if (crossing && --crossing.n <= 0) finishCross(); };
   quietLayout = true;
   give.forEach((c, i) => {
@@ -115,16 +116,17 @@ function crossOnWall(rec, t) {
   });
   quietLayout = false; persistCopies();
   get.forEach((c, i) => flyCard(c, false, now + 260 + i * 80, 780, () => { quietLayout = true; setOwned(c, true, { quiet: true }); quietLayout = false; delete chasing[c.id]; persistChase(); step(); }));
+  more.forEach((c, i) => flyCard(c, false, now + 260 + (get.length + i) * 80, 780, () => { setN(c, nOf(c) + 1); persistCopies(); relayoutSoon(); step(); }));
   if (!crossing.n) finishCross();
 }
 function finishCross() {
-  const { rec, t, give, get, still } = crossing; crossing = null;
+  const { rec, t, give, got, still } = crossing; crossing = null;
   for (const c of give) c.away = false;
   rec.state = "done"; rec.doneAt = Date.now(); persistTrades();
   syncBadge(); updateCount(); drawList();
   if (lifted) liftLayout(true);
   tick(14); kick();
-  toast(`${rec.by === "them" ? `${t.name} accepted. ` : ""}${copyTradedText(get, give, still || [], t)}`);
+  toast(`${rec.by === "them" ? `${t.name} accepted. ` : ""}${copyTradedText(got, give, still || [], t)}`);
 }
 // Where the card's tile is on screen right now, or null if it isn't drawn (another set open).
 function tileRectOf(c) {

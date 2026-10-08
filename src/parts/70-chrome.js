@@ -8,8 +8,35 @@ function toast(t, action = null, label = "Undo") {
     toastEl.append(" ", b);
   }
   toastEl.classList.toggle("act", Boolean(action));
+  placeToast();
   toastEl.classList.add("show"); clearTimeout(toast.t); toast.t = setTimeout(() => toastEl.classList.remove("show"), action ? 4500 : 2200);
 }
+// A message takes the top bar for a moment, from the search to the right end (in the trade binder, its title), in the
+// bar's own colours: never a banner over the wall. A tap on the bar goes through to it, and the message steps aside.
+function placeToast() {
+  const R = (el) => el?.getBoundingClientRect(), wide = (r) => r && r.width >= 160 && r.top + r.height > 0;
+  const cl = document.body.classList;
+  let r = null;
+  if (cl.contains("inbinder") && !cl.contains("trading")) {
+    const b = R(document.getElementById("bbar")), s = R(document.getElementById("bb-show"));
+    if (b && s) r = { left: b.left + 46, top: b.top + 2, width: s.left - 8 - (b.left + 46), height: b.height - 4 };
+  }
+  if (!wide(r)) {
+    const q = R(document.getElementById("search")), t = R(document.querySelector(".top .strip"));
+    if (q && q.width > 0 && t) r = { left: q.left, top: t.top + 3, width: t.right - 3 - q.left, height: t.height - 6 }; // filters, settings and about wait under it; Back and Mark stay in reach
+  }
+  if (!wide(r)) {
+    const t = R(document.querySelector(".top .strip")), right = innerWidth - Math.max(10, SAFE.right || 0);
+    r = t && t.width ? { left: t.right + 8, top: t.top + 5, width: right - t.right - 8, height: t.height - 10 } : null;
+    if (!wide(r)) r = { left: 10, top: (t?.top ?? 10) + 5, width: innerWidth - 20, height: 40 };
+  }
+  Object.assign(toastEl.style, { left: `${Math.round(r.left)}px`, top: `${Math.round(r.top)}px`, width: `${Math.round(r.width)}px`, minHeight: `${Math.round(r.height)}px` });
+}
+// The bar changes under a message (a set opens and Back and Mark come in): it moves with the search it sits over.
+if (window.ResizeObserver) new ResizeObserver(() => { if (toastEl.classList.contains("show")) placeToast(); }).observe(document.getElementById("search"));
+// A message takes no taps but its button's: a tap on the bar reaches what's under it (Filters, settings, the search),
+// and the message steps aside for it.
+addEventListener("pointerdown", (e) => { if (toastEl.classList.contains("show") && e.target.closest?.(".top .strip, #bbar")) { toastEl.classList.remove("show"); clearTimeout(toast.t); } }, true);
 // A sheet coming up takes focus for the keyboard without lighting a button for a tap: after a key, its button takes
 // focus (with its ring); after a touch or a click, the sheet itself does (no ring), and Tab still reaches the button.
 let keyed = false;
@@ -133,3 +160,4 @@ function setListMode(on) {
 }
 document.getElementById("to-list").onclick = () => { prefs.close(); setListMode(true); };
 document.getElementById("to-wall").onclick = () => setListMode(false);
+setTimeout(() => { if (window.__w) Object.defineProperties(window.__w, { toast: { value: toast } }); }, 0);

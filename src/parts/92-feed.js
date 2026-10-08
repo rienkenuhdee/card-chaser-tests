@@ -339,18 +339,31 @@ function openListing(id) {
     ${mine}
     <p class="ls-fine">A guide to where to look first, not a promise. The listings here are made up for the demo.</p>
   </div>
-  <div class="ls-foot"><button type="button" class="mbtn" data-ls-close>Close</button><button type="button" class="mbtn primary" data-ls-open>Open on ${esc(openOn(L))}</button></div>`;
+  <div class="ls-foot"><button type="button" class="mbtn" data-ls-close>Close</button>${(() => { const u = listingUrl(L); return u ? `<a class="mbtn primary" data-ls-open href="${esc(u)}" target="_blank" rel="noopener">Open on ${esc(openOn(L))}</a>` : `<button type="button" class="mbtn primary" data-ls-open>Open on ${esc(openOn(L))}</button>`; })()}</div>`;
   if (!lsheet.open) lsheet.showModal();
   lsheet.querySelector(".ls-scroll").scrollTop = 0;
   focusFor(lsheet.querySelector("[data-ls-open]"), lsheet);
   tick(5);
 }
 const agoLeft = (ms) => { const h = Math.floor(ms / 3600e3), m = Math.max(1, Math.round((ms % 3600e3) / 60e3)); return ms <= 0 ? "moments" : h >= 24 ? `${Math.floor(h / 24)} d ${h % 24} h` : h ? `${h} h ${m} min` : `${m} min`; };
+// The listings are made up, so Open goes to the card on the real site: a search for its name (the made-up sets and
+// numbers would find nothing), where its real listings are. The made-up shops have nowhere to go.
+function listingUrl(L) {
+  const c = L.c, q = encodeURIComponent(c.name);
+  if (L.src === "ebay") return `https://www.ebay.com/sch/i.html?_nkw=${q}+pokemon+card`;
+  if (L.src === "tcgplayer") return `https://www.tcgplayer.com/search/pokemon/product?productLineName=pokemon&q=${q}`;
+  if (L.src === "reddit") return `https://www.reddit.com/r/${L.sub}/search/?q=${encodeURIComponent(c.name)}&restrict_sr=1&sort=new`;
+  if (L.src === "local") {
+    const town = L.seller.split(", ")[1]?.toLowerCase();
+    return L.seller.startsWith("Craigslist") ? `https://${town}.craigslist.org/search/sss?query=${encodeURIComponent(`pokemon ${c.name}`)}` : `https://www.facebook.com/marketplace/search/?query=${encodeURIComponent(`pokemon ${c.name}`)}`;
+  }
+  return null;
+}
 function closeListing() { if (lsheet.open) lsheet.close(); }
 lsheet.addEventListener("close", () => { lsOpen = null; });
 lsheet.addEventListener("click", (e) => {
   if (e.target === lsheet || e.target.closest("[data-ls-close]")) { closeListing(); return; } // a tap outside the sheet, or Close
-  if (e.target.closest("[data-ls-open]")) { toast(`In the app this opens the listing on ${openOn(lsOpen)}. The listings here are made up.`); tick(4); return; }
+  if (e.target.closest("button[data-ls-open]")) { toast(`${openOn(lsOpen)} is a made-up shop in this test, so there's no page to open.`); tick(4); return; }
   const o = e.target.closest("[data-other]"); if (o) { openListing(o.dataset.other); return; }
   if (e.target.closest("[data-mine]") && lsOpen) { const c = lsOpen.c; closeListing(); toCard(c); }
 });

@@ -21,8 +21,14 @@
   flick wins), position second. A small pinch never closes a set.
 - **Familiar on top of novel.** Back button, pull to scroll, tap to open, press and hold to mark, Mark to select a
   handful like Photos. The mosaic is novel; how you move through it shouldn't be.
-- **A collector's archive, not a toy.** Archivo (condensed for names, tabular figures for prices), hairlines, small
-  radii, color from the cards themselves. Rounded, bouncy type read as "comic sans".
+- **A collector's archive, not a toy; the app is one painting.** A geometric sans, large and confident (Futura on the
+  phone, no web font needed), tabular figures. Square corners, flat fields of red, yellow, blue, black and white held
+  in black rules, no glass or shadows; the map is one Mondrian and every room is one of its rectangles (round 23, De
+  Stijl). Rounded, bouncy type read as "comic sans". The cards keep their own fuller palette: they're what's hung on
+  the painting.
+- **Things move along straight lines.** Across, then up or down; nothing overshoots or springs (round 23).
+- **A look Ryan loves lands exactly as he saw it.** Fixes to it are offered, not folded in (round 23: a harvest that
+  "fixed" radical's weak spots lost what he loved about it, and went back to the variant as previewed).
 - **Lenses over pages.** Collection and Chase recolor or rearrange what you're looking at instead of navigating away
   (Chase deals your chase list out of the wall), as long as the other flies it all home and the wall is exactly as it
   was. What used to be the Need lens is a filter now: Show (All / Missing / Have), Color by, Group by and Time sit in
@@ -288,7 +294,40 @@ decisions in hand (it removed Remove set, which Ryan had asked to keep; restored
 Show: Missing and the Chase lens both earn a place once everything missing is chased; greyed art in missing pockets;
 the medal art is still the loudest thing on screen.
 
+**Round 23: Bauhaus and Mondrian.** What the Wall looks like with Bauhaus and Piet Mondrian as its visual language.
+Safe: the same app on a Bauhaus design system (primaries plus black on warm paper, Futura, square or circle, each
+primary one meaning, the full art a poster: one disc on a flat field). Bold: heavy black rules as the structure, every
+set a ruled rectangle whose header fills with colour as far as you've got, the cards in a thin-ruled grid, the map's
+rectangles sized by what's in them, the trade binder's cover a small Mondrian. Radical: the app as one painting. The
+map is a single Mondrian (each room one rectangle, full bleed, the rules shared), the rules carry into the rooms (the
+wall's panels are fields whose gutters are rules, the trophy room's panels and the pages are cut by rules), everything
+moves along straight lines (across, then down), trophies are Bauhaus primitives (the kind is the shape: square,
+circle, triangle), the type is geometric, the chrome flat and square. Kept: radical, exactly as previewed (Ryan: "LOVE THE RADICAL. Harvest that"). A first harvest folded it into the
+parts and fixed the critic's weak spots in its own terms (light rules in dark mode, a held pinch with no empty fields,
+tier notches, an ink lens, neutral count fields, a condensed face for names), and added safe's poster full art and
+bold's Mondrian binder cover. Ryan: "Not a fan of how it was integrated. I liked how radical looked exactly." So the
+Wall is radical's own part (`95-de-stijl.js`) and stylesheet, pixel-identical to the preview on the wall, the map and
+every room, light, dark and on its side; the critic's points are open questions instead. Dropped: bold's set-title
+progress fields (Ryan: "cool theory but distracting appearance"), and everything else from safe and bold. Also on this
+branch: messages sit inside the top bar, in its field and rules, instead of a black banner over the wall (Ryan: "it's
+always been in the way"); they let taps through to the bar and step aside, and follow the search when the bar changes
+under them. The listing sheet's Open on eBay, TCGplayer, Reddit, Craigslist or Marketplace is a real link to a search
+for the card (the listings are made up; the made-up shops say so). Learned: when Ryan loves a variant's look, the
+harvest is the variant; "normalize" applies to how you move through it, not to how it looks. Not verified on an
+iPhone: the tests run with a fallback sans, so Futura is unseen here. Before merging, an audit diffed every function
+the painting redefines against what it replaces (nothing dropped) and walked every kept feature of rounds 1 to 23 at
+both sizes, light, dark and reduced motion: one older bug fixed (a trade accepted off the table dropped a card you
+already had instead of adding a copy, round 17's model), with a gesture check.
+
 ## Open questions (next rounds)
+
+- Production parity (audit, round 23). What production has that the Wall doesn't yet, beyond what's out of scope for
+  an on-device prototype (accounts, sync, real push, PSA lookups): most of the Feed's sorts and filters (12 sorts down
+  to 4; raw or slab, grade, lots, too cheap, hide, max price), adding a shop in Source, "Fill your Dex" in the Feed,
+  graded slabs and grade wants, price history and the collection's value over time, savings stats from "I bought it",
+  favourites and priority stars, print placeholders, card reports, the card sheet's Graded tab, and the completion
+  ceremony. Replaced, not lost: the collection grid (the wall, search, Filters, the list view), the card sheet (the
+  card up close), the public trade page (Show mode and Someone new, in person). Online trading stays pinned (round 18).
 
 - A deal arriving off screen: one tap from the line to the offers, and whether the arrival should nudge the wall.
 - Painting past the screen's edge: should a sweep scroll the binder as it goes?
@@ -298,4 +337,5 @@ the medal art is still the loudest thing on screen.
 - The import: a real import without acquisition dates loses the story (round 20); and the Complete Dex can't be chosen on the import path, only in Choose your sets.
 - A chase's twins: should a custom panel's cards also lead in the Chase lens, or only their set's copy? And should a chase hide from the wall once it's complete?
 - Trophies: the worth line is a made-up year; real data would start at the finish date ("Up $27 since you finished"). Medals: whether Undo after a mint should take a medal back (production keeps it), the full-screen completion ceremony production plays, and the server-side luck roll when the two merge. Sharing a trophy (safe's picture card), and whether a sub-chase of a finished set should fold into the set's plaque. The room hides the lenses; Value could recolour the engravings.
-- Bringing the wall into the real app: the rooms map is the navigation model (round 21); production's tabs sit at the top, and a merge would put the map where they are. 
+- Bringing the wall into the real app: the rooms map is the navigation model (round 21); production's tabs sit at the top, and a merge would put the map where they are.
+- The painting (round 23), the critic's points, offered rather than applied: in dark mode the rules are black on charcoal, so the wall's painting fades; a held pinch to the map shows empty fields mid-way (across, then down); trophy tiers as hues (bronze blue, silver red, gold yellow) have no order to read; the yellow active lens shares yellow with earned; the count fields take the set's nearest primary; Futura's width cuts set names sooner ("Neo G…"). Also: gold still marks a chased card while red is the Chase room, card scans come in full colour inside the painting, and some motion outside the map still arcs (the trade table's lifts, the reply flights).

@@ -14,8 +14,9 @@ const R = [];
 for (const [dark, width, height] of [[false, 390, 844], [true, 390, 844], [false, 844, 390], [true, 844, 390], [false, 1440, 900]]) {
   const tag = `${width > 1000 ? "desktop" : width > height ? "landscape" : "phone"}-${dark ? "dark" : "light"}`; // landscape: a phone on its side (round 22)
   const p = await phone(browser, file, { dark, motion: false, dpr: 2, width, height });
-  // One choice in the Filters sheet: open it, tap, and close it again (Time closes it by itself).
-  const pick = async (sel, close = true) => { if (await p.$eval("#filter-menu", (e) => e.hidden)) { await p.click("#filter"); await wait(120); } await p.click(sel); await wait(250); if (close && !(await p.$eval("#filter-menu", (e) => e.hidden))) { await p.click("#f-done"); await wait(120); } };
+  // One choice in the Filters sheet: open it, tap, and close it again (Time closes it by itself). A message in the bar
+  // covers Filters until it is tapped away (round 23).
+  const pick = async (sel, close = true) => { if (await p.$eval("#filter-menu", (e) => e.hidden)) { await p.evaluate(() => document.getElementById("toast").classList.remove("show")); await p.click("#filter"); await wait(120); } await p.click(sel); await wait(250); if (close && !(await p.$eval("#filter-menu", (e) => e.hidden))) { await p.click("#f-done"); await wait(120); } };
   for (const mode of ["set", "value", "rarity", "type"]) {
     if (mode !== "set") await pick(`[data-group="${mode}"]`);
     for (const lens of ["have", "chase"]) {
@@ -31,7 +32,7 @@ for (const [dark, width, height] of [[false, 390, 844], [true, 390, 844], [false
     }
   }
   await pick('[data-group="set"]');
-  await p.click("#filter"); await wait(150);
+  await p.evaluate(() => document.getElementById("toast").classList.remove("show")); await p.click("#filter"); await wait(150);
   if (width < 700) await p.screenshot({ path: path.join(out, `${tag}-filters.png`) });
   await p.click("#f-done"); await wait(120);
   // open the first group, screenshot the binder, and a card up close
