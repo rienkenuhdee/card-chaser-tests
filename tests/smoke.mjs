@@ -137,6 +137,18 @@ for (const dark of [false, true]) {
   R.push([`a frame that throws on the way to the map doesn't freeze it: the move lands (${s.map ? "on the map" : "not on the map"}) and the top bar names the snag`, s.map && !s.trans && /test fault in pieces/.test(s.err) && /snag/.test(s.toast) && px > 0 && !p.errors.length]);
   await p.close();
 }
+// A gradient at a bad number (Safari throws "The provided value is non-finite") is drawn at 0 instead: the move lands
+// with no snag, and the top bar names where the number came from.
+{
+  const p = await phone(browser, file, { motion: true });
+  await p.evaluate(() => { localStorage.setItem("wall-welcomed", "1"); localStorage.setItem("wall-map-seen", "1"); }); await p.reload({ waitUntil: "load" }); await wait(1500);
+  const t = await installTouch(p);
+  await p.evaluate(() => __w.armFault("nan"));
+  await t.pinch(195, 420, 260, 70, 500); await wait(1500);
+  const s = await p.evaluate(() => ({ map: __w.rooms.map, trans: Boolean(__w.state.trans), err: window.__frameError || "", bad: window.__badNumber || "", toast: document.getElementById("toast").textContent }));
+  R.push([`a gradient at a bad number is drawn anyway and named (${s.bad || "not named"}), and the move lands`, s.map && !s.trans && !s.err && /createLinearGradient in drawPieces/.test(s.bad) && /bad number/.test(s.toast) && !p.errors.length]);
+  await p.close();
+}
 await browser.close();
 const bad = report(R);
 console.log(`\nScreenshots: ${path.relative(process.cwd(), out)}`);

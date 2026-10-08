@@ -674,7 +674,7 @@ function drawPieces(k, r, A, R, RW, now) {
     if (x0 > vw || x1 < 0 || y0 > vh || y1 < 0) continue;
     const f = { x: r.x + p.dx, y: r.y + p.dy, w: r.w, h: r.h };
     ctx.save(); ctx.beginPath(); ctx.rect(x0, y0, x1 - x0, y1 - y0); ctx.clip();
-    testFault("pieces"); dsFrame(f, RW); drawCard(k, f, now, 1);
+    testFault("pieces"); testFault("nan"); dsFrame(f, RW); drawCard(k, f, now, 1);
     ctx.restore(); curFont = "";
   }
   // Where two pieces of one room have parted, the cut between them is a rule.
