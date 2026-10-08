@@ -51,7 +51,7 @@ function focusFor(el, box) {
 const about = document.getElementById("about");
 document.getElementById("info").onclick = () => about.showModal();
 document.getElementById("about-close").onclick = () => about.close();
-document.getElementById("reset").onclick = () => { saved = {}; persist(); try { for (const k of ["wall-chase", "wall-chases", "wall-scope", "wall-done", "wall-spares", "wall-copies", "wall-paid", "wall-trades", "wall-welcomed", "wall-imported", "wall-sets", "wall-lens", "wall-mode", "wall-value", "wall-show", "wall-order", "wall-corder", "wall-feed-view", "wall-medals", "wall-dated", "wall-arrival", "wall-feed-seen", "wall-sources-off", "wall-map-seen", "wall-checker", "wall-tb-hint", "wall-graded", "wall-favs", "wall-priority"]) localStorage.removeItem(k); } catch { /* fine */ } location.reload(); };
+document.getElementById("reset").onclick = () => { saved = {}; persist(); try { for (const k of ["wall-chase", "wall-chases", "wall-scope", "wall-done", "wall-spares", "wall-copies", "wall-paid", "wall-trades", "wall-welcomed", "wall-imported", "wall-sets", "wall-lens", "wall-mode", "wall-value", "wall-show", "wall-order", "wall-corder", "wall-feed-view", "wall-medals", "wall-dated", "wall-arrival", "wall-feed-seen", "wall-sources-off", "wall-map-seen", "wall-checker", "wall-tb-hint", "wall-graded", "wall-favs", "wall-priority", "wall-shops"]) localStorage.removeItem(k); } catch { /* fine */ } location.reload(); };
 
 // ---------- settings: appearance, the list, reset ----------
 const prefs = document.getElementById("prefs");

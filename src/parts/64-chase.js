@@ -16,7 +16,7 @@ let spares = {};
 try { spares = JSON.parse(localStorage.getItem("wall-spares") || "{}") || {}; } catch { spares = {}; }
 for (const c of cards) c.spare0 = false; // so do your spares
 const isSpare = (c) => c.owned && (spares[c.id] ?? c.spare0);
-// Favourites (parity 4): up to five cards you own, oldest first, shown first in Show mode. A card you take out drops
+// Favorites (parity 4): up to five cards you own, oldest first, shown first in Show mode. A card you take out drops
 // off (it's left out when read, so Undo brings it back). Priority: a ★ on a card you chase (production's).
 let favs = [], prio = {}, prioVer = 0;
 try { favs = (JSON.parse(localStorage.getItem("wall-favs") || "[]") || []).filter((id) => typeof id === "string"); } catch { favs = []; }

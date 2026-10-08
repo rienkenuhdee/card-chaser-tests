@@ -56,7 +56,7 @@ function fillPanel(c, dir) {
     buy.hidden = c.owned; // a card you have: the wall behind it is the way back
     buy.textContent = c.deal && isChase(c) ? `Buy for ${money(c.deal)}` : "Find a copy";
     updateFlag(c);
-    starPanel(c); // favourite or priority (82-stars.js)
+    starPanel(c); // favorite or priority (82-stars.js)
     artPanel(c); // a vintage scan's note (41-art.js)
     fillChips(panelMore, c);
     gradedPanel(c); // what grades ask, and your slabs (79-graded.js)

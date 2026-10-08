@@ -1,5 +1,5 @@
-// ---------- favourites and priority stars (parity 4) ----------
-// Production's two stars, lean. Favourites: up to five cards you own, your showcase, chosen with ☆ on the card up
+// ---------- favorites and priority stars (parity 4) ----------
+// Production's two stars, lean. Favorites: up to five cards you own, your showcase, chosen with ☆ on the card up
 // close and shown first, large, in Show mode of the trade binder (78-trade-binder.js), never offered for trade. A sixth
 // takes the oldest one's place, and the message names it with Undo. Priority: ★ on a card you chase, on the card up
 // close or a Feed row. It leads the Chase lens, its listings score a little higher (production's +4), and the Feed's
@@ -10,11 +10,11 @@ function starPanel(c) {
   const own = (c.base || c).owned, chase = !own && isChase(c);
   starBtn.hidden = !own && !chase;
   if (starBtn.hidden) return;
-  const on = own ? isFav(c) : isPrio(c), word = own ? "Favourite" : "Priority";
+  const on = own ? isFav(c) : isPrio(c), word = own ? "Favorite" : "Priority";
   starBtn.textContent = `${on ? "★" : "☆"} ${word}`;
   starBtn.classList.toggle("on", on);
   starBtn.setAttribute("aria-pressed", String(on));
-  starBtn.title = own ? (on ? "A favourite: first in Show mode" : "Make it a favourite") : (on ? "Priority: first on your chase list" : "Make it a priority");
+  starBtn.title = own ? (on ? "A favorite: first in Show mode" : "Make it a favorite") : (on ? "Priority: first on your chase list" : "Make it a priority");
 }
 starBtn.onclick = () => { const c = state.focus; if (!c) return; if ((c.base || c).owned) toggleFav(c); else togglePrio(c); };
 function starsChanged() {
@@ -26,12 +26,12 @@ function toggleFav(c) {
   const b = c.base || c; if (!b.owned) return;
   const cur = favCards(), was = favs.slice();
   tick(cur.includes(b) ? 4 : 8);
-  if (cur.includes(b)) { favs = cur.filter((x) => x !== b).map((x) => x.id); toast(`${b.name} isn't a favourite any more.`); }
+  if (cur.includes(b)) { favs = cur.filter((x) => x !== b).map((x) => x.id); toast(`${b.name} isn't a favorite any more.`); }
   else if (cur.length >= FAV_MAX) { // a sixth: it takes the oldest one's place, and Undo puts that back
     const old = cur[0];
     favs = [...cur.slice(1), b].map((x) => x.id);
-    toast(`Five favourites at most. ${b.name} replaces ${old.name}, your oldest.`, () => { favs = was; persistStars(); starsChanged(); });
-  } else { favs = [...cur, b].map((x) => x.id); toast(`${b.name} is a favourite. It's first in Show mode.`); }
+    toast(`Five favorites at most. ${b.name} replaces ${old.name}, your oldest.`, () => { favs = was; persistStars(); starsChanged(); });
+  } else { favs = [...cur, b].map((x) => x.id); toast(`${b.name} is a favorite. It's first in Show mode.`); }
   persistStars(); starsChanged();
 }
 function togglePrio(c) {
