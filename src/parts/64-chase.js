@@ -225,8 +225,8 @@ function drawFeedTile(c, x, y, w, h, a, now = performance.now()) {
   ctx.globalAlpha = a;
   const tx = x + pad + mw + pad, tw = x + w - pad - tx;
   ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
-  const arrived = deal && c.dealAt > 0, price = fitText(short(c.deal ?? capOf(c)), tw);
-  ctx.fillStyle = deal ? theme.deal : theme.ink; font(800, 21 * s); ctx.fillText(price, tx, y + pad + 17 * s);
+  const arrived = deal && c.dealAt > 0; font(700, 21 * s, true); const price = fitText(short(c.deal ?? capOf(c)), tw);
+  ctx.fillStyle = deal ? theme.deal : theme.ink; font(700, 21 * s, true); ctx.fillText(price, tx, y + pad + 17 * s);
   if (arrived && c.dealWas) { // a price drop: the old asking price, struck through
     const pw = textW(price); font(600, 12 * s);
     const old = short(c.dealWas), ow = textW(old), ox = tx + pw + 6 * s;
@@ -241,7 +241,7 @@ function drawFeedTile(c, x, y, w, h, a, now = performance.now()) {
     ctx.fillText(fitText(c.dealWas ? `↓ ${ago}` : ago, tw), tx, y + pad + 62 * s);
     if (!c.dealSeen && !state.trans && !shuffle && Date.now() - c.dealAt > 3000 && y >= topPad() - 2 && y + h <= vh - botPad() + 2) lookedAt(c);
   }
-  ctx.fillStyle = theme.ink; font(700, 14 * s, true); ctx.fillText(fitText(c.name, tw), tx, y + h - pad - 13 * s);
+  ctx.fillStyle = theme.ink; fitName(c.name, tw, 700, 14 * s); ctx.fillText(fitText(c.name, tw), tx, y + h - pad - 13 * s);
   ctx.fillStyle = theme.muted; font(500, 11 * s); ctx.fillText(fitText(`${st.code} ${c.num}/${st.printed}`, tw), tx, y + h - pad);
   ctx.globalAlpha = 1;
 }

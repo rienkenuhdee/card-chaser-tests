@@ -36,7 +36,7 @@ const plural1 = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 // under the bar, the pockets as wide as it allows, the dots and the page number along its bottom edge. Who wants a
 // card and its price sit on the card itself, so no line under the pockets takes their height.
 // The map's Trade card draws the classic page (full: false), pockets packed.
-const SHOW_BG = "#0B0C0F", SHOW_PAGE = "#15171C", SHOW_SLEEVE = "#22262E", SHOW_LINE = "#2C313B", SHOW_MUTED = "#9AA0AD", SHOW_PICK = "#3BD597";
+const SHOW_BG = "#0B0C0F", SHOW_PAGE = "#15171C", SHOW_SLEEVE = "#22262E", SHOW_LINE = "#3A3A3A", SHOW_MUTED = "#9AA0AD", SHOW_PICK = "#F1EDE4"; // a pick across the table: a white block (round 23)
 const TB_BAR = 44, TB_ARROW = 44, TB_SLEEVE = 3; // the bar's height, an arrow's column, the sleeve around a card
 function tbGeom(show, only = 0, full = true) {
   const S = SAFE, flat = landPhone(), spread = only || (flat || (vw >= 820 && vh >= 600) ? 2 : 1);
@@ -103,22 +103,23 @@ function tbPaint(i, G) {
   ctx.clearRect(0, 0, G.pw + 2, G.ph + 2);
   const fill = show ? SHOW_PAGE : theme["panel-solid"], line = show ? SHOW_LINE : theme["slot-line"], sleeve = show ? SHOW_SLEEVE : theme.slot;
   const muted = show ? SHOW_MUTED : theme.muted, left = tbLeft(G, i);
-  rr(0.5, 0.5, G.pw - 1, G.ph - 1, two ? (left ? [10, 4, 4, 10] : [4, 10, 10, 4]) : 10); ctx.fillStyle = fill; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = line; ctx.stroke();
+  const rule = show ? SHOW_LINE : theme.rule; // the page is a field in a rule, and each pocket a field in its own (round 23)
+  ctx.fillStyle = fill; ctx.fillRect(0, 0, G.pw, G.ph); ctx.lineWidth = 3; ctx.strokeStyle = rule; ctx.strokeRect(1.5, 1.5, G.pw - 3, G.ph - 3);
   const rx = left ? G.pw - G.ring / 2 : G.ring / 2;
   for (const f of [0.17, 0.5, 0.83]) { ctx.beginPath(); ctx.arc(rx, G.ph * f, two ? 3 : 3.4, 0, Math.PI * 2); ctx.fillStyle = show ? SHOW_BG : theme.bg; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = line; ctx.stroke(); } // the holes the rings go through
   ctx.textBaseline = "alphabetic";
   for (let k = 0; k < 9; k++) {
     const r = tbPocket(G, i, k), c = items[k];
-    rr(r.x - sl, r.y - sl, r.w + sl * 2, r.h + sl * 2, 6); ctx.fillStyle = sleeve; ctx.fill(); // the sleeve
-    ctx.fillStyle = line; ctx.fillRect(r.x - 1, r.y - sl, r.w + 2, 1); // its opening along the top
+    ctx.fillStyle = sleeve; ctx.fillRect(r.x - sl, r.y - sl, r.w + sl * 2, r.h + sl * 2); // the sleeve
+    ctx.lineWidth = 2; ctx.strokeStyle = rule; ctx.strokeRect(r.x - sl - 1, r.y - sl - 1, r.w + sl * 2 + 2, r.h + sl * 2 + 2);
     if (!c) continue;
     if (c.away) { // out on the trade table: the pocket keeps its name
-      ctx.setLineDash([4, 4]); rr(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1, r.w * 0.045); ctx.lineWidth = 1; ctx.strokeStyle = line; ctx.stroke(); ctx.setLineDash([]);
+      ctx.setLineDash([4, 4]); ctx.lineWidth = 1; ctx.strokeStyle = line; ctx.strokeRect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1); ctx.setLineDash([]);
       ctx.textAlign = "center"; ctx.fillStyle = muted; font(600, 11); ctx.fillText("On the table", r.x + r.w / 2, r.y + r.h / 2 + 4);
       continue;
     }
     const pic = tbPic(c, r.w);
-    if (pic) { faceShadow(r.x, r.y, r.w, r.h); ctx.drawImage(pic.bmp, r.x, r.y, r.w, r.h); }
+    if (pic) ctx.drawImage(pic.bmp, r.x, r.y, r.w, r.h);
     else { // the drawn face, at a size that prints no price of its own (the pill has it)
       const W0 = Math.min(r.w, 108), s = r.w / W0;
       ctx.setTransform(dpr * s, 0, 0, dpr * s, dpr * r.x, dpr * r.y);
@@ -126,11 +127,11 @@ function tbPaint(i, G) {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1;
     }
     if (show && bnd.picks.has(c.id)) { // picked across the table
-      ctx.lineWidth = 3.5; ctx.strokeStyle = SHOW_PICK; rr(r.x - 2.5, r.y - 2.5, r.w + 5, r.h + 5, r.w * 0.045 + 2.5); ctx.stroke();
+      ctx.lineWidth = 4; ctx.strokeStyle = SHOW_PICK; ctx.strokeRect(r.x - 2, r.y - 2, r.w + 4, r.h + 4);
       const R = clamp(r.w * 0.11, 9, 14), cx = r.x + r.w - R - 4, cy = r.y + R + 4;
-      ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fillStyle = SHOW_PICK; ctx.fill();
-      ctx.lineWidth = Math.max(2, R * 0.2); ctx.strokeStyle = "#0B0C0F"; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.beginPath();
-      ctx.moveTo(cx - R * 0.45, cy + R * 0.02); ctx.lineTo(cx - R * 0.12, cy + R * 0.36); ctx.lineTo(cx + R * 0.48, cy - R * 0.36); ctx.stroke(); ctx.lineCap = "butt"; ctx.lineJoin = "miter";
+      ctx.fillStyle = SHOW_PICK; ctx.fillRect(cx - R, cy - R, R * 2, R * 2); // a square tick
+      ctx.lineWidth = Math.max(2, R * 0.2); ctx.strokeStyle = "#0B0C0F"; ctx.beginPath();
+      ctx.moveTo(cx - R * 0.45, cy + R * 0.02); ctx.lineTo(cx - R * 0.12, cy + R * 0.36); ctx.lineTo(cx + R * 0.48, cy - R * 0.36); ctx.stroke();
     }
     said.push(...tbOnCard(c, r, pic, show));
   }
@@ -186,31 +187,32 @@ function tbOnCard(c, r, pic, show) {
   }
   return said;
 }
-// The binder's front cover: green board (the Trade room's colour) with a darker spine at its ring side, the title in
-// gold. The same object as the closed binder on the Trade room's page, which opens into the pages.
-const COVER = { light: ["#2F7A52", "#1F5A3B", "#174A30"], dark: ["#2B6B4A", "#1C4F36", "#133B28"] };
+// The binder's front cover (round 23, from bold): a small Mondrian, the spine a black rule at its ring side, red over
+// the title, a little yellow at its side, blue in the far corner. The same object as the closed binder on the Trade
+// room's page (styles.css draws it there), which opens into the pages.
 function tbCoverPaint(G) {
-  const w = G.pw, h = G.ph, [c0, c1, c2] = theme.dark ? COVER.dark : COVER.light, spine = Math.max(10, w * 0.09);
+  const w = G.pw, h = G.ph, spine = Math.max(10, w * 0.09), lw = clamp(w * 0.022, 4, 9);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
   ctx.clearRect(0, 0, w + 2, h + 2);
-  const gr = ctx.createLinearGradient(0, 0, w, h); gr.addColorStop(0, c0); gr.addColorStop(0.6, c1); gr.addColorStop(1, c2);
-  rr(0, 0, w, h, 10); ctx.fillStyle = gr; ctx.fill();
-  ctx.save(); rr(0, 0, w, h, 10); ctx.clip();
-  ctx.fillStyle = "rgb(0 0 0 / .22)"; ctx.fillRect(0, 0, spine, h); // the spine, at the ring side
-  ctx.fillStyle = "rgb(255 255 255 / .10)"; ctx.fillRect(spine, 0, 1.5, h);
-  ctx.strokeStyle = "rgb(255 236 190 / .28)"; ctx.setLineDash([3, 3]); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(spine + 6, 8); ctx.lineTo(spine + 6, h - 8); ctx.stroke(); ctx.setLineDash([]); // stitching
-  const sh = ctx.createLinearGradient(0, 0, w, h * 0.6); sh.addColorStop(0, "rgb(255 255 255 / 0)"); sh.addColorStop(0.45, "rgb(255 255 255 / .07)"); sh.addColorStop(0.55, "rgb(255 255 255 / 0)");
-  ctx.fillStyle = sh; ctx.fillRect(0, 0, w, h);
-  ctx.restore(); curFont = "";
-  ctx.lineWidth = 1; ctx.strokeStyle = "rgb(0 0 0 / .25)"; rr(0.5, 0.5, w - 1, h - 1, 10); ctx.stroke();
-  const cx = spine + (w - spine) / 2, gold = theme.dark ? "#E8BE55" : "#F1CF72";
-  rr(spine + 14, h * 0.3, w - spine - 28, h * 0.26, 6); ctx.lineWidth = 1.2; ctx.strokeStyle = "rgb(241 207 114 / .55)"; ctx.stroke(); // the label's frame, foil
-  ctx.textAlign = "center"; ctx.textBaseline = "alphabetic"; ctx.fillStyle = gold;
-  const fs = clamp(w * 0.105, 13, 26); font(800, fs, true); ctx.fillText(fitText("Trade binder", w - spine - 36), cx, h * 0.43 + fs * 0.36); // the title alone in its frame (the count is beside it, on the page)
+  ctx.fillStyle = theme.panelFill; ctx.fillRect(0, 0, w, h);
+  const vx = spine + (w - spine) * 0.7, y1 = h * 0.2, y2 = h * 0.62, y3 = h * 0.36;
+  ctx.fillStyle = theme["c-red"]; ctx.fillRect(spine, 0, vx - spine, y1);
+  ctx.fillStyle = theme["c-yellow"]; ctx.fillRect(vx, y1, w - vx, y3 - y1);
+  ctx.fillStyle = theme["c-blue"]; ctx.fillRect(vx, y2, w - vx, h - y2);
+  ctx.fillStyle = theme.rule;
+  ctx.fillRect(0, 0, spine, h); // the spine
+  ctx.fillRect(vx - lw / 2, 0, lw, h);
+  ctx.fillRect(spine, y1 - lw / 2, w - spine, lw);
+  ctx.fillRect(spine, y2 - lw / 2, w - spine, lw);
+  ctx.fillRect(vx, y3 - lw / 2, w - vx, lw);
+  ctx.lineWidth = lw; ctx.strokeStyle = theme.rule; ctx.strokeRect(lw / 2, lw / 2, w - lw, h - lw);
+  ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; ctx.fillStyle = theme.ink;
+  const fs = clamp(w * 0.1, 13, 26), tw = vx - spine - lw - 24; font(700, fs);
+  ["Trade", "binder"].forEach((t, k) => ctx.fillText(fitText(t, tw), spine + lw + 12, y1 + lw + fs * 1.15 * (k + 1))); // one word a line, set large
 }
 function tbEnsure(i, G) {
   if (i < -1) return;
-  const key = i === -1 ? `cover|${G.pw}|${G.ph}|${dpr}|${theme.dark ? 1 : 0}|${tbList().length}` : tbKey(i, G), slot = i === -1 ? "cover" : `${G.show ? "s" : "o"}${i}`, had = bnd.cache.get(slot), now = performance.now();
+  const key = i === -1 ? `cover|${G.pw}|${G.ph}|${dpr}|${theme.dark ? 1 : 0}|${theme.rule}|${tbList().length}` : tbKey(i, G), slot = i === -1 ? "cover" : `${G.show ? "s" : "o"}${i}`, had = bnd.cache.get(slot), now = performance.now();
   if (had?.key === key) { had.used = now; return; }
   if (i === -1) tbCoverPaint(G); else tbPaint(i, G);
   const W = Math.ceil(G.pw * dpr), H = Math.ceil(G.ph * dpr), most = 3 * G.spread + 1; // a spread mid-turn needs its pages either side, and the cover

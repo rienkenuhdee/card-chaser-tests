@@ -23,7 +23,7 @@ function placeToast() {
   }
   if (!wide(r)) {
     const q = R(document.getElementById("search")), t = R(document.querySelector(".top .strip"));
-    if (wide(q) && t) r = { left: q.left, top: t.top + 5, width: t.right - 5 - q.left, height: t.height - 10 }; // filters, settings and about wait under it
+    if (q && q.width > 0 && t) r = { left: q.left, top: t.top + 5, width: t.right - 5 - q.left, height: t.height - 10 }; // filters, settings and about wait under it; Back and Mark stay in reach
   }
   if (!wide(r)) {
     const t = R(document.querySelector(".top .strip")), right = innerWidth - Math.max(10, SAFE.right || 0);
@@ -32,6 +32,8 @@ function placeToast() {
   }
   Object.assign(toastEl.style, { left: `${Math.round(r.left)}px`, top: `${Math.round(r.top)}px`, width: `${Math.round(r.width)}px`, minHeight: `${Math.round(r.height)}px` });
 }
+// The bar changes under a message (a set opens and Back and Mark come in): it moves with the search it sits over.
+if (window.ResizeObserver) new ResizeObserver(() => { if (toastEl.classList.contains("show")) placeToast(); }).observe(document.getElementById("search"));
 toastEl.addEventListener("click", (e) => { if (e.target === toastEl) { toastEl.classList.remove("show"); clearTimeout(toast.t); } });
 // A sheet coming up takes focus for the keyboard without lighting a button for a tap: after a key, its button takes
 // focus (with its ring); after a touch or a click, the sheet itself does (no ring), and Tab still reaches the button.

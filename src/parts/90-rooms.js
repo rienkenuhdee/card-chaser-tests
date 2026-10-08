@@ -19,7 +19,7 @@
 // blank screen. The only picture is the wall's on the Chase card, card-sized and reused. A flick between rooms is
 // the same idea sideways (state.trans "hop").
 
-const ROOM_COL = { feed: "c-blue", chase: "c-red", trade: "c-green", medal: "c-yellow", source: "c-blue" }; // production's tab colours
+const ROOM_COL = { feed: "c-blue", chase: "c-red", trade: "c-green", medal: "c-yellow", source: "c-blue" }; // production's tab colours (Trade's "green" is black now: round 23)
 const mapUI = { L: null, press: null, kb: -1, pulse: null, feedIn: null };
 let mapSeenOnce = false;
 try { mapSeenOnce = localStorage.getItem("wall-map-seen") === "1"; } catch { /* fresh */ }
@@ -28,50 +28,55 @@ const mapSeen = () => { if (mapSeenOnce) return; mapSeenOnce = true; try { local
 const mapReady = () => !wel.on && !story && !ar.on && !tbl.on && !marking && !state.focus && !pop.c && !paying() && !document.body.classList.contains("listmode") && !document.querySelector("dialog[open]");
 const SCREEN = () => ({ x: 0, y: 0, w: vw, h: vh });
 
-// ----- the map's layout: Feed along the top, Chase and Trade over Medal in the middle, Source along the bottom -----
-// It reads like production's tab bar: Feed, Chase, Trade, Medal, Source. Chase is the biggest: its card has the wall's
-// own proportions, so the wall shrinks into it without cropping.
+// ----- the map's layout: one painting (round 23) -----
+// The map is a single Mondrian: black rules, white fields and a few primary fields, each room one rectangle of it, full
+// bleed. It reads like production's tab bar: Feed along the top, Chase and Trade over Trophies in the middle, Source
+// along the bottom. Chase is the biggest: under its red field it holds the wall in the wall's own proportions, so the
+// wall shrinks into it without cropping. Adjacent fields' frames make one rule.
 const wallBand = () => ({ x: SAFE.left, y: topPad() - 4, w: vw - SAFE.left - SAFE.right, h: vh - botPad() + 4 - (topPad() - 4) });
-const CARD_HEAD = 56; // a card's name and its count line
+const DS = { HEAD: 58, LENS: 46 }; // a coloured field's height under a room's name; the Chase card's lens strip
+const CARD_HEAD = DS.HEAD;
+const dsRW = () => (landPhone() ? 5 : 6); // the painting's rule
 function mapLayout() {
-  const key = `${vw}|${vh}|${botPad()}|${SAFE.left}|${SAFE.right}`;
+  const key = `${vw}|${vh}|${botPad()}|${SAFE.left}|${SAFE.right}|${SAFE.bottom}`;
   if (mapUI.L?.key === key) return mapUI.L;
   if (landPhone()) return (mapUI.L = mapAcross(key));
-  const W = Math.min(vw - 20, 1180), x0 = Math.round((vw - W) / 2), gap = 10, top = topPad() - 2, bottom = vh - 34, avail = bottom - top;
-  const fH = Math.round(clamp(avail * 0.21, 132, 186)), sH = Math.round(clamp(avail * 0.18, 126, 156));
-  const my = top + fH + gap, mh = avail - fH - sH - gap * 2;
-  const B = wallBand(), asp = B.w / B.h, FOOT = 50;
-  let thH = mh - CARD_HEAD - FOOT, thW = thH * asp;
-  const cMax = W * (vw < 700 ? 0.56 : 0.64);
-  if (thW + 16 > cMax) { thW = cMax - 16; thH = thW / asp; }
-  const cw = Math.round(thW + 16), rx = x0 + cw + gap, rw = W - cw - gap, th = Math.round((mh - gap) / 2);
+  const RW = dsRW(), top = topPad() - 2, bottom = vh - 34, avail = bottom - top;
+  const fH = Math.round(clamp(avail * 0.2, 128, 178)), sH = Math.round(clamp(avail * 0.155, 108, 142));
+  const my = top + fH + RW, mh = avail - fH - sH - RW * 2;
+  const B = wallBand(), asp = B.w / B.h;
+  let thH = mh - DS.HEAD - DS.LENS - RW * 2, thW = thH * asp;
+  const cMax = vw * (vw < 700 ? 0.58 : 0.62);
+  if (thW > cMax) { thW = cMax; thH = thW / asp; }
+  const cw = Math.round(thW), rx = cw + RW, rw = vw - rx, th = Math.round((mh - RW) * 0.5);
   const r = {
-    feed: { x: x0, y: top, w: W, h: fH },
-    chase: { x: x0, y: my, w: cw, h: mh },
+    feed: { x: 0, y: top, w: vw, h: fH },
+    chase: { x: 0, y: my, w: cw, h: mh },
     trade: { x: rx, y: my, w: rw, h: th },
-    medal: { x: rx, y: my + th + gap, w: rw, h: mh - th - gap },
-    source: { x: x0, y: my + mh + gap, w: W, h: sH },
+    medal: { x: rx, y: my + th + RW, w: rw, h: mh - th - RW },
+    source: { x: 0, y: my + mh + RW, w: vw, h: sH },
   };
-  const thumb = { x: x0 + (cw - thW) / 2, y: my + CARD_HEAD, w: thW, h: thH };
-  return (mapUI.L = { key, r, thumb, hintY: vh - 14 });
+  const thumb = { x: 0, y: my + DS.HEAD + RW, w: cw, h: thH };
+  return (mapUI.L = { key, r, thumb, RW, top, bottom, hintY: vh - 13 });
 }
 // On a phone on its side (round 22) the map reads across, in the tab bar's order: Feed, then Chase (the biggest, the
-// wall's own proportions), then Trade over Medal, then Source, each a column clear of the notch.
+// wall's own proportions), then Trade over Trophies, then Source, each a column clear of the notch.
 function mapAcross(key) {
-  const gap = 10, x0 = 10 + SAFE.left, W = vw - 20 - SAFE.left - SAFE.right, top = topPad() - 2, bottom = vh - SAFE.bottom - 30, h = bottom - top;
-  const B = wallBand(), asp = B.w / B.h, FOOT = 50, U = W - gap * 3;
-  let cw = Math.round(Math.min(U * 0.42, U - 3 * 150)), thW = cw - 16, thH = thW / asp; // the others keep a readable width
-  if (thH > h - CARD_HEAD - FOOT) { thH = h - CARD_HEAD - FOOT; thW = thH * asp; cw = Math.round(thW + 16); }
-  const sw = Math.round((U - cw) / 3), fx = x0, cx = fx + sw + gap, tx = cx + cw + gap, sx = tx + sw + gap, sW = x0 + W - sx, th = Math.round((h - gap) / 2);
+  const RW = dsRW(), x0 = SAFE.left, W = vw - SAFE.left - SAFE.right, top = topPad() - 2, bottom = vh - SAFE.bottom - 28, h = bottom - top;
+  const B = wallBand(), asp = B.w / B.h, U = W - RW * 3;
+  let cw = Math.round(Math.min(U * 0.42, U - 3 * 150)), thW = cw, thH = thW / asp; // the others keep a readable width
+  const maxH = h - DS.HEAD - DS.LENS - RW * 2;
+  if (thH > maxH) { thH = maxH; thW = thH * asp; cw = Math.round(thW); }
+  const sw = Math.round((U - cw) / 3), fx = x0, cx = fx + sw + RW, tx = cx + cw + RW, sx = tx + sw + RW, sW = x0 + W - sx, th = Math.round((h - RW) / 2);
   const r = {
     feed: { x: fx, y: top, w: sw, h },
     chase: { x: cx, y: top, w: cw, h },
     trade: { x: tx, y: top, w: sw, h: th },
-    medal: { x: tx, y: top + th + gap, w: sw, h: h - th - gap },
+    medal: { x: tx, y: top + th + RW, w: sw, h: h - th - RW },
     source: { x: sx, y: top, w: sW, h },
   };
-  const thumb = { x: cx + (cw - thW) / 2, y: top + CARD_HEAD, w: thW, h: thH }; // under its name, the lenses under it, and the set closest to done in what's left
-  return { key, r, thumb, hintY: vh - SAFE.bottom - 12 };
+  const thumb = { x: cx, y: top + DS.HEAD + RW, w: cw, h: thH }; // under its name, the lenses under it, and the set closest to done in what's left
+  return { key, r, thumb, RW, top, bottom, hintY: vh - SAFE.bottom - 10 };
 }
 function mapHit(x, y, nearest = false) {
   const L = mapLayout();
@@ -103,7 +108,7 @@ const wallPic = { cv: null, key: "" };
 function wallThumb(D, now) {
   const key = `${Math.round(D.w)}|${Math.round(D.h)}|${vw}|${vh}|${dpr}|${theme.bg}|${state.lens}|${state.value ? 1 : 0}|${state.time ? Math.round(state.t / 864e5) : 0}|${mode}|${wallVer}|${Math.round(room.on ? room.wallScroll : mScroll)}|${scan.last}|${state.matches ? state.matches.size : -1}`;
   if (wallPic.key === key && wallPic.cv) { ctx.drawImage(wallPic.cv, D.x, D.y, D.w, D.h); return; }
-  ctx.save(); rr(D.x, D.y, D.w, D.h, 6); ctx.clip(); drawRoomAt("chase", wallBand(), D, now + 4000); ctx.restore(); curFont = "";
+  ctx.save(); rr(D.x, D.y, D.w, D.h); ctx.clip(); drawRoomAt("chase", wallBand(), D, now + 4000); ctx.restore(); curFont = "";
   if (D.x < 0 || D.y < 0 || D.x + D.w > vw || D.y + D.h > vh) return; // not all on screen yet: drawn, not kept
   const k = Math.min(dpr, 2), W = Math.max(1, Math.round(D.w * k)), H = Math.max(1, Math.round(D.h * k));
   const cv = wallPic.cv || (wallPic.cv = document.createElement("canvas"));
@@ -125,12 +130,12 @@ function syncPages() {
   for (const [id, el] of Object.entries(PAGES)) { const want = on.has(id); if (el.hidden === want) { el.hidden = !want; if (want) renderPage(id); } }
 }
 function renderPage(id) { if (id === "feed") renderFeed(); else if (id === "trade") renderTrade(); else if (id === "source") renderSource(); }
-// A page at its place in a move to or from the map: scaled into D, clipped to its card R, fading as the card's face
+// A page at its place in a move to or from the map: scaled into D, cut square to its field R, fading as the card's face
 // comes up under it.
 function pageAt(el, R, D, a) {
   const k = D.w / vw, l = (R.x - D.x) / k, t = (R.y - D.y) / k, w = R.w / k, h = R.h / k;
   el.style.transform = `translate(${D.x.toFixed(2)}px, ${D.y.toFixed(2)}px) scale(${k.toFixed(4)})`;
-  el.style.clipPath = `inset(${t.toFixed(1)}px ${(vw - l - w).toFixed(1)}px ${(vh - t - h).toFixed(1)}px ${l.toFixed(1)}px round ${(14 / k).toFixed(1)}px)`;
+  el.style.clipPath = `inset(${t.toFixed(1)}px ${(vw - l - w).toFixed(1)}px ${(vh - t - h).toFixed(1)}px ${l.toFixed(1)}px)`;
   el.style.opacity = a.toFixed(3);
 }
 function pagesRest() { for (const el of Object.values(PAGES)) { el.style.transform = ""; el.style.clipPath = ""; el.style.opacity = ""; } }
@@ -204,42 +209,83 @@ function stepMapTrans(now, T) {
   state.trans = null; T.done(T);
   return true;
 }
-// The geometry of a move at q: the room's rect R (full screen to its card), what's drawn into it (D, scaled to the
-// card's width), and how far the card's own face has come up (fb).
+// ----- the move between a room and the map, along straight lines (round 23) -----
+// q: 0 the room, 1 the map. Up to the map the room narrows to its column first, then closes to its row; into a room
+// it's the reverse (a room that already spans the screen one way moves in one phase). Every field carries its own
+// rules, so they ride out to the screen's edges with it. The painting is never empty: while the room narrows it keeps
+// its full size, cut by its edges like a window, and only shrinks into its card as it closes to its row; and the rest
+// of the painting is cut along the room's column (dsPieces), so whatever stands beside the column arrives whole in the
+// first phase, at its own height, and what is above and below the room comes in with its edges in the second.
+function dsAxes(q, A) {
+  if (reduced) { const s = q < 0.5 ? 0 : 1; return [s, s]; }
+  if (A.w >= vw * 0.9 || A.h >= vh * 0.7) { const e = ease(q); return [e, e]; }
+  return [ease(clamp(q / 0.6, 0, 1)), ease(clamp((q - 0.4) / 0.6, 0, 1))];
+}
+const dsLerp = (a, b, k) => a + (b - a) * k;
+// The geometry of a move at q: the room's field R (the screen, narrowing, then closing to its card), what's drawn into
+// it (D: the room at its own size until it closes, then shrinking to the card's width), and how far the card's own
+// face has come up (fb).
 function mapGeom(T, use) {
-  const L = mapLayout(), A = L.r[T.room], e = reduced ? (T.q < 0.5 ? 0 : 1) : ease(clamp(T.q, 0, 1));
-  const R = lerpRect(SCREEN(), A, e), fb = clamp((e - 0.55) / 0.4, 0, 1), k1 = A.w / vw;
-  const D = lerpRect(SCREEN(), { x: A.x, y: A.y - (topPad() - 8) * k1, w: A.w, h: vh * k1 }, e);
-  use(R, D, fb, e, L, A);
+  const L = mapLayout(), A = L.r[T.room], q = clamp(T.q, 0, 1), [ex, ey] = dsAxes(q, A);
+  const R = { x: A.x * ex, y: A.y * ey, w: dsLerp(vw, A.w, ex), h: dsLerp(vh, A.h, ey) };
+  const k = dsLerp(1, A.w / vw, ey), D = { x: R.x, y: R.y - (topPad() - 8) * k * ey, w: vw * k, h: vh * k };
+  const fb = reduced ? (q < 0.5 ? 0 : 1) : clamp((q - 0.55) / 0.4, 0, 1);
+  use(R, D, fb, ease(q), L, A, ex, ey);
+}
+// A field's frame: the rule around it, as wide as the painting's rules (adjacent frames make one rule).
+function dsFrame(r, RW) { ctx.fillStyle = theme.rule; ctx.fillRect(r.x - RW, r.y - RW, r.w + RW * 2, r.h + RW * 2); }
+// Where another room stands while one moves (A its place on the map, R where it is now), as up to three pieces cut
+// along A's column: the piece in the column moves up or down with R's edge, the pieces beside it sideways with R's
+// sides. Each: the strip [x0, x1] of the room's frame on the map, and how far it has moved.
+function dsPieces(r, A, R, RW) {
+  const c0 = A.x - RW / 2, c1 = A.x + A.w + RW / 2, l = r.x - RW, rt = r.x + r.w + RW, out = [];
+  const dxL = R.x - A.x, dxR = R.x + R.w - A.x - A.w, dy = r.y + r.h <= A.y ? R.y - A.y : R.y + R.h - A.y - A.h;
+  if (l < c0) out.push({ x0: l, x1: Math.min(rt, c0), dx: dxL, dy: 0, w0: 0 });
+  if (rt > c0 && l < c1) out.push({ x0: Math.max(l, c0), x1: Math.min(rt, c1), dx: dxL, dy, w0: rt > c1 ? R.w - A.w : 0 }); // stretched to R's width while it's still narrowing
+  if (rt > c1) out.push({ x0: Math.max(l, c1), x1: rt, dx: dxR, dy: 0, w0: 0 });
+  return out;
+}
+function drawPieces(k, r, A, R, RW, now) {
+  const P = dsPieces(r, A, R, RW);
+  for (const p of P) {
+    const x0 = p.x0 + p.dx, x1 = p.x1 + p.dx + p.w0, y0 = r.y - RW + p.dy, y1 = r.y + r.h + RW + p.dy;
+    if (x0 > vw || x1 < 0 || y0 > vh || y1 < 0) continue;
+    const f = { x: r.x + p.dx, y: r.y + p.dy, w: r.w, h: r.h };
+    ctx.save(); ctx.beginPath(); ctx.rect(x0, y0, x1 - x0, y1 - y0); ctx.clip();
+    dsFrame(f, RW); drawCard(k, f, now, 1);
+    ctx.restore(); curFont = "";
+  }
+  // Where two pieces of one room have parted, the cut between them is a rule.
+  ctx.fillStyle = theme.rule;
+  for (let i = 1; i < P.length; i++) {
+    const a = P[i - 1], b = P[i]; if (Math.abs(a.dy - b.dy) < 0.5) continue;
+    ctx.fillRect(b.x0 + b.dx - RW / 2, r.y - RW + Math.min(a.dy, b.dy), RW, r.h + RW * 2 + Math.abs(a.dy - b.dy));
+  }
 }
 function drawMapTrans(now, T) {
   prepCards(); // a card whose picture is out of date is painted first, before anything else is drawn
-  mapGeom(T, (R, D, fb, e, L, A) => {
-    const id = T.room;
+  mapGeom(T, (R, D, fb, e, L, A, ex, ey) => {
+    const id = T.room, RW = L.RW, q = clamp(T.q, 0, 1);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1;
     ctx.fillStyle = theme.bg; ctx.fillRect(0, 0, vw, vh);
-    if (e > 0.01) { // the other rooms come in from just beyond their places
-      const ax = A.x + A.w / 2, ay = A.y + A.h / 2, push = (1 - e) * 0.24;
-      for (const k of ROOMS) {
-        if (k === id) continue;
-        const r = L.r[k];
-        drawCard(k, { x: r.x + (r.x + r.w / 2 - ax) * push, y: r.y + (r.y + r.h / 2 - ay) * push, w: r.w, h: r.h }, now, e);
-      }
-      drawMapHint(clamp((e - 0.7) / 0.3, 0, 1));
-    }
-    if (id === "chase") { // the wall itself becomes the card's picture; the card's frame and words come up around it
-      const fa = clamp((e - 0.45) / 0.45, 0, 1), W = lerpRect(wallBand(), L.thumb, e);
-      if (fa > 0) { ctx.globalAlpha = fa; rr(R.x + 0.5, R.y + 0.5, R.w - 1, R.h - 1, 14 * e); ctx.fillStyle = theme["panel-solid"]; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = theme["slot-line"]; ctx.stroke(); ctx.globalAlpha = 1; }
-      ctx.save(); rr(W.x, W.y, W.w, W.h, 6 * e); ctx.clip();
-      if (e >= 0.999) wallThumb(W, now); else drawRoomAt("chase", wallBand(), W, now);
+    if (q > 0.005) for (const k of ROOMS) if (k !== id) drawPieces(k, L.r[k], A, R, RW, now);
+    drawMapHint(clamp((q - 0.75) / 0.25, 0, 1));
+    dsFrame(R, RW);
+    if (id === "chase") { // the wall becomes the card's picture; its red field comes down from above and its lenses ride its foot
+      const B = wallBand(), s = dsLerp(1, L.thumb.w / B.w, ey), Wd = { x: R.x + dsLerp(B.x, L.thumb.x - A.x, ey), y: dsLerp(B.y, L.thumb.y, ey), w: B.w * s, h: B.h * s };
+      ctx.fillStyle = theme["panel-solid"]; ctx.fillRect(R.x, R.y, R.w, R.h);
+      ctx.save(); ctx.beginPath(); ctx.rect(R.x, R.y, R.w, R.h); ctx.clip();
+      ctx.save(); ctx.beginPath(); ctx.rect(Wd.x, Wd.y, Wd.w, Wd.h); ctx.clip();
+      if (q >= 0.999) wallThumb(Wd, now); else drawRoomAt("chase", B, Wd, now);
       ctx.restore(); curFont = "";
-      if (fa > 0) chaseChrome(R, now, fa, W);
+      chaseChrome(R, now, 1, Wd, reduced ? (q < 0.5 ? 0 : 1) : ease(clamp(q / 0.35, 0, 1)));
+      ctx.restore(); curFont = "";
       return;
     }
-    // A room shrinks into its card and the card's face comes up through it.
-    ctx.save(); rr(R.x, R.y, R.w, R.h, 14 * e); ctx.clip();
+    // Another room: it narrows into its field, and the field's face comes up through it.
+    ctx.save(); ctx.beginPath(); ctx.rect(R.x, R.y, R.w, R.h); ctx.clip();
     ctx.fillStyle = id === "medal" ? theme["room-bg"] : theme.bg; ctx.fillRect(R.x, R.y, R.w, R.h);
-    if (fb > 0 || PAGES[id]) { const k = R.w / A.w; ctx.setTransform(dpr * k, 0, 0, dpr * k, dpr * R.x, dpr * R.y); drawCard(id, { x: 0, y: 0, w: A.w, h: A.h }, now, 1); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
+    if (fb > 0 || PAGES[id]) { const kk = R.w / A.w; ctx.fillStyle = theme["panel-solid"]; ctx.fillRect(R.x, R.y, R.w, R.h); ctx.setTransform(dpr * kk, 0, 0, dpr * kk, dpr * R.x, dpr * R.y); drawCard(id, { x: 0, y: 0, w: A.w, h: A.h }, now, 1); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
     if (id === "medal" && fb < 1) { ctx.globalAlpha = 1 - fb; drawRoomAt("medal", SCREEN(), D, now); }
     ctx.restore(); curFont = ""; ctx.globalAlpha = 1;
     if (PAGES[id]) pageAt(PAGES[id], R, D, 1 - fb); // a page moves itself, over the canvas
@@ -252,18 +298,19 @@ function drawMapHint(a) {
   ctx.fillText(fitText("Pinch any room closed to come back here", vw - 24), vw / 2, mapLayout().hintY);
   ctx.textAlign = "left"; ctx.globalAlpha = 1;
 }
-// The map at rest: five cards, each showing what's going on inside.
+// The map at rest: the painting.
 function drawMap(now) {
   prepCards();
-  const L = mapLayout();
+  const L = mapLayout(), RW = L.RW;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1;
   ctx.fillStyle = theme.bg; ctx.fillRect(0, 0, vw, vh);
+  for (const id of ROOMS) dsFrame(L.r[id], RW);
   let more = false;
   for (const id of ROOMS) if (drawCard(id, L.r[id], now, 1)) more = true;
   const pr = mapUI.press && L.r[mapUI.press];
-  if (pr) { ctx.lineWidth = 2; ctx.strokeStyle = theme.ink; rr(pr.x + 1, pr.y + 1, pr.w - 2, pr.h - 2, 13); ctx.stroke(); }
+  if (pr) { ctx.lineWidth = 4; ctx.strokeStyle = theme.ink; ctx.strokeRect(pr.x + 2, pr.y + 2, pr.w - 4, pr.h - 4); }
   const kr = mapUI.kb >= 0 && L.r[ROOMS[mapUI.kb]];
-  if (kr) { ctx.lineWidth = 2.5; ctx.strokeStyle = theme.ink; rr(kr.x - 3, kr.y - 3, kr.w + 6, kr.h + 6, 16); ctx.stroke(); }
+  if (kr) { ctx.lineWidth = 5; ctx.strokeStyle = theme.ink; ctx.strokeRect(kr.x + 2.5, kr.y + 2.5, kr.w - 5, kr.h - 5); }
   drawMapHint(1);
   return more;
 }
@@ -291,6 +338,8 @@ function drawHop(now, T) {
     if (PAGES[id]) PAGES[id].style.transform = `translateX(${ox.toFixed(1)}px)`;
     else if (ox > -vw && ox < vw) drawRoomAt(id, SCREEN(), { x: ox, y: 0, w: vw, h: vh }, now);
   }
+  const sx = T.dir > 0 ? vw * (1 - e) : vw * e, RW = dsRW(); // the seam between two rooms is a rule (a page carries its own)
+  ctx.fillStyle = theme.rule; ctx.fillRect(sx - RW / 2, 0, RW, vh);
 }
 function hopBy(d) {
   const i = ROOMS.indexOf(rooms.at) + d;
@@ -421,11 +470,11 @@ function mapTap(x, y, was) {
   const lens = id === "chase" ? chaseLensAt(x, y) : null;
   openPlace(id, 640, lens && lens !== state.lens ? () => { if (rooms.at === "chase" && view === "mosaic" && !state.trans) setLens(lens); } : null);
 }
-// The Chase card's small lens bar: a tap on a lens goes into Chase, and the wall then takes that lens (its own flight).
+// The Chase card's lens strip: a tap on a lens goes into Chase, and the wall then takes that lens (its own flight).
 function chaseLensAt(x, y) {
-  const R = mapLayout().r.chase, bx = R.x + 12, by = R.y + R.h - 40, bw = R.w - 24;
-  if (y < by - 6 || y > by + 34 || x < bx || x > bx + bw) return null;
-  return LENSES[clamp(Math.floor(((x - bx) / bw) * LENSES.length), 0, LENSES.length - 1)];
+  const L = mapLayout(), R = L.r.chase, by = L.thumb.y + L.thumb.h + L.RW;
+  if (y < by || y > by + DS.LENS || x < R.x || x > R.x + R.w) return null;
+  return LENSES[clamp(Math.floor(((x - R.x) / R.w) * LENSES.length), 0, LENSES.length - 1)];
 }
 const LENSES = ["have", "chase"], LENS_NAMES = { have: "Collection", chase: "Chase" };
 for (const type of ["touchstart", "touchmove", "touchend", "touchcancel"]) addEventListener(type, (e) => {
