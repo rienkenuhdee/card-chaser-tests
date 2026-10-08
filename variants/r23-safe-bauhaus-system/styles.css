@@ -74,65 +74,73 @@ dialog::backdrop, .pay-scrim { background: rgb(20 20 20 / .55); }
 .cface.full::before { background: linear-gradient(115deg, transparent 38%, rgb(255 255 255 / .2) 38% 52%, transparent 52%); }
 
 /* The trade binder's cover, on the Trade room's page: black board, flat. */
-.tc-page { background: #1A1A1A; box-shadow: none; }
+.tc-page { background: linear-gradient(90deg, #000 0 9%, #1A1A1A 9%); box-shadow: none; } /* flat bands: the spine, then the board */
 .tc-page::before { box-shadow: none; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tc-page { background: #2A2925; } }
-:root[data-theme="dark"] .tc-page { background: #2A2925; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tc-page { background: linear-gradient(90deg, #1E1D1A 0 9%, #2A2925 9%); } }
+:root[data-theme="dark"] .tc-page { background: linear-gradient(90deg, #1E1D1A 0 9%, #2A2925 9%); }
 
 /* ---------- type: a geometric sans; titles bold, labels in caps ---------- */
 html, body { font-family: var(--font); }
 .panel h1, dialog h2, #list h1, #list h2, .o-title b, .pay-head b { letter-spacing: 0; font-stretch: 100%; }
 .fsheet .fs-lbl, dialog .lbl { letter-spacing: .1em; }
 
-/* ---------- the 8px grid: the chrome ---------- */
-.top { top: calc(env(safe-area-inset-top, 0px) + 8px); padding: 0 8px; }
-.strip { height: 56px; padding: 0 6px; gap: 0; }
-.ib { width: 40px; height: 40px; }
+/* ---------- colour and state on the chrome ---------- */
 .ib:hover, .ib[aria-expanded="true"] { background: var(--line); }
-.search { height: 40px; margin: 0 8px; }
-.count { height: 32px; padding: 0 8px; }
-.lens { bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); padding: 4px; }
-.lens button { height: 40px; padding: 0 16px; font-weight: 600; letter-spacing: .02em; }
-/* The lens you're on is a black block (white on dark). */
+.lens button { font-weight: 600; letter-spacing: .02em; }
+/* The lens you're on is a black block (white on dark); a filter that's on is a yellow one. */
 .lens .ink { background: var(--ink); }
 .lens button[aria-pressed="true"] { color: var(--bg); }
-.lens .fchip { margin-left: 8px; padding-left: 8px; border-left: var(--rule); }
+.lens .fchip { border-left: var(--rule); }
 .lens .fchip button { background: var(--bh-yellow); color: #141414; }
-.timebar { bottom: calc(env(safe-area-inset-bottom, 0px) + 80px); padding: 8px 16px 8px 8px; gap: 0 8px; }
 .timebar #t-area { fill: color-mix(in srgb, var(--deal) 16%, transparent); }
 .timebar #t-line { stroke: var(--deal); stroke-width: 2; }
-
-/* Sheets and dialogs: a black rule along the top edge, 24px gutters, 48px buttons. */
-.panel, .offers, .pay, .welcome, .chase-sheet, .msheet, .arrival { border: 0; border-top: var(--rule); }
-.panel { padding: 16px 24px calc(env(safe-area-inset-bottom, 0px) + 16px); gap: 16px; }
-.panel .acts, .pay-acts, .pay-keys { gap: 8px; }
-.act { height: 48px; border: var(--rule); font-weight: 700; }
+/* Sheets and dialogs: a black rule along the edge they rise from; 2px rules on buttons; black for the primary action. */
+.panel, .offers, .pay, .welcome, .chase-sheet, .msheet, .arrival { border: var(--rule); }
+.act { border: var(--rule); font-weight: 700; }
 .act:not(.primary):not(.owned):not(.on) { border-color: var(--line); border-width: 2px; }
 .act.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .act.owned { border-color: var(--deal); background: color-mix(in srgb, var(--deal) 12%, transparent); }
 .act.want.on { border-color: var(--gold); background: color-mix(in srgb, var(--gold) 22%, transparent); }
-.mbtn, dialog .btn, .pill-btn, .mark { height: 40px; border-width: 2px; }
+.mbtn, dialog .btn, .pill-btn, .mark, .pay-keys button, .chip { border-width: 2px; }
 .mbtn.primary, dialog .btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
-.pay-keys button { height: 56px; border-width: 2px; }
-.chip { height: 40px; padding: 0 16px; border-width: 2px; }
-dialog { padding: 24px; }
-.arrange-menu { padding: 8px; gap: 0; }
-.arrange-menu button { padding: 8px 16px; }
 .arrange-menu button:hover, .arrange-menu button:focus-visible { background: var(--line); }
 .arrange-menu [aria-checked="true"] { box-shadow: inset 4px 0 0 var(--ink); }
 .arrange-menu .tick { color: var(--ink); }
-.seg { padding: 4px; background: var(--slot); }
-.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
-.fsheet .seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.seg { background: var(--slot); }
+.seg button[aria-pressed="true"], .fsheet .seg button[aria-pressed="true"], .fsheet .seg button[aria-pressed="true"]:hover { background: var(--ink); color: var(--bg); }
 .fsheet .seg button:hover { background: var(--line); }
-.fsheet .seg button[aria-pressed="true"]:hover { background: var(--ink); }
-.fsheet .fs-row { padding: 8px 0; gap: 8px; }
-.fsheet .fs-foot { padding-top: 16px; }
-.toast { background: var(--ink); color: var(--bg); padding: 8px 8px 8px 16px; }
-.toast:not(.act) { padding-right: 16px; }
+.toast { background: var(--ink); color: var(--bg); }
 .toast-btn { background: var(--bh-yellow); color: #141414; }
-.caption { padding: 8px 16px; }
 :focus-visible { outline: 2px solid var(--bh-blue); outline-offset: 2px; }
+
+/* ---------- the 8px grid (upright; a phone on its side keeps its own compact top row) ---------- */
+@media not all and (orientation: landscape) and (max-height: 559px) {
+  .top { top: calc(env(safe-area-inset-top, 0px) + 8px); padding: 0 8px; }
+  .strip { height: 56px; padding: 0 6px; gap: 0; }
+  .ib { width: 40px; height: 40px; }
+  .search { height: 40px; margin: 0 8px; }
+  .count { height: 32px; padding: 0 8px; }
+  .lens { bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); padding: 4px; }
+  .lens button { height: 40px; padding: 0 16px; }
+  .lens .fchip { margin-left: 8px; padding-left: 8px; }
+  .timebar { bottom: calc(env(safe-area-inset-bottom, 0px) + 80px); padding: 8px 16px 8px 8px; gap: 0 8px; }
+  .panel, .offers, .pay, .welcome, .chase-sheet, .msheet, .arrival { border-width: 2px 0 0; }
+  .panel { padding: 16px 24px calc(env(safe-area-inset-bottom, 0px) + 16px); gap: 16px; }
+  .panel .acts, .pay-acts, .pay-keys { gap: 8px; }
+  .act { height: 48px; }
+  .mbtn, dialog .btn, .pill-btn, .mark { height: 40px; }
+  .pay-keys button { height: 56px; }
+  .chip { height: 40px; padding: 0 16px; }
+  dialog { padding: 24px; }
+  .arrange-menu { padding: 8px; gap: 0; }
+  .arrange-menu button { padding: 8px 16px; }
+  .fsheet .fs-row { padding: 8px 0; gap: 8px; }
+  .fsheet .fs-foot { padding-top: 16px; }
+  .toast { padding: 8px 8px 8px 16px; }
+  .toast:not(.act) { padding-right: 16px; }
+  .caption { padding: 8px 16px; }
+}
+@media (min-width: 720px) { .panel, .offers, .pay, .welcome, .chase-sheet, .msheet, .arrival { border-width: 2px; } }
 
 /* Switches: a square track, a round knob (the one circle in the control). */
 .fsheet [aria-checked="true"] .sw, .sw input:checked + span { background: var(--deal); }

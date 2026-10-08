@@ -14,7 +14,8 @@ for what's earned, chased or switched on) and black is the primary action, so it
   (`backdrop-filter`), no soft shadows (`--shadow: none` and the one-off shadows flattened), no CSS gradients except
   hard-stop bands. Floating chrome (top strip, lens bar, dialogs) wears a 2px black rule; sheets a 2px rule along the
   top. The lens you're on is a black block (white on dark); an active filter chip is yellow. Spacing on the chrome
-  moved to 8px steps (strip 56, buttons 40/48, gutters 16/24).
+  moved to 8px steps (strip 56, buttons 40/48, gutters 16/24), upright only: a phone on its side keeps its own compact
+  top row. The Trade room's closed binder is a black board drawn as two hard colour bands (spine, board).
 - `11-bauhaus-ink.js` (added): recolours `TYPE` (see below) and `SET_INK` / `sets[].ink`: each set's bar and medal
   ribbon is red, yellow, blue or black, so neighbours on the wall differ.
 - `98-bauhaus.js` (added), redefining:
@@ -49,7 +50,10 @@ their meaning everywhere else (chrome, state, rooms), so the type view reads as 
 All checks pass (navigation and gestures are unchanged).
 
 ## Frame budget
-See the test run below.
+`npm test -- --variant r23-safe-bauhaus-system`: everything passed. Perf: mosaic 16.7ms, held pinch 18.9ms, held pinch
+up to the map 20.0ms; binder with 64 pictures 16.7ms at rest and pinched; binder mid-turn 17.8ms on its side, 23.3ms
+upright; on its side mosaic 16.7ms, held pinch 20.0ms (budget 34ms). Square tiles skip `roundRect`, so far-out frames
+are no more expensive than before.
 
 ## Unsure about
 - Futura is on iPhone, but the font fallbacks were only checked on Linux (sans-serif) here. Futura is wide: long set

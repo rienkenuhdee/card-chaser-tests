@@ -238,7 +238,7 @@ function drawRoom(now, alpha = 1, except = null) {
     const y = it.y - mScroll; if (y > vh || y + it.h < 0) continue;
     if (it.type === "header") {
       ctx.drawImage(headerImage(R.w, it.h), R.x - PADR, y - PADR, R.w + PADR * 2, it.h + PADR * 2);
-      const sy = y + it.h - 6; // the room's yellow field, as on the map, held between two rules
+      const sy = y + it.h - 3; // the room's yellow field, as on the map, held between two rules
       ctx.fillStyle = theme.rule; ctx.fillRect(0, sy, vw, 14); ctx.fillStyle = theme["c-yellow"]; ctx.fillRect(0, sy + 3, vw, 8);
     } else if (it.type === "row") ctx.drawImage(mdRowImage(it), it.x - PADR, y - PADR, it.w + PADR * 2, it.h + PADR * 2);
     else mdDrawItem(it, y, pg && it.blk === pg);
