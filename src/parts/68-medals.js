@@ -455,6 +455,10 @@ function mdRoomLayout(R, y0, items, hits, plaques, rails) {
   const L = medalList();
   let y = y0;
   const head = (text, gap = 12) => { y += gap; items.push({ type: "head", x: R.x, y, w: R.w, h: 30, text }); y += 32; };
+  if (cards.some((c) => c.owned)) { // the collection at market: opens Collection value (parity 3, 81-history.js)
+    const v = valueSeries(), it = { type: "value", x: R.x, y: y + 16, w: R.w, h: 64, now: money(v.now), line: valueChange(v, "90").brief, blk: mdBlock("value", { mdval: true }) };
+    items.push(it); hits.push(it); y += 16 + 64;
+  }
   if (L.earned.length) { // the Showcase: the rarest you've earned
     head("Showcase", 8);
     const n = R.w >= 600 ? clamp(Math.floor(R.w / 104), 6, 8) : 4, cw = R.w / n, row = L.earned.slice(0, n);
@@ -602,6 +606,14 @@ function mdDrawItem(it, y, pressed) {
     const my = y + it.h / 2 + 5;
     font(700, 15, true); ctx.fillStyle = theme["room-ink"]; ctx.fillText("Not started yet", it.x + 14, my);
     ctx.textAlign = "right"; ctx.fillStyle = theme["room-muted"]; font(600, 12.5); ctx.fillText(`${it.n} ${it.n === 1 ? "chase" : "chases"} ${it.open ? "▴" : "▾"}`, it.x + it.w - 14, my);
+  } else if (it.type === "value") { // Collection at market: a white field in a rule, tap for Collection value
+    ctx.fillStyle = pressed ? theme.slot : theme["panel-solid"]; ctx.fillRect(it.x, y, it.w, it.h);
+    ctx.lineWidth = 3; ctx.strokeStyle = theme.rule || theme["room-ink"]; ctx.strokeRect(it.x + 1.5, y + 1.5, it.w - 3, it.h - 3);
+    font(800, 12.5); ctx.fillStyle = theme["room-muted"]; ctx.fillText("COLLECTION AT MARKET", it.x + 14, y + 24);
+    font(800, 22); ctx.fillStyle = theme["room-ink"]; ctx.fillText(it.now, it.x + 14, y + 50);
+    const nw = textW(it.now);
+    ctx.textAlign = "right"; font(800, 22); ctx.fillText("›", it.x + it.w - 14, y + 42);
+    font(600, 13); ctx.fillStyle = theme["room-muted"]; ctx.fillText(fitText(it.line, Math.max(0, it.w - nw - 70)), it.x + it.w - 36, y + 49);
   } else if (it.type === "note") {
     font(700, 13); ctx.fillStyle = theme["room-ink"]; ctx.fillText(it.title, it.x + 4, y + 16);
     font(500, 12.5); ctx.fillStyle = theme["room-muted"];
@@ -614,6 +626,7 @@ function mdWrap(text, w) { const key = `${curFont}|${Math.round(w)}|${text}`; le
 // A tap on a medal, a filter, a shelf's fold line, or the fold of chases not started yet.
 function mdTap(b) {
   if (b.mdt) { openMedal(b.mdt.id); return; }
+  if (b.mdval) { openValue(); return; }
   tick(4);
   if (b.mdf) mdFilter = b.mdf;
   else if (b.mdfold) mdFoldAll = !mdFoldAll;

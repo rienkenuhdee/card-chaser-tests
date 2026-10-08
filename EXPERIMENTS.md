@@ -366,12 +366,32 @@ per-set Grade you want, PSA's population and cert API, graded price history. The
 screen upright now that it can hold slabs. Smoke checks: a slab owns the card and badges its pocket, Remove and Undo,
 the three filters narrow and clear, a slab passes Near Mint only.
 
+**Parity 3: price history and collection value.** No variants, one build. Production's card chart and its Collection
+value screen, with made-up history in place of its server's. Every card has a daily market price about a year back
+and the lowest eBay ask that day, seeded by card id, worked out when asked for and cached, never stored: a drift for
+the year (vintage holos climb), a new set starting high at release and settling, a few steps, day to day noise, and
+the last day exactly today's market. A set out this year starts on its release. On the card up close, under the
+price, one plain line ("Up 12% in 90 days", or "since it came out") and a small chart with 30 days, 90 days and 1 year:
+a black rule for its baseline, the market in ink, the ask a thin red line, a day's price holding across and then
+stepping up or down, today a small square. A card with a slab adds Raw or its grade ("PSA 9"): the grade's ask (scaled
+from what it asks today, moving a little more than raw) is drawn on its own, since on one scale it flattened the raw
+card's line. In Trophies, a field under the title, Collection at market, gives the worth and its 90 days and opens
+Collection value (the listing sheet's frame): the worth now (exactly the total everywhere else, slabs at their
+grade's ask), 30 days, 90 days or All with the change in money and percent, how much of that came from cards you
+added, the line, one sentence saying earlier days are estimated (each card at that day's price from the day you got
+it), what you paid on Got it against what those cards are worth now with the latest eight, and the six sets worth
+the most with a bar each in the set's primary. The list reads the sheet's numbers as text, with a button to open it,
+and every card row ends with its 90 day trend. Left out: production's server-side history (one record a day, 400
+days), real TCGplayer prices and eBay asks, and value by chase (here by set). Smoke checks: a card's chart draws
+with finite points and ends at its market, its ranges switch, Collection at market opens the sheet from Trophies,
+its now is the worth total, and its ranges change the change line.
+
 ## Open questions (next rounds)
 
 - Production parity (audit, round 23). What production has that the Wall doesn't yet, beyond what's out of scope for
   an on-device prototype (accounts, sync, real push, PSA lookups): the Feed's language, version,
   lots and too-cheap filters (the made-up listings don't carry them yet), adding a shop in Source, "Fill your Dex" in the Feed,
-  grade wants (the per-set Grade you want) and PSA's population and cert checks (graded slabs landed in parity 2), price history and the collection's value over time, savings stats from "I bought it",
+  grade wants (the per-set Grade you want) and PSA's population and cert checks (graded slabs landed in parity 2), real price history kept day by day (parity 3 made it up, seeded), value by chase, savings stats from "I bought it" (what the market said when you bought),
   favourites and priority stars, print placeholders, card reports, and the completion
   ceremony. Replaced, not lost: the collection grid (the wall, search, Filters, the list view), the card sheet (the
   card up close), the public trade page (Show mode and Someone new, in person). Online trading stays pinned (round 18).
