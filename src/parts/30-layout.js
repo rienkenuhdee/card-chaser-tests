@@ -172,7 +172,7 @@ function packFolded(g) {
 function liftedLayout() {
   const R = { x: 8 + SAFE.left, y: topPad(), w: vw - 16 - SAFE.left - SAFE.right };
   let y = R.y + shelfLayout(R);
-  const live = groups.filter((g) => !g.done && g.lead.length), folded = groups.filter((g) => !g.done && !g.lead.length);
+  const live = groups.filter((g) => !g.done && g.lead.length).sort((a, b) => isPrio(b.lead[0]) - isPrio(a.lead[0])), folded = groups.filter((g) => !g.done && !g.lead.length);
   // On a wide screen two live panels sit side by side; on a phone they stack.
   const across = R.w >= 900 ? 2 : 1, pw = R.w / across;
   for (let i = 0; i < live.length; i += across) {

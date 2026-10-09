@@ -386,14 +386,74 @@ days), real TCGplayer prices and eBay asks, and value by chase (here by set). Sm
 with finite points and ends at its market, its ranges switch, Collection at market opens the sheet from Trophies,
 its now is the worth total, and its ranges change the change line.
 
+**Parity 4: favorites and priority.** No variants, one build. Production's two stars, lean. Favorites: up to five
+cards you own, your showcase. On the card up close, a card you own has ☆ Favorite under its price; on, it's ★ in a
+yellow field. They come first in Show mode of the trade binder, the Wall's in-person version of production's public
+trade page: a page of their own before the trade pages, titled Favorites and "Not for trade", the cards as large as
+the page lets them be (two across upright, three across on a spread), no price, and a tap on one picks nothing. A card
+you take out drops off (left out when read, so Undo brings it back); a sixth takes the oldest one's place, and the
+message names it with Undo. Priority: ☆ Priority on a chased card up close, and a ★ on every Feed row. A priority card
+leads its panel in the Chase lens, and its panel leads the lens; the lifted tile wears a black star on a yellow field in
+its corner (two rects and one glyph through `font()`); its listings score +4 ("Priority card", production's boost);
+Filters gains My priority; the list view marks it. Kept in `wall-favs` and `wall-priority`, cleared by Reset. Left out:
+production's favorites picker (with its up and down arrows), priority's effect on scan rotation (no scans here), and a
+Show mode reached with favorites but no spares (the binder still opens only with a spare). Smoke checks: a favorite
+is first in Show mode, a sixth replaces the oldest and Undo puts it back, priority boosts a listing's score and leads
+the Chase lens, My priority narrows the Feed, Reset clears both.
+
+**Parity 5: add a shop.** No variants, one build. Production's "add any Shopify card shop by its website" and its
+store watcher's first-look rule, in Source. Under Card shops, Add a shop takes a website or a bare domain
+("pokecorner.com", "https://www.PokeCorner.com/collections/singles"), keeps only the domain (https://pokecorner.com)
+and names the shop from it (Pokecorner; card-cove.shop is Card Cove); anything else is refused under the field in plain
+words ("That doesn't look like a website"), and so is a shop you already have. It becomes a source in Card shops after
+the made-up two, with a switch like theirs, its website as a real link, and Remove with Undo. What it has in stock is
+made up, seeded by its domain and the card: about one card you chase in eleven, at 80 to 97% of market and never under
+the card's best listing, so about what Northside gives. Its listings flow into the Feed like the other shops' (the
+switch, the counts, Shops in the Source filter, the map's Shops chip). The first look just records what's there and
+new items show from the next look (production's rule), so its listings are dated from when you added it and are never
+NEW; the page says so on its row and when you add it. Open on the listing's sheet opens the shop's own search for the
+card (https://domain/search?q=name, Shopify's path); the made-up two still open nothing. Kept in `wall-shops`, cleared
+by Reset. "/" no longer jumps to search while you type in a field (a website has slashes). Left out: the real check
+(Shopify's products.json, the homepage fallback for shops that aren't on Shopify) and whether it worked, restocks and
+price drops after the first look, the Chico shops' hours, and adding or removing shops from the list view (it keeps
+their switches). Smoke checks: a bare domain adds a source with listings in the Feed (none NEW) whose sheet opens its
+search, bad input is refused, the switch hides its listings, Remove and Undo, Reset clears it.
+
+**Parity 6: completion ceremony.** No variants, one build. Production's full-screen finish ("the cards flip in, the
+medal appears, and you can share the image", with confetti), lean and in the painting's language. Finishing a whole set
+or chase by hand (the moment that mints its trophy) plays it before the trophy flow: the set's cards travel across
+their rows into a ruled grid, rows from alternate sides, the farthest card first (at most 30, whole rows; the rest fill
+row by row, drawn in from the left, so a big set is as quick as a small one), the pockets past the last card one red
+field; the plate drops straight down into place under it (a yellow field in a black rule, the Binder Complete trophy on
+its white square, the name beside it); the title and the counts come in across ("Fossil complete.", "62 of 62 ·
+October 8, 2026", what it's worth); squares and short rules in red, yellow, blue and black fall straight down (36,
+seeded by the trophy, nothing turns or bounces). About 4 s, then the final frame holds. Share and Done come up as the
+plate lands. Share hands the phone's share sheet a PNG of the final frame (the grid, the plate, the title; 1170 wide),
+made as the moment lands so the sheet opens inside the tap, or saves it where there's no share sheet; Done, a tap
+anywhere else or Escape ends it, and the trophy flow carries on exactly as before: the mint and the shelf, the medal
+mint or card, and the message with its Undo (held while the ceremony was up, said when it ends). Reduced motion: the
+final frame, still. On its side the grid takes the left and the plate, the words and the buttons the right. It plays
+once per finish, as production's does (a trophy is kept there, so the ceremony never repeats): Undo and the same card
+again finish it with no second ceremony; a set finished quietly (an import, a trade) or before this existed is counted
+as celebrated (localStorage wall-ceremony, cleared by Reset). Drawn on its own canvas over everything, from one copy
+of the final frame lettered once when it opens, so a moving frame only copies rectangles and fills a few dozen squares;
+both canvases are let go when it closes. Left out: production's card pictures flipping in (the grid is the cards'
+colours, as the wall draws them far out; a picture would also taint the share image), the vibration pattern beyond
+what Android allows, and a ceremony for the Dex's or a medal's own milestones. Smoke checks: finishing the smallest set
+plays it with the message and the medal held, it lands and stops, Share gives a PNG, Done lets the flow carry on, Undo
+and the card again don't replay it, and the reduced-motion still; perf: the ceremony with every card on the wall
+(1,327 pockets) under 34 ms with no canvas made while it moves.
+
 ## Open questions (next rounds)
 
 - Production parity (audit, round 23). What production has that the Wall doesn't yet, beyond what's out of scope for
-  an on-device prototype (accounts, sync, real push, PSA lookups): the Feed's language, version,
-  lots and too-cheap filters (the made-up listings don't carry them yet), adding a shop in Source, "Fill your Dex" in the Feed,
-  grade wants (the per-set Grade you want) and PSA's population and cert checks (graded slabs landed in parity 2), real price history kept day by day (parity 3 made it up, seeded), value by chase, savings stats from "I bought it" (what the market said when you bought),
-  favourites and priority stars, print placeholders, card reports, and the completion
-  ceremony. Replaced, not lost: the collection grid (the wall, search, Filters, the list view), the card sheet (the
+  an on-device prototype (accounts, sync, real push, PSA lookups): the Feed's language, version, lots and too-cheap
+  filters (the made-up listings don't carry them yet), a real check of an added shop and its restocks and price drops
+  (parity 5 made its stock up), "Fill your Dex" in the Feed (Ryan: skip), grade wants (the per-set Grade you want) and
+  PSA's population and cert checks (graded slabs landed in parity 2), real price history kept day by day (parity 3 made
+  it up), value by chase, savings stats from "I bought it", the favorites picker and priority's scan rotation
+  (favorites and priority landed in parity 4), print placeholders and card reports. The completion ceremony landed in
+  parity 6. Replaced, not lost: the collection grid (the wall, search, Filters, the list view), the card sheet (the
   card up close), the public trade page (Show mode and Someone new, in person). Online trading stays pinned (round 18).
 
 - A deal arriving off screen: one tap from the line to the offers, and whether the arrival should nudge the wall.
@@ -403,6 +463,6 @@ its now is the worth total, and its ranges change the change line.
 - Spares: Show mode's Someone new gives cards away with nothing back; a stranger at a show might want to offer a card, which needs their side of the table without an account.
 - The import: a real import without acquisition dates loses the story (round 20); and the Complete Dex can't be chosen on the import path, only in Choose your sets.
 - A chase's twins: should a custom panel's cards also lead in the Chase lens, or only their set's copy? And should a chase hide from the wall once it's complete?
-- Trophies: the worth line is a made-up year; real data would start at the finish date ("Up $27 since you finished"). Medals: whether Undo after a mint should take a medal back (production keeps it), the full-screen completion ceremony production plays, and the server-side luck roll when the two merge. Sharing a trophy (safe's picture card), and whether a sub-chase of a finished set should fold into the set's plaque. The room hides the lenses; Value could recolour the engravings.
+- Trophies: the worth line is a made-up year; real data would start at the finish date ("Up $27 since you finished"). Medals: whether Undo after a mint should take a medal back (production keeps it), whether the completion ceremony (parity 6) should show the cards' own pictures (production flips them in; here the grid is their colours, and a picture would taint the share image), and the server-side luck roll when the two merge. Sharing a trophy (safe's picture card), and whether a sub-chase of a finished set should fold into the set's plaque. The room hides the lenses; Value could recolour the engravings.
 - Bringing the wall into the real app: the rooms map is the navigation model (round 21); production's tabs sit at the top, and a merge would put the map where they are.
 - The painting (round 23): gold still marks a chased card while red is the Chase room; the yellow active lens shares yellow with earned; the count fields take the set's nearest primary; card scans come in full colour inside the painting; some motion outside the map still arcs (the trade table's lifts, the reply flights). The binder held mid-turn upright with pictures runs close to the 34 ms budget on the test machine (it did before round 23 too).

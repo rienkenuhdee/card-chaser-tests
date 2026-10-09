@@ -1454,3 +1454,41 @@ a.mbtn { display: inline-flex; align-items: center; justify-content: center; box
 .vb-bar i { display: block; height: 100%; border: 2px solid var(--rule); box-sizing: border-box; }
 .vs-bars b { font-variant-numeric: tabular-nums; }
 .vs-foot .mbtn, .vs-foot .mbtn:first-child { flex: 1; }
+
+/* ===== Parity 4: favorites and priority. The star is a small field in a black rule; on, it's yellow. ===== */
+.p-side { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex: none; }
+.p-star { height: 34px; padding: 0 10px; border: 2px solid var(--rule); border-radius: 0; background: var(--panel-solid); color: var(--ink); font: 700 13.5px var(--font); white-space: nowrap; cursor: pointer; }
+.p-star[hidden] { display: none; }
+.p-star.on { background: var(--c-yellow); color: #121212; }
+.fd { position: relative; }
+.fd-row { grid-template-areas: "card name slab" "card set slab" "card price ." "card mkt ." "card src ."; }
+.fd-star { position: absolute; right: 12px; bottom: 10px; width: 44px; height: 40px; border: 2px solid var(--rule); border-radius: 0; background: var(--panel-solid); color: var(--ink); font: 700 19px/1 var(--font); cursor: pointer; }
+.fd-star.on { background: var(--c-yellow); color: #121212; }
+.fd-star:active { transform: translateY(1px); }
+/* ===== Parity 5: add a shop. A shop you added carries its website and Remove under its line; the form below the
+   shops is one more field of the painting: a black rule round it, a square field and a black Add. ===== */
+.src-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; margin-top: 4px; }
+.src-acts a, .src-acts button { min-height: 32px; display: inline-flex; align-items: center; padding: 0; border: 0; background: none; font: 700 13.5px var(--font); color: var(--ink); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.src-acts a { color: var(--c-blue); overflow-wrap: anywhere; }
+.shop-add { display: grid; gap: 10px; margin-top: calc(var(--rw, 3px) * -1); padding: 12px 14px 14px; border: var(--rw, 3px) solid var(--rule); background: var(--panel-solid); }
+.shop-add label { display: grid; gap: 2px; }
+.shop-add label b { font: 700 16px var(--font); font-stretch: 90%; }
+.shop-add label small { color: var(--muted); font-size: 13.5px; line-height: 1.35; }
+.shop-row { display: flex; gap: 8px; }
+.shop-row input { flex: 1; min-width: 0; box-sizing: border-box; height: 44px; padding: 0 12px; border: 2px solid var(--rule); border-radius: 0; background: var(--bg); color: var(--ink); font: 600 16px var(--font); }
+.shop-row input::placeholder { color: var(--muted); }
+.shop-row input[aria-invalid="true"] { border-color: var(--c-red); }
+.shop-row .mbtn { height: 44px; padding: 0 20px; border-radius: 0; }
+.shop-msg { margin: 0; font-size: 13.5px; line-height: 1.4; color: var(--ink); }
+.shop-msg.bad { color: var(--c-red); font-weight: 700; }
+/* Parity 6: the completion ceremony. Full screen over everything, the painting's own ground; the moment is drawn on
+   its canvas, the two buttons sit under it in the chrome's ruled squares and come up once the plate has landed. */
+.cer { position: fixed; inset: 0; z-index: 20; background: var(--bg); touch-action: none; overscroll-behavior: contain; }
+.cer[hidden] { display: none; }
+.cer canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.cer-say { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.cer-acts { position: absolute; display: flex; gap: 12px; opacity: 0; pointer-events: none; transition: opacity .25s; }
+.cer.in .cer-acts { opacity: 1; pointer-events: auto; }
+.cer-acts .act { flex: 1; height: 100%; }
+.cer-acts .act:not(.primary) { background: var(--panel-solid); color: var(--ink); }
+@media (prefers-reduced-motion: reduce) { .cer-acts { transition: none; } }

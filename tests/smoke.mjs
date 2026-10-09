@@ -294,6 +294,159 @@ for (const dark of [false, true]) {
   await p.click("#vsheet [data-vs-close]"); await wait(200);
   await p.close();
 }
+// Favorites and priority (parity 4): ☆ on a card you own makes it a favorite, first in Show mode; a sixth takes the
+// oldest one's place and Undo puts it back; ★ on a card you chase boosts its listings' score and leads the Chase lens;
+// My priority narrows the Feed; Reset clears both.
+{
+  const p = await phone(browser, file, { motion: false });
+  await p.evaluate(() => {
+    const at = Date.now() - 30 * 86400e3, owned = {}, chase = {}, copies = {};
+    for (const c of __w.cards) { if (c.own0) { owned[c.id] = { on: true, at }; if (c.i % 4 === 0) copies[c.id] = { n: 2, got: at }; } else chase[c.id] = true; }
+    localStorage.setItem("wall-owned", JSON.stringify(owned)); localStorage.setItem("wall-chase", JSON.stringify(chase)); localStorage.setItem("wall-copies", JSON.stringify(copies));
+    localStorage.setItem("wall-imported", "TCGplayer"); localStorage.setItem("wall-welcomed", "1"); localStorage.setItem("wall-map-seen", "1");
+  });
+  await p.reload({ waitUntil: "load" }); await wait(800);
+  await p.evaluate(() => __w.enterGroup(__w.groups[0])); await wait(900);
+  const fid = await p.evaluate(() => { const c = __w.groups[0].cards.find((c) => c.owned && !c.ph); __w.focus(c); return c.id; }); await wait(600);
+  await p.click("#p-star"); await wait(300);
+  const star = await p.$eval("#p-star", (e) => ({ text: e.textContent, on: e.getAttribute("aria-pressed") }));
+  await p.evaluate(() => __w.unfocus()); await wait(200);
+  await p.evaluate(() => __w.goRoom("trade")); await wait(900);
+  await p.evaluate(() => __w.openBinder()); await wait(1000);
+  await p.evaluate(() => __w.tbEnterShow()); await wait(700);
+  const show = await p.evaluate(() => ({ first: __w.tbPageItems(0, true).map((c) => c.id), vi: __w.bnd.vi, said: __w.bnd.labels.get(0) || [], trade: __w.tbPageItems(1, true).length }));
+  R.push([`a favorite (${star.text}, pressed ${star.on}) is first in Show mode (page 1 of the show: ${show.said.join(", ")})`, star.on === "true" && /★ Favorite/.test(star.text) && show.first[0] === fid && show.vi === 0 && show.said[0] === "Favorites" && show.trade > 0]);
+  await p.evaluate(() => __w.tbHandBack()); await wait(300);
+  await p.evaluate(() => __w.closeBinder(true)); await wait(300);
+  const six = await p.evaluate(() => { // four more, then a sixth
+    const own = __w.cards.filter((c) => c.owned && !c.ph && !__w.isFav(c)).slice(0, 5);
+    for (const c of own.slice(0, 4)) __w.toggleFav(c);
+    const before = __w.favCards().map((c) => c.id);
+    __w.toggleFav(own[4]);
+    return { before, after: __w.favCards().map((c) => c.id), sixth: own[4].id, toast: document.getElementById("toast").textContent, oldest: __w.cards.find((c) => c.id === before[0]).name };
+  });
+  await p.click("#toast .toast-btn"); await wait(200);
+  const undone = await p.evaluate(() => ({ ids: __w.favCards().map((c) => c.id), kept: JSON.parse(localStorage.getItem("wall-favs") || "[]") }));
+  R.push([`a sixth favorite takes the oldest one's place ("${six.toast}") and Undo puts it back (${undone.ids.length} favorites)`, six.before.length === 5 && six.after.length === 5 && six.after.includes(six.sixth) && !six.after.includes(six.before[0]) && six.toast.includes(six.oldest) && six.toast.includes("Undo") && JSON.stringify(undone.ids) === JSON.stringify(six.before) && JSON.stringify(undone.kept) === JSON.stringify(six.before)]);
+  await p.evaluate(() => __w.goRoom("chase")); await wait(900);
+  const pr = await p.evaluate(() => {
+    const listed = new Set(__w.feedList().map((L) => L.c));
+    const g = __w.groups.find((g, i) => i > 0 && g.cards.filter((c) => __w.isChase(c)).length > 1 && g.cards.some((c) => listed.has(c)));
+    const c = g.cards.filter((c) => listed.has(c)).sort((a, b) => a.price - b.price)[0], L = __w.feedList().find((L) => L.c === c);
+    const s0 = __w.scoreOf(L).score;
+    __w.togglePrio(c);
+    const s1 = __w.scoreOf(L), line = s1.lines.find((x) => x.key === "prio");
+    return { id: c.id, name: c.name, s0, s1: s1.score, line: Boolean(line), gi: __w.groups.indexOf(g) };
+  });
+  await p.click('[data-lens="chase"]'); await wait(900);
+  const lead = await p.evaluate((gi) => { const g = __w.groups[gi], live = __w.groups.filter((x) => x.lead?.length).sort((a, b) => a.m.y - b.m.y); return { first: g.cards[0].id, lifted: g.cards[0].lift, top: live[0] === g }; }, pr.gi);
+  R.push([`priority boosts ${pr.name}'s listing (score ${pr.s0} to ${pr.s1}) and puts it first in the Chase lens (${lead.first === pr.id ? "first" : "not first"} in its panel, ${lead.top ? "its panel on top" : "panel not on top"})`, pr.line && (pr.s1 > pr.s0 || pr.s1 === 100) && lead.first === pr.id && lead.lifted === 1 && lead.top]);
+  await p.click('[data-lens="have"]'); await wait(300);
+  await p.evaluate(() => __w.goRoom("feed")); await wait(900);
+  const rows = () => p.$$eval("#pf-list [data-l]", (b) => b.map((x) => x.dataset.l));
+  const all = await rows();
+  await p.click("#pf-more-btn"); await wait(150);
+  await p.click("#pf-prio"); await wait(250);
+  const mine = await rows(), label = await p.$eval("#pf-more-btn", (e) => e.textContent);
+  const row = await p.$eval(`#pf-list [data-prio="${pr.id}"]`, (b) => b.getAttribute("aria-pressed")).catch(() => null);
+  await p.click("#pf-prio"); await wait(200);
+  R.push([`My priority narrows the Feed (${all.length} listings, ${mine.length} for priority cards; "${label}") and the row's star is on`, all.length > mine.length && mine.length > 0 && mine.every((id) => id.split("~")[0] === pr.id) && label === "Filters (1)" && row === "true"]);
+  await p.evaluate(() => document.getElementById("reset").click()); await wait(1500);
+  const reset = await p.evaluate(() => ({ favs: localStorage.getItem("wall-favs"), prio: localStorage.getItem("wall-priority"), n: __w.favCards().length }));
+  R.push([`Reset clears favorites and priority (${reset.favs ?? "none"}, ${reset.prio ?? "none"})`, reset.favs === null && reset.prio === null && reset.n === 0 && !p.errors.length]);
+  if (p.errors.length) console.log(p.errors);
+  await p.close();
+}
+// Add a shop (parity 5): a bare domain becomes a source in Card shops with listings in the Feed (none NEW: the first
+// look only records what's there), its switch hides them, Remove takes it out and Undo brings it back, bad input is
+// refused in plain words, an added shop's listing opens its own search, and Reset clears it.
+{
+  const p = await phone(browser, file, { motion: false });
+  await p.evaluate(() => {
+    const at = Date.now() - 30 * 86400e3, owned = {}, chase = {};
+    for (const c of __w.cards) { if (c.own0) owned[c.id] = { on: true, at }; else chase[c.id] = true; }
+    localStorage.setItem("wall-owned", JSON.stringify(owned)); localStorage.setItem("wall-chase", JSON.stringify(chase));
+    localStorage.setItem("wall-imported", "TCGplayer"); localStorage.setItem("wall-welcomed", "1"); localStorage.setItem("wall-map-seen", "1");
+  });
+  await p.reload({ waitUntil: "load" }); await wait(800);
+  await p.evaluate(() => __w.goRoom("source")); await wait(900);
+  const id = "shop-pokecorner.com", mine = () => p.evaluate((id) => { const all = __w.feedList(); return { n: all.filter((L) => L.src === id).length, fresh: all.filter((L) => L.src === id && __w.isNewL(L)).length, row: Boolean(document.querySelector(`#ps-body [data-row="${id}"]`)), stored: JSON.parse(localStorage.getItem("wall-shops") || "[]").length, msg: document.getElementById("ps-shop-msg")?.textContent || "" }; }, id);
+  const add = async (t) => { await p.$eval("#ps-shop-url", (e) => { e.value = ""; }); await p.type("#ps-shop-url", t); await p.click("#ps-shop button[type=submit]"); await wait(300); };
+  await add("not a website"); const bad1 = await mine();
+  await add("pokecorner"); const bad2 = await mine();
+  await add("https://www.PokeCorner.com/collections/singles"); const added = await mine();
+  const shop = await p.evaluate((id) => { const L = __w.feedList().find((x) => x.src === id); __w.openListing(L.id); const a = document.querySelector("#lsheet a[data-ls-open]"); return { name: document.querySelector(`#ps-body [data-row="${id}"] b`)?.textContent, site: document.querySelector(`#ps-body [data-row="${id}"] .src-acts a`)?.href, open: a?.href || "", label: a?.textContent || "", card: L.c.name }; }, id);
+  await p.keyboard.press("Escape"); await wait(300);
+  R.push([`adding a shop by its website makes a source with listings in the Feed ("${shop.name}", ${added.n} listings, ${added.fresh} NEW; "${added.msg}"), its website a link, and its listing opens its own search (${shop.label}: ${shop.open})`, shop.name === "Pokecorner" && added.row && added.n > 0 && added.fresh === 0 && added.stored === 1 && /first look just records/.test(added.msg) && shop.site === "https://pokecorner.com/" && shop.open === `https://pokecorner.com/search?q=${encodeURIComponent(shop.card)}` && shop.label === "Open on Pokecorner"]);
+  R.push([`bad input is refused in plain words ("${bad1.msg}", "${bad2.msg}")`, !bad1.row && !bad2.row && bad1.stored === 0 && bad2.stored === 0 && /doesn't look like a website/.test(bad1.msg) && /doesn't look like a website/.test(bad2.msg)]);
+  await p.click(`#ps-body [data-src="${id}"]`); await wait(300); const off = await mine();
+  await p.click(`#ps-body [data-src="${id}"]`); await wait(300); const on = await mine();
+  R.push([`switching the added shop off hides its listings (${off.n} off, ${on.n} back on)`, off.n === 0 && on.n === added.n]);
+  await p.click(`#ps-body [data-shop-rm="pokecorner.com"]`); await wait(300); const gone = await mine();
+  await p.click("#toast .toast-btn"); await wait(400); const back = await mine();
+  R.push([`Remove takes the shop out (${gone.row ? "row still there" : "row gone"}, ${gone.n} listings) and Undo brings it back (${back.n} listings)`, !gone.row && gone.n === 0 && gone.stored === 0 && back.row && back.n === added.n && back.stored === 1]);
+  await p.evaluate(() => { document.getElementById("reset").click(); }); await wait(1200);
+  const reset = await p.evaluate(() => ({ stored: localStorage.getItem("wall-shops"), n: __w.myShops.length }));
+  R.push([`Reset clears the added shops (${reset.n} left)`, reset.stored === null && reset.n === 0 && !p.errors.length]);
+  await p.close();
+}
+// Parity 6: the completion ceremony. The last card of the smallest set, marked by hand, plays it full screen while the
+// trophy flow waits (its message, its medal); Done ends it and the flow carries on; Share hands a PNG of the final
+// frame to the share sheet; Undo and the same card again don't play it twice; under reduced motion it's a still.
+for (const motion of [true, false]) {
+  const p = await phone(browser, file, { motion, dpr: 2 });
+  const sm = await p.evaluate(() => {
+    const g = __w.groups.filter((x) => x.set).sort((a, b) => a.base.length - b.base.length)[0], at = Date.now() - 5 * 86400e3, owned = {};
+    g.base.slice(0, -1).forEach((c) => { owned[(c.base || c).id] = { on: true, at }; });
+    localStorage.setItem("wall-owned", JSON.stringify(owned)); localStorage.setItem("wall-welcomed", "1"); localStorage.setItem("wall-map-seen", "1");
+    return g.name;
+  });
+  await p.reload({ waitUntil: "load" }); await wait(motion ? 3200 : 900);
+  await p.evaluate((n) => __w.enterGroup(__w.groups.find((x) => x.name === n)), sm); await wait(1200);
+  const last = () => p.evaluate((n) => { const g = __w.groups.find((x) => x.name === n), c = g.base[g.base.length - 1]; return { id: c.id, owned: c.owned }; }, sm);
+  const own = (on, undo = false) => p.evaluate((n, on, undo) => { const g = __w.groups.find((x) => x.name === n), c = g.base[g.base.length - 1]; __w.setOwned(c, on, undo ? { undo: () => __w.setOwned(c, !on, { quiet: true }) } : {}); }, sm, on, undo);
+  const st = () => p.evaluate((n) => {
+    const g = __w.groups.find((x) => x.name === n), el = document.getElementById("cer"), t = document.getElementById("toast"), sec = __w.mdSecOf(g);
+    return { on: __w.cer.on, shown: !el.hidden, in: el.classList.contains("in"), still: __w.cer.still, raf: __w.cer.raf, said: el.querySelector("#cer-say").textContent, held: __w.cer.toast?.[0] || "", toast: t.classList.contains("show") ? t.textContent : "", undo: Boolean(t.querySelector(".toast-btn")), done: Boolean(__w.done[`${g.set.id}|set`]), seen: Boolean(__w.cerSeen[`${g.set.id}|set`]), mint: __w.mintsOn.length > 0, pop: document.getElementById("mpop").classList.contains("show"), earned: Boolean(__w.medals[`${sec}:complete`]) };
+  }, sm);
+  await own(true, true); await wait(motion ? 700 : 400);
+  const a = await st();
+  R.push([`${motion ? "" : "reduced motion: "}finishing ${sm} by hand plays the ceremony ("${a.said}"), the message and the medal waiting under it (${a.held ? "message held" : "no message"}, ${a.earned ? "medal earned" : "no medal yet"}, ${a.mint || a.pop ? "medal shown" : "medal not shown"})`, a.on && a.shown && a.done && a.seen && new RegExp(`^${sm} complete\\. (\\d+) of \\1 · `).test(a.said) && /finished/.test(a.held) && !a.toast && !a.mint && !a.pop && !p.errors.length]);
+  if (motion) {
+    await p.evaluate(() => { __w.cer.hold = 1300; }); await wait(200); // the plate landed, the title coming in, the confetti falling
+    await p.screenshot({ path: path.join(out, "phone-light-ceremony-mid.png") });
+    await p.evaluate(() => { __w.cer.hold = null; }); await wait(3600);
+    const f = await st();
+    R.push([`the ceremony lands on its final frame and stops (buttons ${f.in ? "up" : "not up"}, ${f.raf ? "still drawing" : "no more frames"})`, f.on && f.in && !f.raf]);
+  } else {
+    const snap = () => p.evaluate(() => document.querySelector("#cer canvas").toDataURL().length + ":" + __w.cer.raf);
+    const s1 = await snap(); await wait(500); const s2 = await snap();
+    R.push([`under reduced motion the ceremony is a still: the final frame at once, the buttons up, nothing drawing (${s1 === s2 ? "same picture" : "changed"})`, a.still && a.in && !a.raf && s1 === s2 && /:0$/.test(s1)]);
+  }
+  await p.screenshot({ path: path.join(out, `phone-light-ceremony-final${motion ? "" : "-still"}.png`) });
+  // Share: the picture goes to the share sheet as a PNG file (a stand-in for the phone's).
+  await p.evaluate(() => { window.__shared = null; Object.defineProperty(navigator, "canShare", { value: (d) => Boolean(d?.files?.length), configurable: true }); Object.defineProperty(navigator, "share", { value: async (d) => { window.__shared = d; }, configurable: true }); });
+  await p.click("#cer-share");
+  for (let i = 0; i < 25 && !(await p.evaluate(() => Boolean(window.__shared))); i++) await wait(200);
+  const sh = await p.evaluate(async () => {
+    const f = window.__shared?.files?.[0]; if (!f) return null;
+    const b = new Uint8Array(await f.arrayBuffer()), dv = new DataView(b.buffer);
+    let bin = ""; for (let i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode(...b.subarray(i, i + 0x8000));
+    return { name: f.name, type: f.type, size: b.length, png: b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47, w: dv.getUint32(16), h: dv.getUint32(20), b64: btoa(bin), on: __w.cer.on };
+  });
+  if (sh) fs.writeFileSync(path.join(out, `phone-light-ceremony-share${motion ? "" : "-still"}.png`), Buffer.from(sh.b64, "base64"));
+  R.push([`${motion ? "" : "reduced motion: "}Share hands the share sheet a PNG of the final frame (${sh ? `${sh.name}, ${sh.type}, ${sh.w}×${sh.h}, ${Math.round(sh.size / 1024)} KB` : "nothing shared"})`, Boolean(sh) && sh.png && sh.type === "image/png" && sh.w === 1170 && sh.h > 1200 && sh.size > 5000 && sh.on]);
+  await p.click("#cer-done"); await wait(1500);
+  const d = await st();
+  R.push([`${motion ? "" : "reduced motion: "}Done ends it and the trophy flow carries on: the message with its Undo ("${d.toast.replace(/\s*Undo$/, "")}"), the medal (${d.mint || d.pop ? "shown" : "not shown"})`, !d.on && !d.shown && d.done && /finished/.test(d.toast) && d.undo && (d.mint || d.pop) && !p.errors.length]);
+  // Undo, then the same card again: finished again, no second ceremony.
+  await p.evaluate(() => document.querySelector("#toast .toast-btn")?.click()); await wait(600);
+  const u = { ...(await st()), ...(await last()) };
+  await own(true, true); await wait(600);
+  const r = await st();
+  R.push([`${motion ? "" : "reduced motion: "}Undo takes the finish back (${u.owned ? "card still owned" : "card out"}, ${u.done ? "still finished" : "not finished"}) and the same card again finishes it without a second ceremony (${r.on ? "it played again" : "no ceremony"}; "${r.toast.replace(/\s*Undo$/, "")}")`, !u.owned && !u.done && r.done && !r.on && !r.shown && /finished/.test(r.toast) && !p.errors.length]);
+  await p.close();
+}
 await browser.close();
 const bad = report(R);
 console.log(`\nScreenshots: ${path.relative(process.cwd(), out)}`);

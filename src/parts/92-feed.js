@@ -27,6 +27,32 @@ const srcState = { off: new Set(), alerts: false, ver: 0 };
 try { const s = JSON.parse(localStorage.getItem("wall-sources-off") || "null"); if (s) { srcState.off = new Set(s.off || []); srcState.alerts = Boolean(s.alerts); } } catch { /* fresh */ }
 const saveSources = () => { srcState.ver++; try { localStorage.setItem("wall-sources-off", JSON.stringify({ off: [...srcState.off], alerts: srcState.alerts })); } catch { /* private mode */ } };
 const srcOn = (id) => !srcState.off.has(id);
+// ----- shops you add (parity 5): production's "add any Shopify card shop by its website". Kept on this device in
+// wall-shops ({ domain, at }); each is a source in Card shops after the made-up two, its stock made up and seeded by
+// its domain. Production's store watcher: the first look just records what's there, and new items show from the next
+// look, so what it finds is dated from when you added it and is never NEW. -----
+const shopName = (d) => d.split(".")[0].split("-").filter(Boolean).map((w) => w[0].toUpperCase() + w.slice(1)).join(" ");
+let myShops = [];
+try { const v = JSON.parse(localStorage.getItem("wall-shops") || "[]"); if (Array.isArray(v)) myShops = v.filter((x) => x && typeof x.domain === "string" && /^[a-z0-9.-]+$/.test(x.domain)).map((x) => ({ domain: x.domain, at: Number(x.at) || Date.now() })); } catch { /* fresh */ }
+const saveShops = () => { try { localStorage.setItem("wall-shops", JSON.stringify(myShops)); } catch { /* private mode */ } };
+function syncShopSrc() { // SRC and SRC_BY follow myShops; w 0, so no seeded listing moves to them
+  for (let i = SRC.length - 1; i >= 0; i--) if (SRC[i].domain) { SRC_BY.delete(SRC[i].id); SRC.splice(i, 1); }
+  for (const x of myShops) {
+    const s = { id: `shop-${x.domain}`, name: shopName(x.domain), group: "Card shops", w: 0, line: "Reading their shop. The first look just records what's in stock; new items show from the next look", domain: x.domain, url: `https://${x.domain}`, at: x.at, k: 1000 + Math.floor(h32(`shop|${x.domain}`) * 1e6) };
+    SRC.push(s); SRC_BY.set(s.id, s);
+  }
+}
+syncShopSrc();
+// A website or a bare domain, as https://domain: "" when there's nothing, null when it isn't one.
+function shopDomain(raw) {
+  let t = String(raw || "").trim();
+  if (!t) return "";
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(t)) t = `https://${t}`;
+  let u; try { u = new URL(t); } catch { return null; }
+  if (!/^https?:$/.test(u.protocol) || u.username || u.password || u.port) return null;
+  const h = u.hostname.toLowerCase().replace(/^www\./, "");
+  return /^(?=.{4,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,24}$/.test(h) ? h : null;
+}
 const scan = { last: Date.now(), next: Date.now() + 6000 }; // the looks: when the last was, when the next is (72-live.js)
 const finds = []; // what this visit's looks found, newest first: { L, at }
 
@@ -55,9 +81,9 @@ function slabFor(c, k) {
 }
 const refOf = (L) => (L.grade ? gradeAsk(L.c, L.grade.co, L.grade.grade) : L.c.price); // what a listing is priced against
 const refName = (L) => (L.grade ? `${slabText(L.grade)} ask` : "market price");
-function makeListing(c, k, price) {
-  const r = (x) => h32(`${c.id}|L${k}|${x}`), st = sets[c.si], vintage = st.year < 2003, src = srcFor(c, k);
-  const L = { id: `${c.id}~${k}`, c, k, src, price, how: "", bestOffer: false, fav: false, ship: null, cond: null, seller: "", fb: null, fbN: null, endsAt: 0, bids: 0, sub: "", grade: slabFor(c, k) };
+function makeListing(c, k, price, src0 = null) {
+  const r = (x) => h32(`${c.id}|L${k}|${x}`), st = sets[c.si], vintage = st.year < 2003, src = src0 || srcFor(c, k);
+  const L = { id: `${c.id}~${k}`, c, k, src, price, how: "", bestOffer: false, fav: false, ship: null, cond: null, seller: "", fb: null, fbN: null, endsAt: 0, bids: 0, sub: "", grade: src0 ? null : slabFor(c, k) };
   const cr = r("cond");
   L.cond = L.grade ? null : cr < 0.5 ? "NM" : cr < 0.68 ? "LP" : cr < 0.74 ? "MP" : cr < 0.76 ? "HP" : null; // the condition the title states, if it does (a slab's grade is its condition)
   if (src === "ebay") {
@@ -82,10 +108,10 @@ function makeListing(c, k, price) {
   else L.title = `${c.name} (${num}) [${st.name}]${cw ? ` - ${cw}` : ""}`;
   return L;
 }
-function listingOf(c, k, price) {
+function listingOf(c, k, price, src0 = null) {
   const key = `${c.id}~${k}|${price}`;
   let L = lsMemo.get(key);
-  if (!L) { L = makeListing(c, k, price); if (lsMemo.size > 4000) lsMemo.clear(); lsMemo.set(key, L); }
+  if (!L) { L = makeListing(c, k, price, src0); if (lsMemo.size > 4000) lsMemo.clear(); lsMemo.set(key, L); }
   return L;
 }
 // Every listing for one card you chase: its best (the deal on the wall), and for the deals the wall started with,
@@ -107,7 +133,21 @@ function listingsOf(c) {
       out.push(L);
     }
   }
+  for (const s of SRC) if (s.domain) { const L = shopListing(c, s); if (L) out.push(L); }
   return out;
+}
+// A shop you added (parity 5): about one card you chase in eleven is in stock there (about what Northside gives),
+// at a shop's price (80 to 97% of market), never under the card's best listing, which is the deal on the wall. Seeded
+// by its domain and the card.
+const SHOP_RATE = 0.09;
+function shopListing(c, s) {
+  const r = (x) => h32(`${c.id}|${s.domain}|${x}`);
+  if (r("has") >= SHOP_RATE) return null;
+  const p = round2(c.price * (0.8 + 0.17 * r("p")));
+  if (p <= c.deal + 0.01) return null;
+  const L = listingOf(c, s.k, p, s.id);
+  L.was = null; L.at = L.seen = s.at; L.dropAt = 0; L.base = true;
+  return L;
 }
 // ----- the Feed's own filters and sort (kept on this device): production's condition and damaged rules -----
 // Condition filters by what a listing's title states (a title that doesn't say still shows, as in production). A
@@ -115,7 +155,7 @@ function listingsOf(c) {
 // matters with any condition, so it's the last choice of the same picker). The filter counts everywhere the Feed is
 // counted (the rooms button, the map), like a source switched off. The sort is only how the page reads.
 const FEED_SORT_IDS = ["newest", "best", "ending", "price", "priceDesc", "pct", "savings", "shops", "local", "seller", "freeShip", "card"];
-const FEED_F0 = { src: "", how: "", slab: "", gco: "", gmin: "", off: "", fresh: "", max: "", free: false, fav: false, soon: false }; // the Filters panel (production's, where the listings carry it)
+const FEED_F0 = { src: "", how: "", slab: "", gco: "", gmin: "", off: "", fresh: "", max: "", free: false, fav: false, soon: false, prio: false }; // the Filters panel (production's, where the listings carry it)
 const feedView = { sort: "newest", cond: "", ...FEED_F0, v: 0 }; // cond: "" any but damaged, NM, LP or MP and better, "any" damaged too
 try {
   const v = JSON.parse(localStorage.getItem("wall-feed-view") || "null");
@@ -145,6 +185,7 @@ function feedPass(L) {
   if (f.max !== "" && +f.max > 0 && totalOf(L) > +f.max) return false;
   if (f.free && L.ship !== 0) return false;
   if (f.fav && !L.fav) return false;
+  if (f.prio && !isPrio(L.c)) return false;
   if (f.soon && !(L.endsAt > now && L.endsAt - now <= 6 * 3600e3)) return false;
   return true;
 }
@@ -177,7 +218,7 @@ function feedList(counts = null, hidden = null) {
 }
 let feedMemo = { key: "", v: null };
 function feedData() { // once a frame at most, for the map's cards
-  const key = `${lastFrame}|${srcState.ver}|${copiesKey}|${scan.last}|${wallVer}|${feedView.cond}|${feedView.v}`;
+  const key = `${lastFrame}|${srcState.ver}|${copiesKey}|${scan.last}|${wallVer}|${feedView.cond}|${feedView.v}|${prioVer}`;
   if (feedMemo.key === key) return feedMemo.v;
   const counts = {}, list = feedList(counts), chased = cards.filter(isChase).length;
   feedMemo = { key, v: { list, counts, chased, fresh: list.filter(isNewL).length } };
@@ -190,7 +231,7 @@ let feedSeenAt = 0;
 try { feedSeenAt = Number(localStorage.getItem("wall-feed-seen")) || 0; } catch { feedSeenAt = 0; }
 let feedFrom = feedSeenAt; // while you're in the Feed: when your last visit ended
 const inFeed = () => rooms.at === "feed" && !rooms.map;
-const isNewL = (L) => L.seen > Math.max(inFeed() ? feedFrom : feedSeenAt, Date.now() - 3 * DAY);
+const isNewL = (L) => !L.base && L.seen > Math.max(inFeed() ? feedFrom : feedSeenAt, Date.now() - 3 * DAY);
 const feedNewCount = () => feedList().filter(isNewL).length;
 function feedEnter() { feedFrom = feedSeenAt; renderFeed(); pgFeed.scrollTop = 0; }
 function feedLeave() { feedSeenAt = Date.now(); feedFrom = feedSeenAt; try { localStorage.setItem("wall-feed-seen", String(feedSeenAt)); } catch { /* private mode */ } syncBadge(); }
@@ -198,7 +239,7 @@ addEventListener("pagehide", () => { if (inFeed()) feedLeave(); });
 
 // ----- production's score (0 to 100), line by line: about 40 is a fair price, 80 and up a standout -----
 function scoreOf(L) {
-  const ageH = Math.floor((Date.now() - L.at) / 3600e3), key = `${L.price}|${ageH}|${srcOn(L.src)}`;
+  const ageH = Math.floor((Date.now() - L.at) / 3600e3), key = `${L.price}|${ageH}|${srcOn(L.src)}|${isPrio(L.c)}`;
   if (L.sc?.key === key) return L.sc;
   const M = marketL(L), pct = pctOf(L), parts = [{ key: "start", label: "Starting point", pts: 40, note: "Every listing starts here: about the market price." }];
   let score = 40;
@@ -215,6 +256,7 @@ function scoreOf(L) {
   else if (ageH < 24) add("fresh", "Listed today", 3);
   if (L.bestOffer) add("offer", "Best Offer", 3, "The seller takes offers, so you may get it for less.");
   if (L.fav) add("fav", "Favorite seller", 10, "A seller you marked as a favorite (in Source).");
+  if (isPrio(L.c)) add("prio", "Priority card", 4, "A card you marked priority (★).");
   if (L.ship === 0) add("freeship", "Free shipping", 2, "Shipping is already in the total.");
   if (L.ship == null && L.src === "ebay") add("noship", "Shipping not listed", -2, "The real price will be higher once shipping is added.");
   if (L.src === "tcgplayer") add("tcgunk", "Condition unknown", -6, "TCGplayer's lowest listing can be any condition.");
@@ -290,7 +332,7 @@ function feedRowHTML(L, slide) {
     ${cardFaceHTML(c)}<span class="fd-name">${n ? '<b class="fd-new">NEW</b>' : ""}${gt ? `<b class="fd-gr">${gt}</b>` : ""}<span>${esc(c.name)}</span></span><span class="fd-set">${esc(st.name)} #${esc(c.num)}${L.cond ? `, ${condOf(L.cond)[1]}` : ""}</span>
     <b class="fd-price">${money(L.price)}${L.was ? ` <s>${money(L.was)}</s>` : ""}</b><span class="fd-mkt">${gt ? `${gt} ask` : "Market"} ${money(ref)} · <em>${pct}% under</em></span>
     <span class="fd-src"><b>${esc(whereText(L))}</b> · ${L.dropAt ? "dropped " : ""}${agoText(L.seen, now)}</span>
-    <span class="slab ${slabClass(sc.score)}"><b>${sc.score}</b><small>score</small></span></button></li>`;
+    <span class="slab ${slabClass(sc.score)}"><b>${sc.score}</b><small>score</small></span></button>${prioBtnHTML(c)}</li>`;
 }
 function renderFeed(slideId = null) {
   if (pgFeed.hidden && !slideId) return;
@@ -313,7 +355,7 @@ function renderFeed(slideId = null) {
 // listings here carry it). A line under it says what the filters hide, with Show all.
 const pfSort = document.getElementById("pf-sort"), pfCond = document.getElementById("pf-cond"), pfHidden = document.getElementById("pf-hidden");
 const pfMoreBtn = document.getElementById("pf-more-btn"), pfMore = document.getElementById("pf-more");
-const PF_FIELDS = { "pf-src": "src", "pf-how": "how", "pf-slab": "slab", "pf-gco": "gco", "pf-gmin": "gmin", "pf-off": "off", "pf-fresh": "fresh", "pf-max": "max", "pf-free": "free", "pf-fav": "fav", "pf-soon": "soon" };
+const PF_FIELDS = { "pf-src": "src", "pf-how": "how", "pf-slab": "slab", "pf-gco": "gco", "pf-gmin": "gmin", "pf-off": "off", "pf-fresh": "fresh", "pf-max": "max", "pf-free": "free", "pf-fav": "fav", "pf-soon": "soon", "pf-prio": "prio" };
 function syncFeedTools(hidden) {
   pfSort.value = feedView.sort; pfCond.value = feedView.cond;
   pfCond.classList.toggle("on", Boolean(feedView.cond));
@@ -338,6 +380,7 @@ for (const [id, k] of Object.entries(PF_FIELDS)) {
 }
 document.getElementById("pf-clear").onclick = () => setFeedView({ ...FEED_F0 });
 pgFeed.addEventListener("click", (e) => {
+  const star = e.target.closest("[data-prio]"); if (star) { const c = cards.find((x) => x.id === star.dataset.prio); if (c) togglePrio(c); return; }
   if (e.target.closest("[data-fd-all]")) { setFeedView({ ...FEED_F0, cond: "any" }); return; }
   const row = e.target.closest("[data-l]"); if (row) { tick(4); openListing(row.dataset.l); return; }
   const go = e.target.closest("[data-go]"); if (!go) return;
@@ -426,9 +469,11 @@ function openListing(id) {
 }
 const agoLeft = (ms) => { const h = Math.floor(ms / 3600e3), m = Math.max(1, Math.round((ms % 3600e3) / 60e3)); return ms <= 0 ? "moments" : h >= 24 ? `${Math.floor(h / 24)} d ${h % 24} h` : h ? `${h} h ${m} min` : `${m} min`; };
 // The listings are made up, so Open goes to the card on the real site: a search for its name (the made-up sets and
-// numbers would find nothing), where its real listings are. The made-up shops have nowhere to go.
+// numbers would find nothing), where its real listings are. A shop you added opens its own search (Shopify's
+// /search?q=); the made-up shops have nowhere to go.
 function listingUrl(L) {
-  const c = L.c, q = encodeURIComponent(c.name);
+  const c = L.c, q = encodeURIComponent(c.name), shop = SRC_BY.get(L.src);
+  if (shop?.domain) return `https://${shop.domain}/search?q=${q}`;
   if (L.src === "ebay") return `https://www.ebay.com/sch/i.html?_nkw=${q}+pokemon+card`;
   if (L.src === "tcgplayer") return `https://www.tcgplayer.com/search/pokemon/product?productLineName=pokemon&q=${q}`;
   if (L.src === "reddit") return `https://www.reddit.com/r/${L.sub}/search/?q=${encodeURIComponent(c.name)}&restrict_sr=1&sort=new`;

@@ -1,6 +1,7 @@
 // ---------- toast, about ----------
 const toastEl = document.getElementById("toast");
 function toast(t, action = null, label = "Undo") {
+  if (cer.on) { cer.toast = [t, action, label]; return; } // under the completion ceremony: said when it ends, Undo and all
   toastEl.textContent = t;
   if (action) {
     const b = document.createElement("button"); b.textContent = label; b.className = "toast-btn";
@@ -51,7 +52,7 @@ function focusFor(el, box) {
 const about = document.getElementById("about");
 document.getElementById("info").onclick = () => about.showModal();
 document.getElementById("about-close").onclick = () => about.close();
-document.getElementById("reset").onclick = () => { saved = {}; persist(); try { for (const k of ["wall-chase", "wall-chases", "wall-scope", "wall-done", "wall-spares", "wall-copies", "wall-paid", "wall-trades", "wall-welcomed", "wall-imported", "wall-sets", "wall-lens", "wall-mode", "wall-value", "wall-show", "wall-order", "wall-corder", "wall-feed-view", "wall-medals", "wall-dated", "wall-arrival", "wall-feed-seen", "wall-sources-off", "wall-map-seen", "wall-checker", "wall-tb-hint", "wall-graded"]) localStorage.removeItem(k); } catch { /* fine */ } location.reload(); };
+document.getElementById("reset").onclick = () => { saved = {}; persist(); try { for (const k of ["wall-chase", "wall-chases", "wall-scope", "wall-done", "wall-spares", "wall-copies", "wall-paid", "wall-trades", "wall-welcomed", "wall-imported", "wall-sets", "wall-lens", "wall-mode", "wall-value", "wall-show", "wall-order", "wall-corder", "wall-feed-view", "wall-medals", "wall-dated", "wall-arrival", "wall-feed-seen", "wall-sources-off", "wall-map-seen", "wall-checker", "wall-tb-hint", "wall-graded", "wall-favs", "wall-priority", "wall-shops", "wall-ceremony"]) localStorage.removeItem(k); } catch { /* fine */ } location.reload(); };
 
 // ---------- settings: appearance, the list, reset ----------
 const prefs = document.getElementById("prefs");
@@ -131,7 +132,7 @@ function drawList() {
     const ws = cards.filter((c) => isChase(c) && (!state.matches || state.matches.has(c))).sort((a, b) => a.si - b.si || chaseCmp(a, b) || a.i - b.i);
     top = `<section><h2>Your chase list</h2><p class="lsub">${ws.length} to go, by set. ${state.corder === "dear" ? "Dearest first." : state.corder === "cheap" ? "Cheapest to get first." : "Live deals first."}</p><ul>${ws.map((c) => {
       const st = sets[c.si];
-      return `<li class="lwrow"><div class="lrow"><span class="lname">${c.name}</span><span class="lmeta">${st.name} #${c.num}, ${c.rname}</span><span class="lprice">${c.deal ? `<b class="ldeal">Live ${money(c.deal)}</b>` : `Pay up to ${money(capOf(c))}`}</span><span class="lstate">Market ${money(c.price)}</span></div><button type="button" class="pill-btn lgot" data-got="${c.i}">Got it</button></li>`;
+      return `<li class="lwrow"><div class="lrow"><span class="lname">${c.name}${isPrio(c) ? ' <span aria-hidden="true">★</span><span class="sr">, priority</span>' : ""}</span><span class="lmeta">${st.name} #${c.num}, ${c.rname}</span><span class="lprice">${c.deal ? `<b class="ldeal">Live ${money(c.deal)}</b>` : `Pay up to ${money(capOf(c))}`}</span><span class="lstate">Market ${money(c.price)}</span></div><button type="button" class="pill-btn lgot" data-got="${c.i}">Got it</button></li>`;
     }).join("")}</ul>${ws.length ? "" : `<p class="lsub">Nothing to chase yet.</p>`}<p class="lsub"><button type="button" class="pill-btn" data-lnew>New chase</button></p></section>`;
   }
   const row = (c) => {

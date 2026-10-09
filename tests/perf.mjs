@@ -42,6 +42,20 @@ const t = await p.evaluate(async () => {
   }
   return { mosaic, pinch, map, pics };
 });
+// Parity 6: the completion ceremony, for every card on the wall at once (more pockets than any set or chase has), held
+// while the cards travel and the rows fill, and again with the plate down and the confetti falling; no canvas is made.
+const cer = await p.evaluate(async () => {
+  if (!__w.cerOpen) return null;
+  const time = async () => { const ts = []; await new Promise((res) => { const f = (x) => { ts.push(x); __w.kick(); if (ts.length < 16) requestAnimationFrame(f); else res(); }; requestAnimationFrame(f); }); return (ts[15] - ts[0]) / 15; };
+  const g = { name: "Every card", key: "perf-ceremony", base: __w.cards.slice() }, made = [], ce = document.createElement;
+  __w.cerOpen(g); __w.cer.hold = 640;
+  document.createElement = function (tag, ...a) { if (String(tag).toLowerCase() === "canvas") made.push(tag); return ce.call(this, tag, ...a); };
+  await time(); const fill = await time(); __w.cer.hold = 1300; const fall = await time();
+  document.createElement = ce;
+  __w.cerClose();
+  return { fill, fall, n: g.base.length, made: made.length };
+});
+if (cer) console.log(`the completion ceremony with ${cer.n} cards: filling ${cer.fill.toFixed(1)}ms per frame, confetti falling ${cer.fall.toFixed(1)}ms per frame, ${cer.made} canvases made while it moved`);
 console.log(`mosaic ${t.mosaic.toFixed(1)}ms per frame, held pinch ${t.pinch.toFixed(1)}ms per frame${t.map != null ? `, held pinch up to the map ${t.map.toFixed(1)}ms per frame` : ""}`);
 if (t.pics) console.log(`with ${t.pics.n} card pictures in: a binder at rest ${t.pics.binder.toFixed(1)}ms per frame, a pinch held into it ${t.pics.pinch.toFixed(1)}ms per frame`);
 // Round 22: a phone on its side (more of the wall on screen at once), and the trade binder's two facing pages held mid-turn.
@@ -87,6 +101,7 @@ console.log(`on its side: mosaic ${u.mosaic.toFixed(1)}ms per frame, held pinch 
 const bad = report([["the mosaic draws within 34ms", t.mosaic < 34], ["a held pinch draws within 34ms", t.pinch < 34], ...(t.map != null ? [["a held pinch up to the map draws within 34ms", t.map < 34]] : []),
   ...(t.pics ? [[`a binder of pictures draws within 34ms (${t.pics.n} pictures in)`, t.pics.n > 0 && t.pics.binder < 34], ["a pinch held into a binder of pictures draws within 34ms", t.pics.pinch < 34]] : []),
   ["on its side, the mosaic draws within 34ms", u.mosaic < 34], ["on its side, a held pinch draws within 34ms", u.pinch < 34], ["on its side, a held pinch up to the map draws within 34ms", u.map < 34], ...(u.turn != null ? [["on its side, a page turn held under the thumb draws within 34ms", u.turn < 34]] : []),
-  ...(picsSide ? [["the binder of card pictures held mid-turn draws within 34ms, on its side and upright", picsSide.ms < 34 && picsUp && picsUp.ms < 34 && picsUp.n > 0]] : [])]);
+  ...(picsSide ? [["the binder of card pictures held mid-turn draws within 34ms, on its side and upright", picsSide.ms < 34 && picsUp && picsUp.ms < 34 && picsUp.n > 0]] : []),
+  ...(cer ? [[`the completion ceremony draws within 34ms with every card in it, and makes no canvas while it moves`, cer.fill < 34 && cer.fall < 34 && cer.made === 0]] : [])]);
 await browser.close();
 process.exit(bad ? 1 : 0);

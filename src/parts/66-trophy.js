@@ -71,7 +71,9 @@ function syncDone({ quiet = false } = {}) {
   }
   if (!minted.length && !freed.length) return null;
   persistDone();
-  applyDone(minted, freed, quiet);
+  const cg = minted.length ? cerFor(minted, quiet) : null; // a whole set or chase finished by hand: the ceremony first (69-ceremony.js)
+  if (cg) cerOpen(cg);
+  cerLater(() => { if (cg) for (const g of minted) if (g.finT) g.finT = performance.now(); applyDone(minted, freed, quiet); }); // then the trophy flow, as before
   return { minted, freed };
 }
 function applyDone(minted, freed, quiet) {

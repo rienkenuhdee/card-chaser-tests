@@ -118,7 +118,7 @@ const PAINT = {
     cardFrame("source", w, h);
     const F = feedData();
     cardTitle("source", w, ""); // its clock is drawn live, on top, as its count line
-    const chips = [], groups0 = [["ebay"], ["tcgplayer"], ["reddit"], ["local"], ["shop-a", "shop-b"]];
+    const chips = [], groups0 = [["ebay"], ["tcgplayer"], ["reddit"], ["local"], SRC.filter((s) => s.group === "Card shops").map((s) => s.id)]; // the made-up two and any you add
     let x = 14, y = CARD_HEAD + 2;
     font(600, 13);
     for (const ids of groups0) {

@@ -12,23 +12,56 @@ function clockText(brief = false) {
   if (!chased) return brief ? "Waiting for a chase" : "Chase a card and it starts looking.";
   return brief ? (left ? `Next look in ${left} s` : "Looking now") : left ? `Last look ${ago} s ago. Next in ${left} s.` : "Looking now.";
 }
+let shopMsg = null; // the Add a shop line: { t, bad }
 function renderSource() {
   if (pgSource.hidden) return;
+  const inp = document.getElementById("ps-shop-url"), keep = inp && { v: inp.value, f: document.activeElement === inp, a: inp.selectionStart, b: inp.selectionEnd }; // a look re-renders the page: what you're typing stays
   const counts = {}; feedList(counts);
   const chased = cards.filter(isChase).length;
   let imp = null; try { imp = localStorage.getItem("wall-imported"); } catch { /* fine */ }
   const owned = cards.filter((c) => c.owned).length;
   const sw = (id, label, on) => `<label class="sw"><input type="checkbox" role="switch" data-src="${id}" aria-label="${esc(label)}"${on ? " checked" : ""}><span aria-hidden="true"></span></label>`;
-  const row = (s) => { const on = srcOn(s.id), n = counts[s.id] || 0; return `<li class="src${on ? "" : " off"}" data-row="${s.id}"><span class="src-main"><b>${esc(s.name)}</b><small>${esc(s.line)}.${on && n ? ` ${plural1(n, "listing")} in your Feed.` : ""}</small></span>${sw(s.id, s.name, on)}</li>`; };
+  const row = (s) => { const on = srcOn(s.id), n = counts[s.id] || 0; return `<li class="src${on ? "" : " off"}" data-row="${esc(s.id)}"><span class="src-main"><b>${esc(s.name)}</b><small>${esc(s.line)}.${on && n ? ` ${plural1(n, "listing")} in your Feed.` : s.domain && on ? " Nothing you chase in stock yet." : ""}</small>${s.domain ? `<span class="src-acts"><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.domain)}</a><button type="button" data-shop-rm="${esc(s.domain)}" aria-label="Remove ${esc(s.name)}">Remove</button></span>` : ""}</span>${sw(s.id, s.name, on)}</li>`; };
   const group = (g) => SRC.filter((s) => s.group === g).map(row).join("");
   psBody.innerHTML = `<div class="src-clock" aria-live="polite"><i class="dot${chased ? "" : " off"}"></i><span><b>${chased ? `Looking for ${plural1(chased, "card")} you chase` : "Nothing to look for yet"}</b><span id="ps-clock">${clockText()}</span><em class="${finds.length ? "" : "none"}" id="ps-finds">${findsText()}</em></span></div>
     <h2>Marketplaces</h2><ul class="srcs">${group("Marketplaces")}</ul>
     <h2>Card shops</h2><ul class="srcs">${group("Card shops")}</ul>
+    <form class="shop-add" id="ps-shop" novalidate><label for="ps-shop-url"><b>Add a shop</b><small>Any Shopify card shop, by its website. Its in-stock singles that match a card you chase show in your Feed. What's in stock is made up in this test.</small></label><span class="shop-row"><input id="ps-shop-url" type="text" inputmode="url" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" placeholder="pokecorner.com" enterkeyhint="go"${shopMsg?.bad ? ' aria-invalid="true" aria-describedby="ps-shop-msg"' : ""}><button class="mbtn primary" type="submit">Add</button></span>${shopMsg ? `<p class="shop-msg${shopMsg.bad ? " bad" : ""}" id="ps-shop-msg" role="status">${esc(shopMsg.t)}</p>` : ""}</form>
     <h2>Favorite sellers</h2><ul class="srcs"><li class="src"><span class="src-main"><b>${FAV_SELLER} on eBay</b><small>Their newest listings are checked every look, and score 10 higher.</small></span></li></ul>
     <h2>Your collection</h2><ul class="srcs"><li class="src"><span class="src-main"><b>${imp && imp !== "1" ? `${esc(imp)} import` : imp ? "Your import" : "Nothing imported yet"}</b><small>${imp ? `${owned.toLocaleString()} cards on your wall now.` : "Import from TCGplayer or Collectr when you start, or pick your sets in Settings."}</small></span></li></ul>
     <h2>Alerts</h2><ul class="srcs"><li class="src${srcState.alerts ? "" : " off"}"><span class="src-main"><b>Phone alerts</b><small>A listing that scores 75 or more pings your phone. In the demo it's a line at the top.</small></span>${sw("alerts", "Phone alerts", srcState.alerts)}</li></ul>
     <p class="rp-note">The listings here are made up for the demo.</p>`;
+  const n = keep && document.getElementById("ps-shop-url");
+  if (n) { n.value = keep.v; if (keep.f) { n.focus({ preventScroll: true }); try { n.setSelectionRange(keep.a, keep.b); } catch { /* fine */ } } }
 }
+// Add a shop (parity 5): a website or a bare domain; a bad one is refused in plain words, under the field.
+function refreshSources() { renderSource(); renderFeed(); syncBadge(); drawList(); kick(); }
+function addShop(raw) {
+  const d = shopDomain(raw), had = d && myShops.some((x) => x.domain === d);
+  if (!d || had) {
+    shopMsg = { bad: true, t: d === "" ? "Type the shop's website, like pokecorner.com." : had ? `${shopName(d)} is already one of your shops.` : "That doesn't look like a website. Try one like pokecorner.com." };
+    tick(4); renderSource(); document.getElementById("ps-shop-url")?.focus({ preventScroll: true }); return false;
+  }
+  myShops.push({ domain: d, at: Date.now() }); saveShops(); syncShopSrc(); saveSources();
+  const counts = {}; feedList(counts); const n = counts[`shop-${d}`] || 0;
+  shopMsg = { bad: false, t: `${shopName(d)} added, ${plural1(n, "listing")} for cards you chase. This first look just records what's in stock; new items show from the next look.` };
+  const inp = document.getElementById("ps-shop-url"); if (inp) { inp.value = ""; inp.blur(); }
+  tick(5); refreshSources(); toast(`${shopName(d)} added.`);
+  return true;
+}
+function removeShop(d) {
+  const i = myShops.findIndex((x) => x.domain === d); if (i < 0) return;
+  const [x] = myShops.splice(i, 1), id = `shop-${d}`, wasOff = srcState.off.has(id);
+  srcState.off.delete(id); shopMsg = null; saveShops(); syncShopSrc(); saveSources(); tick(4); refreshSources();
+  toast(`${shopName(d)} removed. Its listings leave your Feed.`, () => {
+    if (myShops.some((y) => y.domain === d)) return;
+    myShops.splice(Math.min(i, myShops.length), 0, x); if (wasOff) srcState.off.add(id);
+    saveShops(); syncShopSrc(); saveSources(); refreshSources(); toast(`${shopName(d)} is back.`);
+  });
+}
+psBody.addEventListener("submit", (e) => { if (e.target.id !== "ps-shop") return; e.preventDefault(); addShop(document.getElementById("ps-shop-url").value); });
+psBody.addEventListener("click", (e) => { const b = e.target.closest("[data-shop-rm]"); if (b) removeShop(b.dataset.shopRm); });
+setTimeout(() => { if (window.__w) Object.defineProperties(window.__w, { addShop: { value: addShop }, removeShop: { value: removeShop }, myShops: { get: () => myShops }, shopDomain: { value: shopDomain } }); });
 const findsText = () => (finds.length ? `${plural1(finds.length, "find")} this visit. Latest: ${finds[0].L.c.name} ${short(finds[0].L.price)} on ${openOn(finds[0].L)}.` : "No finds yet this visit.");
 // The clock ticks while Source is up (its line only), and a find lights the row it came from.
 function syncSourceClock() {
