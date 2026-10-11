@@ -1,0 +1,23 @@
+/* Round 18, safe: online trades by post. */
+
+/* The close-up: their copy's photo, while you hold the card. */
+.peek { position: fixed; z-index: 7; left: 50%; top: 46%; transform: translate(-50%, -50%) scale(.94); opacity: 0; pointer-events: none;
+  display: grid; gap: 10px; justify-items: center; padding: 12px 12px 14px; border-radius: 18px; background: var(--panel-solid);
+  border: 1px solid var(--line); box-shadow: var(--shadow); max-width: calc(100vw - 40px); }
+.peek.on { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+@media (prefers-reduced-motion: no-preference) { .peek { transition: opacity .16s, transform .22s cubic-bezier(.2,.9,.25,1.04); } }
+.peek canvas { display: block; border-radius: 10px; }
+.pk-cap { display: grid; gap: 2px; text-align: center; max-width: 260px; }
+.pk-cap b { font: 800 21px var(--font); font-stretch: 78%; color: var(--ink); }
+.pk-cap span { font-size: 13px; line-height: 1.35; color: var(--muted); }
+.pk-cap .pk-card { color: var(--ink); font-weight: 600; }
+
+/* Mark as shipped. */
+#ship-dlg p { margin: 0 0 4px; color: var(--muted); }
+#ship-dlg .sd-in { display: block; width: 100%; box-sizing: border-box; height: 46px; margin: 0 0 18px; padding: 0 12px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: 500 16px var(--font); font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+#ship-dlg .sd-in:focus { outline: 2px solid var(--ink); outline-offset: 1px; }
+
+/* Settings: the demo clock. */
+#prefs .shipnote { margin: 0 0 8px; font-size: 14px; color: var(--muted); }
+

@@ -1,0 +1,3 @@
+/* Round 18, bold: in the mail */
+.panel .deal.mailline { color: var(--gold); }
+dialog .mailnote { margin: 0 0 8px; font-size: 14px; color: var(--muted); }
