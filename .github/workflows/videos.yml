@@ -1,0 +1,84 @@
+# Films Card Chaser and uploads the videos as artifacts. Posts nothing anywhere.
+# The daily short runs at 8:00 AM Pacific; either video can be run by hand (Actions > Videos > Run workflow).
+name: Videos
+
+on:
+  schedule:
+    # GitHub's schedule is UTC and doesn't follow daylight saving: 15:00 UTC is 8:00 AM PDT and 16:00 UTC is 8:00 AM
+    # PST. Both fire; the job runs only the one that is 8 AM in Los Angeles that day (the "when" step below).
+    - cron: "0 15 * * *"
+    - cron: "0 16 * * *"
+  workflow_dispatch:
+    inputs:
+      video:
+        description: Which video
+        type: choice
+        options: [short, walkthrough]
+        default: short
+      set:
+        description: "Short only: a set from videos/sets.json (blank: today's)"
+        required: false
+        default: ""
+
+concurrency:
+  group: videos
+  cancel-in-progress: false
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: videos
+    steps:
+      - name: When
+        id: when
+        working-directory: .
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "$(TZ=America/Los_Angeles date +%H)" != "08" ]; then
+            echo "run=no" >> "$GITHUB_OUTPUT"; echo "Not 8 AM in Los Angeles; the other schedule runs today."
+          else
+            echo "run=yes" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.when.outputs.run == 'yes'
+      - uses: actions/setup-node@v4
+        if: steps.when.outputs.run == 'yes'
+        with:
+          node-version: 22
+      - name: Install
+        if: steps.when.outputs.run == 'yes'
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q ffmpeg fonts-dejavu-core
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Record
+        if: steps.when.outputs.run == 'yes'
+        env:
+          DEMO_EMAIL: ${{ secrets.DEMO_EMAIL }}
+          DEMO_PASSWORD: ${{ secrets.DEMO_PASSWORD }}
+          VIDEO: ${{ github.event_name == 'workflow_dispatch' && inputs.video || 'short' }}
+          SET: ${{ github.event_name == 'workflow_dispatch' && inputs.set || '' }}
+        run: |
+          if [ "$VIDEO" = "walkthrough" ]; then npm run record:walkthrough
+          elif [ -n "$SET" ]; then npm run record:short -- --set "$SET"
+          else npm run record:short; fi
+      - name: Upload the video
+        if: steps.when.outputs.run == 'yes' && success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event_name == 'workflow_dispatch' && inputs.video || 'short' }}-${{ github.run_number }}
+          path: |
+            videos/out/*.mp4
+            videos/out/caption.txt
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload the failure screenshot
+        if: steps.when.outputs.run == 'yes' && failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failure-${{ github.run_number }}
+          path: videos/out/failure-*.png
+          if-no-files-found: ignore
+          retention-days: 7

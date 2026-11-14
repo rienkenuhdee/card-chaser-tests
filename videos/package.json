@@ -1,0 +1,18 @@
+{
+  "name": "card-chaser-videos",
+  "private": true,
+  "type": "module",
+  "description": "Films Card Chaser on a phone-sized screen and cuts vertical videos from it.",
+  "scripts": {
+    "record:walkthrough": "node record.mjs walkthrough",
+    "record:short": "node record.mjs short",
+    "rehearse:walkthrough": "node record.mjs walkthrough --rehearse",
+    "rehearse:short": "node record.mjs short --rehearse"
+  },
+  "dependencies": {
+    "playwright": "1.63.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

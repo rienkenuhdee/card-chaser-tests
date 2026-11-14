@@ -11,7 +11,9 @@
     "test:gestures": "node tests/gestures.mjs",
     "test:smoke": "node tests/smoke.mjs",
     "test:perf": "node tests/perf.mjs",
-    "test:landscape": "node tests/landscape.mjs"
+    "test:landscape": "node tests/landscape.mjs",
+    "record:walkthrough": "npm --prefix videos run record:walkthrough",
+    "record:short": "npm --prefix videos run record:short"
   },
   "devDependencies": {
     "puppeteer": "^23.0.0"

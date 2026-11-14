@@ -1,0 +1,9 @@
+[
+  { "name": "Pikachu", "dex": 25 },
+  { "name": "Charizard", "dex": 6 },
+  { "name": "Eevee", "dex": 133 },
+  { "name": "Gengar", "dex": 94 },
+  { "name": "Umbreon", "dex": 197 },
+  { "name": "Rayquaza", "dex": 384 },
+  { "name": "Mewtwo", "dex": 150 }
+]
