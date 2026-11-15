@@ -45,10 +45,10 @@ export async function openWithFlight(F, S, re, name, caption) {
   l = await panelInView(S, re);
   if (blank.length) { log(`${name}: its first screen has a card with no picture; opening it off camera`); await openPanel(S, l, name); return false; }
   await F.begin(`${name} opens`, caption);
-  await sleep(550);
+  await sleep(380);
   await S.tapAt(l.x + Math.min(30, l.w / 2), l.y + 34, { pause: false });
   await S.page.waitForFunction(() => !document.getElementById("back").hidden, null, { timeout: 15000 }).catch(() => { throw new Fail(`${name} didn't open`); });
-  await sleep(1100);
+  await sleep(950);
   await F.end();
   await S.settled(name, { loadRest: true, timeout: 45000 });
   return true;
@@ -204,37 +204,60 @@ export async function dealInView(S) {
   throw new Fail("Couldn't bring Find's deal into view");
 }
 
-/** Taps the missing card, then View offers in Find, and lands on its deal: three clips, each from a finished screen. */
-export async function cardToDeal(F, S, card, scene, caption, { hold = 1300 } = {}) {
-  // Where the card is now (closing it up close can move the page a little): its label nearest to where it was.
-  const all = await S.labels();
-  const again = all.filter((e) => e.t === card.label).map(cardPoint).filter((p) => p.y >= 120 && p.y <= VIEW.height - 60).sort((a, b) => Math.hypot(a.x - card.x, a.y - card.y) - Math.hypot(b.x - card.x, b.y - card.y))[0];
-  if (!again || again.y < 120 || again.y > VIEW.height - 60) throw new Fail(`${scene}: lost sight of ${card.name}`);
-  Object.assign(card, again);
-  await F.begin(`${scene} · the card`, caption);
-  await sleep(500);
+/**
+ * The climax, in one unbroken take: the missing card flies up close, View offers in Find, Find's answer comes in, the
+ * page scrolls to the deal, and it lands: a spotlight, the page leaning in, a shake, confetti, the stamp and the
+ * punchline caption. The whole path is run once off camera first (so the card's sheet and Find's answer for it are
+ * loaded and kept), then filmed from the set with nothing left to load.
+ */
+export async function cardToDeal(F, S, card, scene, caption, { hold = 1600, punch = "" } = {}) {
+  // Where the card is now (the page may have moved a little since it was chosen): its label nearest to where it was.
+  const relocate = async () => {
+    const at = (await S.labels()).filter((e) => e.t === card.label).map(cardPoint).filter((p) => p.y >= 120 && p.y <= VIEW.height - 60).sort((a, b) => Math.hypot(a.x - card.x, a.y - card.y) - Math.hypot(b.x - card.x, b.y - card.y))[0];
+    if (!at) throw new Fail(`${scene}: lost sight of ${card.name}`);
+    Object.assign(card, at);
+  };
+  await relocate();
+  // Off camera: the path once, then back to the set.
   await S.T.tap(card.x, card.y);
-  // The card flies up close (its picture is already in: it was opened once while choosing it).
-  await S.page.waitForFunction(() => document.body.classList.contains("focused"), null, { timeout: 8000 }).catch(() => {});
-  await sleep(750);
-  await F.end();
-  await S.page.waitForFunction(() => { const e = document.getElementById("p-buy"), r = e?.getBoundingClientRect(); return document.body.classList.contains("focused") && r && r.height > 0 && r.bottom < innerHeight && /View offers in Find/.test(e.textContent); }, null, { timeout: 10000 }).catch(() => { throw new Fail(`${scene}: the card's sheet has no "View offers in Find"`); });
-  await S.settled(`${scene}: ${card.name} up close`);
+  await S.page.waitForFunction(() => document.body.classList.contains("focused"), null, { timeout: 8000 }).catch(() => { throw new Fail(`${scene}: ${card.name} didn't come up close`); });
+  await S.page.waitForFunction(() => { const e = document.getElementById("p-buy"), r = e?.getBoundingClientRect(); return r && r.height > 0 && r.bottom < innerHeight && /View offers in Find/.test(e.textContent); }, null, { timeout: 10000 }).catch(() => { throw new Fail(`${scene}: the card's sheet has no "View offers in Find"`); });
+  await S.settled(`${scene}: ${card.name} up close (rehearsed)`);
   const st = await panelState(S);
   if (st.name !== card.name) throw new Fail(`${scene}: opened ${st.name || "something else"}, not ${card.name}`);
-
-  await F.begin(`${scene} · View offers in Find`, caption);
-  await beat(); await sleep(300);
-  await S.tapEl("#p-buy", { pause: false });
-  await sleep(260);
-  await F.end();
+  await S.page.locator("#p-buy").click();
   await S.page.waitForFunction(() => { const e = document.getElementById("fa"); return e && !e.hidden && e.getBoundingClientRect().height > 0; }, null, { timeout: 15000 }).catch(() => { throw new Fail(`${scene}: Find's answer didn't open`); });
-  await S.settled(`${scene}: Find's answer for ${card.name}`);
+  await S.page.locator("#fa .fa-under").first().waitFor({ state: "attached", timeout: 15000 }).catch(() => { throw new Fail(`${scene}: Find's answer shows no deal under market`); });
+  await S.settled(`${scene}: Find's answer for ${card.name} (rehearsed)`);
+  // Back: Find's answer to the card up close in Collection, then the card closed onto the set.
+  // (Find's answer has its own way back across, "‹ Back to Gengar in Collection" (99-links.js); then the card is closed.)
+  const across = S.page.locator("button, a, [role=button]", { hasText: /Back to .+ in Collection/ }).first();
+  if (await across.isVisible().catch(() => false)) { await across.click().catch(() => {}); await sleep(1100); }
+  for (let i = 0; i < 3 && (await S.page.evaluate(() => document.body.classList.contains("focused") || document.getElementById("fa")?.hidden === false)); i++) {
+    await S.page.locator("#back").click().catch(() => {});
+    await sleep(900);
+  }
+  await S.page.waitForFunction(() => !document.body.classList.contains("focused") && document.getElementById("fa")?.hidden !== false, null, { timeout: 10000 }).catch(() => { throw new Fail(`${scene}: couldn't get back to the set from Find's answer`); });
+  await S.settled(`${scene}: back on the set`);
+  await relocate();
 
-  await F.begin(`${scene} · the deal`, caption);
-  await sleep(700);
+  // On camera: the card, then (past the app's in-between screens) the answer and the deal.
+  await F.begin(`${scene} · the card`, caption);
+  await sleep(450);
+  await S.T.tap(card.x, card.y);
+  await S.page.waitForFunction(() => document.body.classList.contains("focused"), null, { timeout: 8000 }).catch(() => {});
+  await sleep(1000);
+  await S.tapEl("#p-buy", { pause: false });
+  await sleep(200);
+  // The app goes from here back out across the wall and Find's home before the answer opens (about a second of
+  // in-between screens): left out, the two halves joined by a quick zoom from the tap straight into the answer.
+  await F.end();
+  await S.page.waitForFunction(() => { const e = document.getElementById("fa"); return e && !e.hidden && e.getBoundingClientRect().height > 0; }, null, { timeout: 8000 }).catch(() => { throw new Fail(`${scene}: Find's answer didn't open on the filmed run`); });
+  await sleep(450);
+  await F.begin(`${scene} · the deal`, caption, { join: "whip" });
+  await sleep(250);
   await dealInView(S);
-  await sleep(350);
+  await sleep(250);
   // The spotlight on the deal's "N% under" and its price together (the row itself runs the screen's width).
   const box = await S.page.evaluate(() => {
     const u = document.querySelector("#fa .fa-under"), row = u?.closest("button") || u?.parentElement;
@@ -244,25 +267,26 @@ export async function cardToDeal(F, S, card, scene, caption, { hold = 1300 } = {
     return { x: x - 6, y: y - 6, width: r - x + 12, height: b - y + 12 };
   });
   if (!box) throw new Fail(`${scene}: the deal's price isn't on screen`);
-  // The payoff: what it saves against the card's worth, stamped in as the spotlight lands.
+  // The payoff: what it saves against the card's worth, from Find's answer itself.
   const say = await S.page.evaluate(() => {
     const fa = document.getElementById("fa"), worth = /Worth about\s*\$([\d,]+(?:\.\d+)?)/.exec(fa.innerText)?.[1];
     const u = fa.querySelector(".fa-under"), row = u?.closest("button") || u?.parentElement, price = /\$([\d,]+(?:\.\d+)?)/.exec(row?.querySelector("em")?.textContent || "")?.[1];
     return { worth: worth && Number(worth.replace(/,/g, "")), price: price && Number(price.replace(/,/g, "")), pct: /(\d+)%/.exec(u?.textContent || "")?.[1] };
   });
   const zoom = 1.12, spot = S.spotlight(box, { zoom });
-  await sleep(380);
+  await sleep(420);
   // A big saving leads with dollars; a small one with the percentage (a "SAVE $1" is no payoff).
   const save = say.worth && say.price ? say.worth - say.price : 0;
   const money = (v) => `$${v >= 100 ? Math.round(v).toLocaleString("en-US") : v.toFixed(2).replace(/\.00$/, "")}`;
   const [big, small] = save >= 10 ? [`SAVE ${money(save)}`, say.pct ? `${say.pct}% under market` : ""] : [`${say.pct}% UNDER`, save > 0 ? `Save ${money(save)} vs market` : "market price"];
-  // Where the spotlit row's top lands once the page has leaned in (the zoom is about the row's middle): the stamp sits
-  // just above it, never over it.
-  const cy = box.y + box.height / 2;
-  F.stamp(big, small, { pageY: cy - (cy - box.y) * zoom });
+  // Where the spotlit row lands once the page has leaned in (the zoom is about the row's middle): the stamp sits above it.
+  const cx = box.x + box.width / 2, cy = box.y + box.height / 2;
+  S.shake();
+  F.overlay({ kind: "confetti", x: cx, y: cy - (cy - box.y) * zoom });
+  F.overlay({ kind: "stamp", big, small, pageY: cy - (cy - box.y) * zoom });
+  if (punch) F.punch(punch);
   await spot;
   await sleep(hold);
   await F.end();
-  const deal = await S.page.locator("#fa .fa-under").first().textContent();
-  log(`${scene}: the deal on screen says "${deal.trim()}"`);
+  log(`${scene}: the deal on screen: "${big}" (${small})`);
 }

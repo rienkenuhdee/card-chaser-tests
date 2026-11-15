@@ -9,21 +9,33 @@ import { log, Fail } from "./log.mjs";
 
 export const OUT_W = W, OUT_H = H;
 // How one part comes in after another: a straight cut (footage that runs on), a quick dissolve (a cut past loading),
-// a slide (a new scene), and the end card's slide up.
-export const XF = { cut: { kind: "fade", d: 1 / 30 }, within: { kind: "fade", d: 0.16 }, scene: { kind: "smoothleft", d: 0.32 }, end: { kind: "slideup", d: 0.4 } };
+// a quick slide (a new scene), a slide up (the card's sheet into Find's answer), and the end card's slide up.
+export const XF = { whip: { kind: "smoothup", d: 0.2 }, cut: { kind: "fade", d: 1 / 30 }, within: { kind: "fade", d: 0.16 }, scene: { kind: "smoothleft", d: 0.26 }, end: { kind: "slideup", d: 0.36 } };
 
 function ff(args, what) {
   try { execFileSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", ...args], { stdio: ["ignore", "inherit", "inherit"] }); }
   catch { throw new Fail(`ffmpeg failed while ${what}`); }
 }
 const q = (p) => p.replace(/'/g, "'\\''");
-const HQ = ["-an", "-c:v", "libx264", "-preset", "medium", "-crf", "14", "-pix_fmt", "yuv420p", "-r", String(FPS)];
+// Colour: pictures are RGB; HD video is read as BT.709, so convert with that matrix and say so in the file (the default,
+// BT.601 untagged, shifted the logo's red #D1281D to #DF3719 on playback).
+const COLOR = "scale=out_color_matrix=bt709:out_range=tv";
+const TAGS = ["-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709", "-color_range", "tv"];
+const HQ = ["-an", "-c:v", "libx264", "-preset", "medium", "-crf", "14", "-pix_fmt", "yuv420p", ...TAGS, "-r", String(FPS)];
 
 /**
  * One clip: its frames in the frame picture, its caption over the band (sliding and fading in when `fresh`, the first
  * clip of a scene; a later clip of the same scene has it already in place, so the dissolve between them is seamless).
  */
-export function renderClip(frames, { frame, caption, fresh, speed = 1, sticker = null }, file, work, id) {
+/**
+ * One clip: its frames in the frame picture, its caption over the band, and its overlays.
+ *   captions: [{ file, at }] in order: each shows from its moment until the next (a punchline swaps the caption in);
+ *     the first slides and fades in when `fresh` (the first clip of a scene), so a dissolve inside a scene is seamless.
+ *   overlays: [{ pattern, at, hold }]: frame sequences (stickers, the counter, confetti, the stamp) placed over the whole
+ *     frame from their moment; `hold` keeps the last frame up (a sticker), else it goes when its frames end (confetti).
+ *   speed: how much faster it plays than it was filmed.
+ */
+export function renderClip(frames, { frame, captions, fresh, speed = 1, overlays = [] }, file, work, id) {
   // The clip as exactly 30 frames a second: for each output frame, the captured frame that was on screen at that moment
   // (hard links, so nothing is copied). Handing ffmpeg the captured frames with their own durations made it read them
   // as a 25 fps stream and repeat every sixth frame while things moved.
@@ -37,29 +49,35 @@ export function renderClip(frames, { frame, caption, fresh, speed = 1, sticker =
     const to = path.join(dir, `${String(k).padStart(6, "0")}.jpg`);
     try { fs.linkSync(frames[i].file, to); } catch { fs.copyFileSync(frames[i].file, to); }
   }
-  const capIn = fresh ? `,fade=t=in:st=0.18:d=0.4:alpha=1` : "";
-  const capY = fresh ? `'-30*max(0,1-max(0,t-0.18)/0.4)'` : "0";
-  const g = [
-    `[0:v]scale=${APP_W}:${APP_H}:flags=lanczos,setsar=1[app]`,
-    `[1:v]format=rgba[bg]`,
-    `[2:v]format=rgba${capIn}[cap]`,
-    `[bg][app]overlay=${APP_X}:${APP_Y}:shortest=1[b]`,
-    `[b][cap]overlay=0:${capY}:shortest=1${sticker ? "[c]" : ",format=yuv420p[v]"}`,
-  ];
-  const inputs = ["-framerate", String(FPS), "-i", path.join(dir, "%06d.jpg"), "-loop", "1", "-framerate", String(FPS), "-i", frame, "-loop", "1", "-framerate", String(FPS), "-i", caption];
-  if (sticker) {
-    // The stamp slams in at its moment: from 1.9x to its size with a little overshoot in 0.22 s, then a small settle.
-    // Drawn as a sequence of frames already scaled (lib/art.mjs stamp()), so the edit only places them.
-    inputs.push("-framerate", String(FPS), "-i", sticker.pattern);
-    g.push(`[3:v]format=rgba,setpts=PTS+${sticker.at.toFixed(3)}/TB[st]`, `[c][st]overlay=0:0:eof_action=repeat:enable='gte(t,${sticker.at.toFixed(3)})',format=yuv420p[v]`);
-  }
+  const inputs = ["-framerate", String(FPS), "-i", path.join(dir, "%06d.jpg"), "-loop", "1", "-framerate", String(FPS), "-i", frame];
+  const g = [`[0:v]scale=${APP_W}:${APP_H}:flags=lanczos,setsar=1[app]`, `[1:v]format=rgba[bg]`, `[bg][app]overlay=${APP_X}:${APP_Y}:shortest=1[l0]`];
+  let last = "l0", k = 2;
+  captions.forEach((c, j) => {
+    const until = captions[j + 1]?.at, on = until != null ? `between(t,${c.at.toFixed(3)},${(until - 0.001).toFixed(3)})` : `gte(t,${c.at.toFixed(3)})`;
+    const intro = j === 0 && fresh ? { fade: ",fade=t=in:st=0.18:d=0.4:alpha=1", y: "'-30*max(0,1-max(0,t-0.18)/0.4)'" } : j > 0 ? { fade: "", y: `'-40*max(0,1-max(0,t-${c.at.toFixed(3)})/0.18)'` } : { fade: "", y: "0" };
+    inputs.push("-loop", "1", "-framerate", String(FPS), "-i", c.file);
+    g.push(`[${k}:v]format=rgba${intro.fade}[c${j}]`, `[${last}][c${j}]overlay=0:${intro.y}:shortest=1:enable='${on}'[l${k}]`);
+    last = `l${k}`; k++;
+  });
+  overlays.forEach((o, j) => {
+    inputs.push("-framerate", String(FPS), "-i", o.pattern);
+    g.push(`[${k}:v]format=rgba,setpts=PTS+${o.at.toFixed(3)}/TB[o${j}]`, `[${last}][o${j}]overlay=0:0:eof_action=${o.hold ? "repeat" : "pass"}:enable='gte(t,${o.at.toFixed(3)})'[l${k}]`);
+    last = `l${k}`; k++;
+  });
+  g.push(`[${last}]${COLOR},format=yuv420p[v]`);
   ff([...inputs, "-filter_complex", g.join(";"), "-map", "[v]", "-frames:v", String(n), ...HQ, file], `cutting clip ${id}`);
+  return file;
+}
+
+/** A finished sequence of frames (the hook, opaque) as a clip. */
+export function renderSeq(pattern, file) {
+  ff(["-framerate", String(FPS), "-i", pattern, "-vf", `${COLOR},format=yuv420p`, ...HQ, file], "making the hook");
   return file;
 }
 
 /** The end card's frames (lib/art.mjs) as a clip. */
 export function renderEndCard(pattern, file) {
-  ff(["-framerate", String(FPS), "-i", pattern, "-vf", "format=yuv420p", ...HQ, file], "making the end card");
+  ff(["-framerate", String(FPS), "-i", pattern, "-vf", `${COLOR},format=yuv420p`, ...HQ, file], "making the end card");
   return file;
 }
 
@@ -84,7 +102,7 @@ export function finish(parts, joins, out, { maxBytes = 10 * 1024 * 1024 } = {}) 
   for (const crf of [21, 24, 27, 30]) {
     const tmp = `${out}.part.mp4`;
     ff([...inputs, "-filter_complex", g.join(";"), "-map", `[${prev}]`, "-an", "-c:v", "libx264", "-preset", "slow", "-crf", String(crf), "-maxrate", "2800k", "-bufsize", "5600k",
-      "-profile:v", "high", "-pix_fmt", "yuv420p", "-r", String(FPS), "-movflags", "+faststart", tmp], "joining and encoding the video");
+      "-profile:v", "high", "-pix_fmt", "yuv420p", ...TAGS, "-r", String(FPS), "-movflags", "+faststart", tmp], "joining and encoding the video");
     const size = fs.statSync(tmp).size;
     if (size < maxBytes) { fs.renameSync(tmp, out); log(`Encoded ${path.basename(out)} at crf ${crf}: ${(size / 1048576).toFixed(2)} MB`); return t; }
     log(`${path.basename(out)} was ${(size / 1048576).toFixed(2)} MB at crf ${crf}; encoding smaller`);

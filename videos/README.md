@@ -6,7 +6,13 @@ videos from it. It only makes files; it posts nothing anywhere.
 | Command | Makes |
 | --- | --- |
 | `npm run record:walkthrough` | `out/walkthrough.mp4`, about 27 s: the Wall, the 30th Celebration, making a set, the Pikachu set, a deal in Find |
-| `npm run record:short` | `out/daily-short.mp4`, 12 to 15 s, on today's set from `sets.json`, and `out/caption.txt` (a post caption and 3 hashtags) |
+| `npm run record:short` | `out/daily-short.mp4`, 12 to 15 s, on today's set from `sets.json` with today's joke from `jokes.json`, and `out/caption.txt` (a post caption and 3 hashtags) |
+
+Both are cut meme-style: a hook on black ("POV: you said “just one more pack” 47 times"), collector jokes for captions
+("Nobody: / Me: a set of EVERY Pikachu"), reaction stickers with the app's own numbers ("237 cards and counting",
+"91 MISSING", a punch-in on the dearest card with "$900?!"), and the deal as the payoff: "wait for it…", a shake,
+confetti in the brand's squares, the stamp ("SAVE $234 / 26% under market") and the punchline ("sniped."). They're
+silent: add a sound when you post.
 
 Each is 1080x1920, H.264, 30 fps, no audio, under 10 MB, with one caption per scene and a 2-second end card.
 
@@ -67,6 +73,23 @@ own set, pick the Pokémon, and Put it on the wall. Then add a line to `sets.jso
 The short needs at least one card in the set that the demo account is missing and that has an offer in Find. If there's
 none that day, the run fails rather than film a set with nothing to show.
 
+## The daily jokes (jokes.json)
+
+One joke a day, picked by the day of the year (stepping differently from the sets, so the pairs change).
+`npm run record:short -- --joke 3` uses a given one (counting from 0). Each joke has four lines; `{name}` becomes the
+day's Pokémon:
+
+```json
+{ "hook": "POV: you said “just one more {name}” 47 times", "set": "every {name} card. one wall.", "wait": "and the one you're missing…", "punch": "sniped." }
+```
+
+- `hook`: the opener, on black, before any app (keep it to one line of about 50 characters)
+- `set`: the caption while the set flies open and glides by
+- `wait`: the caption while the missing card flies up and Find opens
+- `punch`: the caption from the moment the deal lands
+
+Keep them short, original and kind (no other people's memes, pictures or brands). Add as many as you like.
+
 ## How it works
 
 - **Sign-in** goes through the API (`POST /api/auth/login`); the session token is put in the page's storage before the
@@ -90,10 +113,12 @@ none that day, the run fails rather than film a set with nothing to show.
   with their own timings made it read them as 25 fps and repeat every sixth frame). Taps, the app's own flights and
   the deal play at their real speed.
 - **It builds to the deal.** A set opens with the app's own flight (it's opened once off camera first, so its pictures
-  are in and the flight is motion, not loading), the set glides by dearest first, a missing card flies up close, and
-  the deal lands: a yellow spotlight, the page leaning in, and a stamp slammed in just above the row, "SAVE $234" over
-  "26% under market" (the card's worth less the deal's price, from Find's answer), or "28% UNDER" over "Save $1.25 vs
-  market" when the dollars are small. Then the end card's blocks slam in and "Free" pops.
+  are in and the flight is motion, not loading), the set glides by dearest first, and the climax is one take: the
+  missing card flies up close and View offers in Find is tapped (that whole path is run once off camera first, so
+  nothing on it is loading). The app then goes back out across the wall and Find's home before the answer opens: that
+  second of in-between screens is left out, the two halves joined by a quick slide up. Then the deal lands: a yellow
+  spotlight, the page leaning in, a shake, confetti, the stamp (the card's worth less the deal's price, from Find's
+  answer; the percentage first when the dollars are small) and the punchline caption.
 - **No blank cards on camera.** A few cards have no picture in the catalog at all (in production on November 15: 3 of the 253
   Pikachu cards; the other sets in sets.json are complete), and the app shows those as empty pockets.
   Custom sets are filmed dearest first (their own Filters, In a set by Price, never saved), which puts the best art up
@@ -103,6 +128,8 @@ none that day, the run fails rather than film a set with nothing to show.
 - **Filming** is the browser's own screencast at 3x (1170x2532 frames), so the screen in the 1080x1920 video is
   downscaled, not blown up. (`VIDEO_DPR=2` films at 2x, a little lighter for the browser.) Playwright's `recordVideo` films at the page's 1x size (390x844), which would have been scaled up about
   2x and looked soft, so it isn't used.
+- **Colour.** Converted to video with the BT.709 matrix and tagged so (an untagged BT.601 conversion played the logo's
+  red #D1281D back as #DF3719). The fields are the app icon's own: red #D1281D, yellow #F2C300, blue #1E4C9E.
 - **Look.** In the brand (BRAND.md): the phone's screen held in a black rule with a hard block shadow, on cream with
   red, yellow and blue fields in the margins, under a black caption band, so the captions never cover the app. Each
   caption slides in with a colour stripe; clips dissolve into each other inside a scene and slide between scenes; the

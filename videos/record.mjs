@@ -9,10 +9,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { openSession, sleep, beat } from "./lib/session.mjs";
+import { openSession, sleep, beat, VIEW } from "./lib/session.mjs";
 import { Film } from "./lib/capture.mjs";
-import { renderClip, renderEndCard, finish, probe, XF } from "./lib/edit.mjs";
-import { Art, ACCENTS, APP_Y, APP_H } from "./lib/art.mjs";
+import { renderClip, renderEndCard, renderSeq, finish, probe, XF } from "./lib/edit.mjs";
+import { Art, ACCENTS, APP_X, APP_Y, APP_W, APP_H } from "./lib/art.mjs";
 import { toWall, panelInView, openPanel, openWithFlight, setFilters, missingByPrice, safeDepth, findMissingWithOffer, cardToDeal } from "./lib/scenes.mjs";
 import { log, Fail } from "./lib/log.mjs";
 
@@ -38,34 +38,54 @@ function setOfTheDay() {
 }
 
 // Pacing: every scroll is filmed at half speed and played at 2x (SLOW), so the video has a fresh frame for every frame
-// it shows; taps, the app's flights and the deal play at their own speed. The video builds to the deal: the set flies
-// open, the cards glide by dearest first, a missing card flies up close, and the deal lands with its stamp.
+// it shows; taps, the app's flights and the deal play at their own speed. Meme-style: a hook on black, collector jokes
+// for captions, reaction stickers with the app's own numbers, and the deal as the payoff.
 const SLOW = 2;
 
+/** The dearest card's price pill in an open set sorted dearest first (the first price under the head), or null. */
+async function dearest(S) {
+  const L = await S.labels();
+  const head = Math.max(0, ...L.filter((e) => /^(Have \d|Missing \d|Chasing \d|~?\$[\d,]+ (in this set|to finish))/.test(e.t)).map((e) => e.y));
+  return L.filter((e) => /^\$[\d,.]+$/.test(e.t) && e.y > head + 6 && e.y < VIEW.height - 120).sort((a, b) => a.y - b.y || a.x - b.x)[0] || null;
+}
+/** The set head's missing count ("Missing 91", or "Chasing 91" on a set you chase): { n, x, y } or null. */
+async function missingCount(S) {
+  const l = (await S.label(/^Missing [\d,]+$/)) || (await S.label(/^Chasing [\d,]+$/));
+  return l ? { n: Number(l.t.replace(/\D/g, "")), x: l.x, y: l.y } : null;
+}
+
 async function walkthrough(S, F) {
-  // 1. The Wall: one long glide down the set grids.
-  const c1 = "Your whole collection on one wall";
+  F.hook = "POV: you said “just one more pack” 47 times";
+
+  // 1. The Wall: one long glide, the collection's count ticking up.
+  const c1 = "the whole collection. one wall.";
   await toWall(S);
-  await F.begin("1 · The Wall", c1, { speed: SLOW });
-  await sleep(1100);
-  await S.glide(460, 6800);
-  await sleep(700);
+  const count = await S.page.evaluate(() => document.getElementById("count")?.textContent || "");
+  const owned = Number((/([\d,]+)\s+of/.exec(count) || [])[1]?.replace(/,/g, "") || 0);
+  await F.begin("1 · The Wall", c1, { speed: SLOW, join: "cut" });
+  await sleep(500);
+  if (owned) F.overlay({ kind: "counter", to: owned, label: "cards and counting", x: 195, y: 640 });
+  await S.glide(460, 6400);
+  await sleep(600);
   await F.end();
 
-  // 2. The 30th Celebration flies open; the finished set (owned filled in, missing faded) glides by.
-  const c2 = "See exactly what you're missing";
+  // 2. "I know exactly what I'm missing": the 30th Celebration flies open, and the app counts it.
+  const c2 = "“I know exactly what I'm missing”";
   await toWall(S);
   await openWithFlight(F, S, /^30th Celebration$/, "30th Celebration", c2);
-  if (!(await S.label(/^Have \d/)) || !(await S.label(/^(Missing|Chasing) \d/))) throw new Fail("30th Celebration: no Have / Missing (Chasing) counts on screen");
+  if (!(await S.label(/^Have \d/)) || !(await missingCount(S))) throw new Fail("30th Celebration: no Have / Missing (Chasing) counts on screen");
   const d30 = await safeDepth(S, "30th Celebration", 460);
-  await F.begin("2 · 30th Celebration", c2, { speed: SLOW });
+  const miss = await missingCount(S);
+  await F.begin("2 · 30th Celebration", c2, { speed: SLOW, join: "cut" });
+  await sleep(400);
+  F.overlay({ kind: "sticker", big: `${miss.n} MISSING`, small: "", color: "red", x: 250, y: miss.y + 70, rot: 6 });
+  await sleep(1400);
+  if (d30 > 60) await S.glide(d30, 4400); else await sleep(3600);
   await sleep(500);
-  if (d30 > 60) await S.glide(d30, 5000); else await sleep(4000);
-  await sleep(900);
   await F.end();
 
-  // 3. Build your own set: Add a set, Make your own set, Pikachu, ending on "Put it on the wall" (not tapped).
-  const c3 = "Build your own sets";
+  // 3. Nobody: / Me: making a set of every Pikachu ("Put it on the wall" is shown, never tapped).
+  const c3 = "Nobody:\nMe: a set of EVERY Pikachu";
   await toWall(S);
   await S.tapEl("#add", { pause: false });
   await S.page.locator("#add-menu [data-add=set]").waitFor({ state: "visible" }).catch(() => { throw new Fail("The + menu has no Add a set"); });
@@ -73,12 +93,12 @@ async function walkthrough(S, F) {
   await S.page.locator("#cs-own").waitFor({ state: "visible" }).catch(() => { throw new Fail("Add a set has no Make your own set"); });
   await S.settled("Add a set");
   await F.begin("3 · Make your own set", c3);
-  await sleep(450);
+  await sleep(350);
   await S.tapEl("#cs-own");
   await S.page.locator("#cs-q").waitFor({ state: "visible" }).catch(() => { throw new Fail("Make your own set has no Pokémon field (#cs-q)"); });
   await S.tapEl("#cs-q");
   // "Pika", then the Pikachu choice: typing the whole name picks it by itself (65-chases.js), and a tap would un-pick it.
-  await S.page.keyboard.type("Pika", { delay: 120 });
+  await S.page.keyboard.type("Pika", { delay: 110 });
   const chip = S.page.locator("#chase-sheet .cs-chip", { hasText: /^\s*Pikachu(?![A-Za-z])/ }).first();
   await chip.waitFor({ state: "visible", timeout: 8000 }).catch(() => { throw new Fail("No Pikachu choice under the Pokémon field"); });
   await S.settled("Pikachu typed", { quiet: 500, timeout: 10000 });
@@ -91,52 +111,80 @@ async function walkthrough(S, F) {
   });
   await S.page.locator("#cs-save").scrollIntoViewIfNeeded();
   await S.settled("Make your own set, Pikachu picked");
+  const n = Number(((await S.page.locator("#cs-n").textContent().catch(() => "")) || "").replace(/\D/g, ""));
   await F.begin("3 · Put it on the wall", c3);
-  await sleep(300);
+  await sleep(250);
+  const save = await S.page.locator("#cs-save").boundingBox();
   await S.spotlight(S.page.locator("#cs-save"));
-  await sleep(700);
+  if (n) F.overlay({ kind: "sticker", big: `${n} TO GO`, small: "", x: save.x + save.width / 2 - 40, y: save.y - 70, rot: -5, size: 64 });
+  await sleep(1000);
   await F.end();
   // Not saved: the demo account already has its Pikachu set (sets.json). Closed without a tap on the button.
   await S.page.locator("#cs-close").click().catch(() => {});
 
-  // 4. The finished Pikachu set, dearest first, gliding by.
-  const c4 = "Every Pikachu, one grid";
+  // 4. every. single. Pikachu: a punch-in on the dearest card ("$494?!"), then the set whips by, dearest first.
+  const c4 = "every. single. Pikachu.";
   const pika = SETS.find((s) => s.name === "Pikachu") || { name: "Pikachu" };
   await toWall(S);
   const pp = await panelInView(S, panelOf(pika));
   await openPanel(S, pp, "The Pikachu set");
   await setFilters(S, "The Pikachu set", { show: "all", order: "price" }); // dearest first: the best art leads
   const d4 = await safeDepth(S, "The Pikachu set", 680);
-  await F.begin("4 · The Pikachu set", c4, { speed: SLOW });
-  await sleep(1100);
-  if (d4 > 60) await S.glide(d4, 7600); else await sleep(6000);
-  await sleep(700);
+  const top = await dearest(S);
+  await F.begin("4 · The dearest Pikachu", c4, { join: "cut" });
+  await sleep(350);
+  if (top) {
+    const cx = top.x + top.w / 2 - 30, cy = top.y + 50;
+    await S.punchIn(cx, cy, 1.45);
+    // (beside the card it's about: the punch-in grows the card about its own middle, so just past its top right corner)
+    F.overlay({ kind: "sticker", big: `${top.t}?!`, small: "", x: Math.max(120, Math.min(290, cx + 105)), y: Math.max(170, cy - 70), rot: 8, size: 76 });
+    await sleep(1100);
+    await S.punchOut();
+  } else await sleep(1200);
+  await F.end();
+  await F.begin("4 · The Pikachu set", c4, { speed: SLOW, join: "cut" });
+  await sleep(300);
+  if (d4 > 60) await S.glide(d4, 5200); else await sleep(4000);
+  await sleep(400);
   await F.end();
 
-  // 5. The climax: a missing card flies up close, View offers in Find, the deal lands with its stamp.
-  const c5 = "Find fair prices for the gaps";
+  // 5. The climax: wait for it… the missing card, its offer, the deal: sniped.
   await missingByPrice(S, "The Pikachu set");
   const card = await findMissingWithOffer(S, "The Pikachu set");
   await S.settled("The Pikachu set, a missing card in view");
-  await cardToDeal(F, S, card, "5", c5, { hold: 2300 });
+  await cardToDeal(F, S, card, "5", "wait for it…", { hold: 1700, punch: "sniped." });
+}
+
+/** Today's joke for the short: by day of the year, from jokes.json (`--joke N` picks one). */
+function jokeOfTheDay(name) {
+  const J = JSON.parse(fs.readFileSync(path.join(HERE, "jokes.json"), "utf8"));
+  const d = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
+  const day = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 86400000);
+  const pick = opt("joke") && opt("joke") !== true ? Number(opt("joke")) : day * 5; // (×5 so it doesn't step with the sets)
+  const j = J[((pick % J.length) + J.length) % J.length];
+  return Object.fromEntries(Object.entries(j).map(([k, v]) => [k, String(v).replaceAll("{name}", name)]));
 }
 
 async function short(S, F, set) {
-  const name = set.name;
-  const c1 = `Every ${name} card, on one wall`;
+  const name = set.name, joke = jokeOfTheDay(name);
+  log(`Today's joke: ${joke.hook}`);
+  F.hook = joke.hook;
   await toWall(S);
-  const flew = await openWithFlight(F, S, panelOf(set), `The ${name} set`, c1);
+  const flew = await openWithFlight(F, S, panelOf(set), `The ${name} set`, joke.set);
   await setFilters(S, `The ${name} set`, { show: "all", order: "price" }); // dearest first: the best art leads
   const d1 = await safeDepth(S, `The ${name} set`, 690);
-  await F.begin(`1 · The ${name} set`, c1, { speed: SLOW });
-  await sleep(flew ? 600 : 1200);
-  if (d1 > 60) await S.glide(d1, 6400); else await sleep(5000);
-  await sleep(900);
+  const miss = await missingCount(S);
+  await F.begin(`1 · The ${name} set`, joke.set, { speed: SLOW, join: flew ? "cut" : undefined });
+  await sleep(300);
+  if (miss?.n) F.overlay({ kind: "sticker", big: `${miss.n} MISSING`, small: "", color: "red", x: 250, y: miss.y + 70, rot: 6, size: 72 });
+  await sleep(500);
+  if (d1 > 60) await S.glide(d1, 5400); else await sleep(4200);
+  await sleep(300);
   await F.end();
   await missingByPrice(S, `The ${name} set`);
   const card = await findMissingWithOffer(S, `The ${name} set`);
   await S.settled(`The ${name} set, a missing card in view`);
-  await cardToDeal(F, S, card, "2", "And the best price for the ones you're missing", { hold: 2200 });
+  await cardToDeal(F, S, card, "2", joke.wait, { hold: 1900, punch: joke.punch });
   return card;
 }
 
@@ -195,17 +243,39 @@ async function main() {
   log(`Cutting ${F.clips.length} clips from ${F.frames.length} frames`);
   const art = await Art.open(path.join(WORK, "art"));
   const frame = await art.frame();
-  const captions = [...new Set(F.clips.map((c) => c.caption))];
+  // Every caption once (a clip's own and its punchline), each with its scene's colour stripe.
+  const texts = [...new Set(F.clips.flatMap((c) => c.captions.map((x) => x.text)))];
   const capFile = new Map();
-  for (const [i, c] of captions.entries()) capFile.set(c, await art.caption(c, i, ACCENTS[i % ACCENTS.length]));
+  for (const [i, t] of texts.entries()) capFile.set(t, await art.caption(t, i, ACCENTS[i % ACCENTS.length]));
+  // The overlays, from the page's px to the video's frame (the screen is APP_W x APP_H at APP_X, APP_Y).
+  const fx = (x) => APP_X + (x * APP_W) / 390, fy = (y) => APP_Y + (y * APP_H) / 844;
+  let on = 0;
+  const overlaysOf = async (c) => {
+    const out = [];
+    for (const o of c.overlays) {
+      const name = `ov${on++}`;
+      if (o.kind === "sticker") out.push({ pattern: await art.sticker(name, o.big, o.small, { cx: fx(o.x), cy: fy(o.y), color: o.color, rot: o.rot, size: o.size }), at: o.at, hold: true });
+      if (o.kind === "counter") out.push({ pattern: await art.counter(name, o.to, o.label, { cx: fx(o.x), cy: fy(o.y) }), at: o.at, hold: true });
+      // (confetti bursts from about the stamp's middle: just above the spotlit row)
+      if (o.kind === "confetti") out.push({ pattern: await art.confetti(name, { cx: fx(o.x), cy: fy(o.y - 92) - 90 }), at: o.at, hold: false });
+      // (the stamp's foot about 92 px of the page above the spotlit row, clear of it and of the Buy button over it)
+      if (o.kind === "stamp") out.push({ pattern: await art.stamp(o.big, o.small, o.pageY != null ? { bottom: fy(o.pageY - 92) } : {}), at: o.at, hold: true });
+    }
+    return out;
+  };
+  const parts = [], joins = [];
+  if (F.hook) { parts.push(renderSeq(await art.hook(F.hook), path.join(WORK, "hook.mp4"))); }
+  for (const [i, c] of F.clips.entries()) {
+    const fresh = i === 0 || F.clips[i - 1].caption !== c.caption;
+    parts.push(renderClip(F.framesOf(c), { frame, captions: c.captions.map((x) => ({ file: capFile.get(x.text), at: x.at })), fresh, speed: c.speed || 1, overlays: await overlaysOf(c) }, path.join(WORK, `part-${String(i).padStart(2, "0")}.mp4`), WORK, i));
+    // How it comes in: a straight cut out of the hook and where footage runs on, a quick dissolve past loading inside a
+    // scene, a zoom into a new scene.
+    if (parts.length > 1) joins.push(i === 0 || c.join === "cut" ? XF.cut : c.join === "whip" ? XF.whip : c.caption === F.clips[i - 1].caption ? XF.within : XF.scene);
+  }
   const endFrames = await art.endCard();
-  const stamps = new Map();
-  // (a page's y on the screen to the video's: the screen is APP_H tall from APP_Y; the stamp's foot about 92 px above the row, clear of it and of the Buy button over it)
-  for (const c of F.clips) if (c.sticker) stamps.set(c, { pattern: await art.stamp(c.sticker.big, c.sticker.small, c.sticker.pageY != null ? { bottom: APP_Y + ((c.sticker.pageY - 92) * APP_H) / 844 } : {}), at: c.sticker.at });
-  const parts = F.clips.map((c, i) => renderClip(F.framesOf(c), { frame, caption: capFile.get(c.caption), fresh: i === 0 || F.clips[i - 1].caption !== c.caption, speed: c.speed || 1, sticker: stamps.get(c) || null }, path.join(WORK, `part-${String(i).padStart(2, "0")}.mp4`), WORK, i));
   await art.close();
   parts.push(renderEndCard(endFrames, path.join(WORK, "end.mp4")));
-  const joins = F.clips.slice(1).map((c, i) => (c.caption === F.clips[i].caption ? XF.within : XF.scene)).concat([XF.end]);
+  joins.push(XF.end);
   const file = path.join(OUT, kind === "walkthrough" ? "walkthrough.mp4" : "daily-short.mp4");
   finish(parts, joins, file);
   const p = probe(file);

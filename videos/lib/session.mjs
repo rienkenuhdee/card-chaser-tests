@@ -169,6 +169,20 @@ export class Session {
     await sleep(950);
   }
 
+  /** A camera punch: the page leans in toward (x, y) by `zoom` quickly (film-only, undone by punchOut or a load). */
+  async punchIn(x, y, zoom = 1.35, ms = 260) {
+    await this.page.evaluate(([x, y, zoom, ms]) => { const h = document.documentElement; h.style.transformOrigin = `${x}px ${y}px`; h.style.transition = `transform ${ms}ms cubic-bezier(.2,.9,.25,1.15)`; requestAnimationFrame(() => { h.style.transform = `scale(${zoom})`; }); }, [x, y, zoom, ms]);
+    await sleep(ms + 40);
+  }
+  async punchOut(ms = 320) {
+    await this.page.evaluate((ms) => { const h = document.documentElement; h.style.transition = `transform ${ms}ms cubic-bezier(.3,.1,.2,1)`; h.style.transform = "none"; }, ms);
+    await sleep(ms + 40);
+  }
+  /** A screen shake (film-only): the page jolts for `ms`. */
+  async shake(ms = 360, px = 14) {
+    await this.page.evaluate(([ms, px]) => { document.body.animate([0, 1, 2, 3, 4, 5, 6].map((k) => ({ transform: `translate(${k % 2 ? px : -px}px, ${k % 3 ? px / 2 : -px / 2}px) rotate(${k % 2 ? 0.6 : -0.6}deg)` })).concat([{ transform: "none" }]), { duration: ms, easing: "ease-out" }); }, [ms, px * 1]);
+  }
+
   /** Scrolls the wall until a panel titled by `re` is in view; returns its label. */
   async findOnWall(re, { maxScrolls = 14 } = {}) {
     for (let dir of [1, -1]) {

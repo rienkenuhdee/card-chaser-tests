@@ -66,12 +66,79 @@ export class Art {
 
   /** A caption: white, a dark outline, in the band, with the scene's colour stripe under it. Transparent elsewhere. */
   async caption(text, i, accent) {
-    const size = text.length > 30 ? 66 : 74;
-    const html = `<div style="position:absolute;left:0;top:0;width:${W}px;height:${BAND}px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:0 60px">
-      <div style="font-weight:800;font-size:${size}px;line-height:1.08;letter-spacing:-0.01em;text-align:center;color:#fff;-webkit-text-stroke:10px ${C.ink};paint-order:stroke fill;text-wrap:balance">${esc(text)}</div>
-      <div style="width:150px;height:12px;background:${accent}"></div>
+    const lines = String(text).split("\n"), long = Math.max(...lines.map((l) => l.length));
+    const size = lines.length > 1 ? 58 : long > 30 ? 66 : 74;
+    const line = (l, k) => `<div style="font-weight:800;font-size:${lines.length > 1 && k === 0 ? Math.round(size * 0.8) : size}px;line-height:1.08;letter-spacing:-0.01em;text-align:center;color:#fff;-webkit-text-stroke:10px ${C.ink};paint-order:stroke fill;text-wrap:balance">${esc(l)}</div>`;
+    const html = `<div style="position:absolute;left:0;top:0;width:${W}px;height:${BAND}px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:${lines.length > 1 ? 4 : 22}px;padding:0 60px">
+      ${lines.map(line).join("")}
+      <div style="width:150px;height:12px;background:${accent};margin-top:${lines.length > 1 ? 14 : 0}px"></div>
     </div>`;
     return this.shot(html, path.join(this.dir, `caption-${i}.png`), { transparent: true });
+  }
+
+  /** Frames of an animated picture (its CSS animations stepped by hand), `seconds` long at 30 fps. Returns the pattern. */
+  async seq(name, html, seconds, { transparent = true } = {}) {
+    await this.page.setContent(`<!doctype html><html><head><meta charset="utf-8"><style>${this.css}</style></head><body>${html}</body></html>`);
+    await this.page.evaluate(() => document.fonts.ready);
+    const frames = Math.round(seconds * FPS);
+    for (let f = 0; f < frames; f++) {
+      await this.page.evaluate((ms) => { for (const a of document.getAnimations()) { a.pause(); a.currentTime = ms; } }, (f * 1000) / FPS);
+      await this.page.screenshot({ path: path.join(this.dir, `${name}-${String(f).padStart(3, "0")}.png`), omitBackground: transparent });
+    }
+    return path.join(this.dir, `${name}-%03d.png`);
+  }
+
+  /** The hook: the meme line on black, words punching in one by one, then held (opaque, `seconds` long). */
+  async hook(text, seconds = 1.25) {
+    const words = String(text).split(" ");
+    const html = `<style>.w{display:inline-block;animation:p .2s cubic-bezier(.3,1.6,.5,1) both}@keyframes p{from{opacity:0;transform:scale(1.8)}to{opacity:1;transform:none}}</style>
+      <div style="position:absolute;inset:0;background:${C.ink};display:flex;align-items:center;justify-content:center;padding:0 80px">
+        <div style="font-weight:900;font-size:96px;line-height:1.1;letter-spacing:-0.02em;text-align:center;color:#fff;text-wrap:balance">
+          ${words.map((w, k) => `<span class="w" style="animation-delay:${(k * 0.07).toFixed(2)}s;${/^POV:?$/i.test(w) ? `color:${C.yellow}` : ""}">${esc(w)}</span>`).join(" ")}
+        </div>
+      </div>`;
+    return this.seq("hook", html, seconds, { transparent: false });
+  }
+
+  /**
+   * A reaction sticker, slammed in from nearly twice its size and tipped: `big` over an optional `small`, centred at
+   * (cx, cy) on the video's frame, yellow (or red with white words) in a black rule with a hard shadow. 0.6 s.
+   */
+  async sticker(name, big, small, { cx, cy, color = "yellow", rot = -7, size = 84 } = {}) {
+    const bg = color === "red" ? C.red : C.yellow, ink = color === "red" ? "#fff" : C.ink;
+    const html = `<style>
+      .s{position:absolute;left:${Math.round(cx)}px;top:${Math.round(cy)}px;white-space:nowrap;padding:18px 32px 24px;background:${bg};border:8px solid ${C.ink};box-shadow:16px 16px 0 ${C.ink};
+         text-align:center;color:${ink};animation:slam .6s linear both}
+      @keyframes slam{0%{transform:translate(-50%,-50%) rotate(${rot - 7}deg) scale(1.9);opacity:0}12%{opacity:1}36%{transform:translate(-50%,-50%) rotate(${rot + 1}deg) scale(.94)}52%{transform:translate(-50%,-50%) rotate(${rot - 1}deg) scale(1.04)}70%,100%{transform:translate(-50%,-50%) rotate(${rot}deg) scale(1)}}
+    </style><div class="s"><div style="font-weight:900;font-size:${size}px;line-height:1;letter-spacing:-0.02em">${esc(big)}</div>${small ? `<div style="margin-top:8px;font-weight:800;font-size:${Math.round(size * 0.4)}px">${esc(small)}</div>` : ""}</div>`;
+    return this.seq(name, html, 0.6);
+  }
+
+  /** A counter sticker that ticks up from 0 to `to` (then holds), with `label` beside it. 1.1 s. */
+  async counter(name, to, label, { cx, cy, rot = -5 } = {}) {
+    const frames = Math.round(1.1 * FPS), files = [];
+    for (let f = 0; f < frames; f++) {
+      const p = Math.min(1, f / (0.8 * FPS)), e = 1 - Math.pow(1 - p, 3), n = Math.round(to * e), pop = f < 6 ? 1.6 - f * 0.1 : 1;
+      const html = `<div style="position:absolute;left:${Math.round(cx)}px;top:${Math.round(cy)}px;transform:translate(-50%,-50%) rotate(${rot}deg) scale(${pop});white-space:nowrap;padding:16px 30px 20px;background:${C.yellow};border:8px solid ${C.ink};box-shadow:16px 16px 0 ${C.ink};text-align:center;color:${C.ink}">
+        <div style="font-weight:900;font-size:96px;line-height:1;font-variant-numeric:tabular-nums">${n.toLocaleString("en-US")}</div><div style="margin-top:6px;font-weight:800;font-size:36px">${esc(label)}</div></div>`;
+      const file = path.join(this.dir, `${name}-${String(f).padStart(3, "0")}.png`);
+      await this.shot(html, file, { transparent: true });
+      files.push(file);
+    }
+    return path.join(this.dir, `${name}-%03d.png`);
+  }
+
+  /** Confetti in the brand's squares (red, yellow, blue, ink, cream) bursting from (cx, cy) and falling. 1.4 s. */
+  async confetti(name, { cx, cy, n = 72 } = {}) {
+    const cols = [C.red, C.yellow, C.blue, C.ink, C.panel];
+    let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    const bits = Array.from({ length: n }, (_, i) => {
+      // (mostly upward and outward, then falling: a pop, not a drip)
+      const a = -Math.PI / 2 + (rnd() - 0.5) * Math.PI * 1.5, v = 520 + rnd() * 700, dx = Math.cos(a) * v, dy = Math.sin(a) * v, sz = 24 + rnd() * 34, spin = (rnd() - 0.5) * 1100;
+      return `<div style="position:absolute;left:${Math.round(cx - sz / 2)}px;top:${Math.round(cy - sz / 2)}px;width:${Math.round(sz)}px;height:${Math.round(sz * (0.6 + rnd() * 0.8))}px;background:${cols[i % cols.length]};border:3px solid ${C.ink};
+        animation:b${i} 1.4s linear both"></div><style>@keyframes b${i}{0%{transform:translate(0,0) rotate(0) scale(.3);opacity:1}35%{transform:translate(${Math.round(dx * 0.75)}px,${Math.round(dy * 0.8)}px) rotate(${Math.round(spin * 0.4)}deg) scale(1)}75%{opacity:1}100%{transform:translate(${Math.round(dx)}px,${Math.round(dy * 0.6 + 760)}px) rotate(${Math.round(spin)}deg) scale(1);opacity:0}}</style>`;
+    }).join("");
+    return this.seq(name, bits, 1.4);
   }
 
   /**

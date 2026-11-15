@@ -1,0 +1,18 @@
+[
+  { "hook": "POV: you said “just one more {name}” 47 times", "set": "every {name} card. one wall.", "wait": "and the one you're missing…", "punch": "sniped." },
+  { "hook": "Me: I'm not a {name} collector", "set": "also me:", "wait": "wait for it…", "punch": "under market. obviously." },
+  { "hook": "Tell me you love {name} without telling me", "set": "every {name}. one grid.", "wait": "the missing one tho…", "punch": "found it. for less." },
+  { "hook": "POV: your binder is 90% {name}", "set": "and it's still not done", "wait": "wait for it…", "punch": "deal secured." },
+  { "hook": "Nobody asked. Here's every {name} card.", "set": "every. single. {name}.", "wait": "now the hard part…", "punch": "sniped." },
+  { "hook": "My wallet: please no. Me: one more {name}", "set": "the damage:", "wait": "okay but this one…", "punch": "at least it's a deal." },
+  { "hook": "POV: you finally count your {name} cards", "set": "it's a lot.", "wait": "but this one's missing…", "punch": "not anymore." },
+  { "hook": "When the {name} set is one card from done", "set": "the wall:", "wait": "the last card:", "punch": "caught at a discount." },
+  { "hook": "Collectors: “I only want the {name}s”", "set": "(all of them)", "wait": "wait for it…", "punch": "sniped." },
+  { "hook": "Day 1 of finishing every {name} card", "set": "the progress:", "wait": "today's target:", "punch": "under market." },
+  { "hook": "POV: you're the {name} person in the group chat", "set": "the receipts:", "wait": "and the gap…", "punch": "filled. for less." },
+  { "hook": "{name} collectors when they spot a deal:", "set": "the collection:", "wait": "the deal:", "punch": "SOLD." },
+  { "hook": "Rating every {name} card I own", "set": "…all of them, apparently", "wait": "and the one I don't…", "punch": "yet." },
+  { "hook": "It's not hoarding if it's every {name} card", "set": "(it's curating)", "wait": "the missing piece…", "punch": "secured." },
+  { "hook": "Me explaining my {name} wall to my family", "set": "it's art.", "wait": "and this one…", "punch": "was a steal." },
+  { "hook": "POV: the {name} set finally makes sense", "set": "every card. one wall.", "wait": "except…", "punch": "not for long." }
+]
