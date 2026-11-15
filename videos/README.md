@@ -121,7 +121,7 @@ Any of these stops the run with a screenshot in `out/failure-*.png` and no video
 `--rehearse` serves a local checkout of the app repo (`Card-Chaser`) inside the browser at cardchaser.app: its own
 live build and its own server code on an in-memory store, with the app's made-up test account, the `sets.json` sets
 added and a few made-up deals. It's for trying changes to the recorder without the demo account or any write to production (the only requests
-that leave the machine are for public card pictures).
+that leave the machine are reads: public card pictures and prices, below).
 
 ```bash
 cd ../../Card-Chaser && npm install && npm run catalog
@@ -131,5 +131,10 @@ cd ../../Card-Chaser && npm install && npm run catalog
 cd videos && node record.mjs walkthrough --rehearse=/path/to/Card-Chaser
 ```
 
-Card pictures load from their real public hosts (the same ones the site uses, and the site's own `/img/` copies), so
-the cards look as they do live. Only the made-up deals' eBay photos are blank.
+Card pictures load from their real public hosts (the same ones the site uses, and the site's own `/img/` copies), and
+prices are today's real ones: the app's own price job fetches TCGplayer's prices (through TCGCSV) for its built-in sets,
+and the filmed custom set's prices come from production's public card lookup (`/api/public/cards-by-key`, the trade
+page's: read-only, no account, paced at about one request a second and kept for a day in
+`out/.rehearsal-prices.json`). The deals are made up (a quarter under market), since the made-up account has no real
+listings.
+

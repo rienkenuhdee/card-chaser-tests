@@ -118,24 +118,25 @@ export async function safeDepth(S, setName, want) {
 }
 
 /**
- * In an open set: finds a card you're missing that has an offer in Find, by trying the likeliest ones (their names or
- * prices among Find's deals) before the clip starts. Returns where to tap it and its name. Leaves the set as it was.
+ * In an open set: finds a card you're missing that has an offer in Find, by trying the likeliest ones (a name and price
+ * that match one of Find's deals) before the clip starts. Returns where to tap it and its name. Leaves the set as it was.
  */
 export async function findMissingWithOffer(S, setName, { views = 7, taps = 16 } = {}) {
   const deals = S.feed.filter((l) => l.cardKey && !l.tooCheap && l.pctVsMarket > 0 && l.type !== "auction");
   const names = new Set(deals.map((l) => l.cardName));
-  const markets = deals.map((l) => Number(l.market)).filter((x) => x > 0);
   const tried = new Set();
   let n = 0;
   for (let v = 0; v < views; v++) {
     const top = await binderTop(S);
     const L = (await S.labels()).filter((e) => e.y > top && e.y < VIEW.height - 60 && e.x > 0 && e.x < VIEW.width);
-    const count = new Map(); for (const e of L) count.set(e.t, (count.get(e.t) || 0) + 1);
-    // Price pills first; a card's name only when it's the one card of that name in view (a Pikachu set is all Pikachu).
-    const cands = L.filter((e) => /^\$[\d,.]+$/.test(e.t) || (names.has(e.t) && count.get(e.t) === 1)).map((e) => {
-      const near = /^\$/.test(e.t) && markets.some((m) => Math.abs(m - money(e.t)) <= Math.max(0.6, m * 0.03));
-      return { e, score: near ? 0 : names.has(e.t) ? 1 : 2, price: /^\$/.test(e.t) ? money(e.t) : 0 };
-    }).filter((c) => c.score < 2 || deals.length === 0 || n < 6).sort((a, b) => a.score - b.score || b.price - a.price);
+    // A price pill's card name: the first name line under it in the same card (names sit at a card's foot).
+    const nameOf = (e) => L.filter((l) => l !== e && l.h <= 16 && !/^[$—●★×]/.test(l.t) && l.x <= e.x + e.w && l.x >= e.x + e.w - 120 && l.y > e.y + 40 && l.y < e.y + 170).sort((a, b) => a.y - b.y)[0]?.t;
+    // Likeliest first: a card whose name and price both match one of Find's deals, then the dearest.
+    const dealt = (name, price) => deals.some((l) => l.cardName === name && Math.abs(Number(l.market) - price) <= Math.max(0.06, Number(l.market) * 0.03));
+    const cands = L.filter((e) => /^\$[\d,.]+$/.test(e.t)).map((e) => {
+      const price = money(e.t), name = nameOf(e);
+      return { e, score: name && dealt(name, price) ? 0 : names.has(name) ? 1 : 2, price };
+    }).filter((c) => c.score === 0 || !deals.length || (v >= views - 2 && c.score === 1)).sort((a, b) => a.score - b.score || b.price - a.price);
     const P = await S.pics();
     const pictured = (e) => { const p = cardPoint(e); return P.some((r) => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h); };
     for (const { e } of cands) {
@@ -153,7 +154,10 @@ export async function findMissingWithOffer(S, setName, { views = 7, taps = 16 } 
       await closeCard(S);
       if (/I have it/i.test(st.own) && offers && Number(offers[1]) > 0) {
         log(`${setName}: picked a missing card with ${offers[1]} offer(s) in Find`);
-        return { x, y, name: st.name, label: e.t };
+        // A card low on the screen is brought up to the middle first, so it's well in view when it's tapped.
+        let cy = y;
+        if (y > VIEW.height * 0.6) { const dy = Math.round(y - VIEW.height * 0.45); await S.scroll(dy, { ms: 700 }); cy = y - dy; }
+        return { x, y: cy, name: st.name, label: e.t };
       }
     }
     await S.scroll(420, { ms: 700 });
@@ -181,8 +185,8 @@ export async function dealInView(S) {
 export async function cardToDeal(F, S, card, scene, caption, { hold = 1300 } = {}) {
   // Where the card is now (closing it up close can move the page a little): its label nearest to where it was.
   const all = await S.labels();
-  const again = all.filter((e) => e.t === card.label).map(cardPoint).sort((a, b) => Math.hypot(a.x - card.x, a.y - card.y) - Math.hypot(b.x - card.x, b.y - card.y))[0];
-  if (!again || Math.hypot(again.x - card.x, again.y - card.y) > 120 || again.y < 120 || again.y > VIEW.height - 60) throw new Fail(`${scene}: lost sight of ${card.name}`);
+  const again = all.filter((e) => e.t === card.label).map(cardPoint).filter((p) => p.y >= 120 && p.y <= VIEW.height - 60).sort((a, b) => Math.hypot(a.x - card.x, a.y - card.y) - Math.hypot(b.x - card.x, b.y - card.y))[0];
+  if (!again || again.y < 120 || again.y > VIEW.height - 60) throw new Fail(`${scene}: lost sight of ${card.name}`);
   Object.assign(card, again);
   await F.begin(`${scene} · the card`, caption);
   await sleep(600);

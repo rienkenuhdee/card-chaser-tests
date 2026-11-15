@@ -42,8 +42,8 @@ async function walkthrough(S, F) {
   const c1 = "Your whole collection on one wall";
   await toWall(S);
   await F.begin("1 · The Wall", c1);
-  await sleep(700);
-  await S.glide(420, 3000);
+  await sleep(900);
+  await S.glide(420, 3200);
   await sleep(500);
   await F.end();
 
@@ -61,8 +61,8 @@ async function walkthrough(S, F) {
   if (!(await S.label(/^Have \d/)) || !(await S.label(/^(Missing|Chasing) \d/))) throw new Fail("30th Celebration: no Have / Missing (Chasing) counts on screen");
   const d30 = await safeDepth(S, "30th Celebration", 420);
   await F.begin("2 · 30th Celebration", c2);
-  await sleep(800);
-  if (d30 > 60) await S.glide(d30, 2200); else await sleep(1800);
+  await sleep(1000);
+  if (d30 > 60) await S.glide(d30, 2400); else await sleep(2000);
   await sleep(700);
   await F.end();
 
@@ -110,8 +110,8 @@ async function walkthrough(S, F) {
   await setFilters(S, "The Pikachu set", { show: "all", order: "price" }); // dearest first: the best art leads
   const d4 = await safeDepth(S, "The Pikachu set", 640);
   await F.begin("4 · The Pikachu set", c4);
-  await sleep(700);
-  if (d4 > 60) await S.glide(d4, 3000); else await sleep(2600);
+  await sleep(900);
+  if (d4 > 60) await S.glide(d4, 3400); else await sleep(3000);
   await sleep(500);
   await F.end();
 
@@ -120,7 +120,7 @@ async function walkthrough(S, F) {
   await missingByPrice(S, "The Pikachu set");
   const card = await findMissingWithOffer(S, "The Pikachu set");
   await S.settled("The Pikachu set, a missing card in view");
-  await cardToDeal(F, S, card, "5", c5, { hold: 900 });
+  await cardToDeal(F, S, card, "5", c5, { hold: 1300 });
 }
 
 async function short(S, F, set) {
@@ -149,6 +149,13 @@ function postCaption(name) {
 }
 
 async function main() {
+  // A rehearsal's server fetches real market prices with Node's own fetch, which uses the machine's HTTPS proxy only
+  // when NODE_USE_ENV_PROXY is set at start (Node 22.21 and up): start again with it where there's a proxy.
+  if (opt("rehearse") && (process.env.HTTPS_PROXY || process.env.https_proxy) && !process.env.NODE_USE_ENV_PROXY) {
+    const { spawnSync } = await import("node:child_process");
+    const r = spawnSync(process.execPath, ["--no-warnings", ...process.argv.slice(1)], { stdio: "inherit", env: { ...process.env, NODE_USE_ENV_PROXY: "1" } });
+    process.exit(r.status ?? 1);
+  }
   const t0 = Date.now();
   fs.rmSync(WORK, { recursive: true, force: true });
   fs.mkdirSync(WORK, { recursive: true });
@@ -157,7 +164,7 @@ async function main() {
     const { rehearsal } = await import("./lib/rehearse.mjs");
     const repo = opt("rehearse") === true ? process.env.CARD_CHASER_REPO || path.resolve(HERE, "../../Card-Chaser") : opt("rehearse");
     log(`Rehearsal: the app from ${repo}, on its own server code and a made-up account (not production)`);
-    rehearse = await rehearsal(repo, { sets: SETS });
+    rehearse = await rehearsal(repo, { sets: SETS, focus: kind === "walkthrough" ? ["Pikachu"] : [setOfTheDay().name], cacheFile: path.join(OUT, ".rehearsal-prices.json") });
   }
   const set = kind === "short" ? setOfTheDay() : null;
   if (set) log(`Today's set: ${set.name}`);
