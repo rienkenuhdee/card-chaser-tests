@@ -85,8 +85,8 @@ none that day, the run fails rather than film a set with nothing to show.
   out, `lib/ripple.js`; scrolls get none), and a 400 to 700 ms pause.
 - **Scrolls** are one long, eased stroke per scene (no stop-and-go), and every finger is moving within 90 ms so the
   Wall never reads it as a long press (which would pick a set up and reorder the demo account's wall).
-- **No blank cards on camera.** A few cards have no picture in the catalog at all (in production today: 6 of the 253
-  Pikachu cards and 1 of the 49 Umbreon; the other sets are complete), and the app shows those as empty pockets.
+- **No blank cards on camera.** A few cards have no picture in the catalog at all (in production on November 15: 3 of the 253
+  Pikachu cards; the other sets in sets.json are complete), and the app shows those as empty pockets.
   Custom sets are filmed dearest first (their own Filters, In a set by Price, never saved), which puts the best art up
   front, and before each scroll the recorder looks down the set (the probe sees which cards were drawn with no
   picture) and stops the scroll short of any. The card tapped for its deal is always one with a picture. The owner's
