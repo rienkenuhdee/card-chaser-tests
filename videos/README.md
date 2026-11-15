@@ -83,16 +83,25 @@ none that day, the run fails rather than film a set with nothing to show.
   until one says "View offers in Find · N".
 - **Taps** are real touch events with a mark drawn at each one (a brand-yellow dot inside a black ring that opens
   out, `lib/ripple.js`; scrolls get none), and a 400 to 700 ms pause.
-- **Scrolls** are one long, eased stroke per scene (no stop-and-go), and every finger is moving within 90 ms so the
-  Wall never reads it as a long press (which would pick a set up and reorder the demo account's wall).
+- **Smooth motion.** Every scroll is one stroke (a quick rise to speed, a long slowing; the finger is moving within
+  90 ms so the Wall never reads it as a long press, which would pick a set up and reorder the demo account's wall),
+  filmed at half speed and played at 2x: the capture then has a fresh frame for every frame of the video, so nothing
+  judders. Each clip is laid out at exactly 30 frames a second before ffmpeg sees it (handing it the captured frames
+  with their own timings made it read them as 25 fps and repeat every sixth frame). Taps, the app's own flights and
+  the deal play at their real speed.
+- **It builds to the deal.** A set opens with the app's own flight (it's opened once off camera first, so its pictures
+  are in and the flight is motion, not loading), the set glides by dearest first, a missing card flies up close, and
+  the deal lands: a yellow spotlight, the page leaning in, and a stamp slammed in just above the row, "SAVE $234" over
+  "26% under market" (the card's worth less the deal's price, from Find's answer), or "28% UNDER" over "Save $1.25 vs
+  market" when the dollars are small. Then the end card's blocks slam in and "Free" pops.
 - **No blank cards on camera.** A few cards have no picture in the catalog at all (in production on November 15: 3 of the 253
   Pikachu cards; the other sets in sets.json are complete), and the app shows those as empty pockets.
   Custom sets are filmed dearest first (their own Filters, In a set by Price, never saved), which puts the best art up
   front, and before each scroll the recorder looks down the set (the probe sees which cards were drawn with no
   picture) and stops the scroll short of any. The card tapped for its deal is always one with a picture. The owner's
   Missing pictures tool in Settings lists the cards to fix.
-- **Filming** is the browser's own screencast at 3x (1170x2532 frames), so the 1080x1920 video is downscaled, not
-  blown up. Playwright's `recordVideo` films at the page's 1x size (390x844), which would have been scaled up about
+- **Filming** is the browser's own screencast at 3x (1170x2532 frames), so the screen in the 1080x1920 video is
+  downscaled, not blown up. (`VIDEO_DPR=2` films at 2x, a little lighter for the browser.) Playwright's `recordVideo` films at the page's 1x size (390x844), which would have been scaled up about
   2x and looked soft, so it isn't used.
 - **Look.** In the brand (BRAND.md): the phone's screen held in a black rule with a hard block shadow, on cream with
   red, yellow and blue fields in the margins, under a black caption band, so the captions never cover the app. Each

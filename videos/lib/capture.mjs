@@ -20,15 +20,23 @@ export class Film {
     });
     await cdp.send("Page.startScreencast", { format: "jpeg", quality: 90, everyNthFrame: 1 });
   }
-  /** Starts keeping a clip from now. The screen must already be finished (Session.settled). */
-  async begin(scene, caption) {
+  /**
+   * Starts keeping a clip from now. The screen must already be finished (Session.settled). `speed`: how much faster it
+   * plays than it was filmed (a scroll filmed at half speed and played at 2x has a fresh frame for every frame of the
+   * video, so it never judders).
+   */
+  async begin(scene, caption, { speed = 1 } = {}) {
     if (this.open) throw new Error("clip already open");
     this.S.assertClean();
     await this.nudge();
-    this.open = { scene, caption, start: Date.now() / 1000 };
+    this.open = { scene, caption, speed, start: Date.now() / 1000, marks: {} };
     this.S.clipOn = true;
     log(`  clip starts: ${scene}`);
   }
+  /** A stamp for the edit to slam in now (the deal's "SAVE $234"). */
+  stamp(big, small, { pageY = null } = {}) { if (this.open) this.open.sticker = { big, small, pageY, at: (Date.now() / 1000 - this.open.start) / this.open.speed }; }
+  /** Notes a moment inside the open clip (seconds of video from its start), for the edit: a sticker's entrance. */
+  mark(name) { if (this.open) this.open.marks[name] = (Date.now() / 1000 - this.open.start) / this.open.speed; }
   async end() {
     if (!this.open) throw new Error("no clip open");
     await this.nudge();

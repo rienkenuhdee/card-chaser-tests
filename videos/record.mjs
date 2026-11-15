@@ -12,8 +12,8 @@ import { fileURLToPath } from "node:url";
 import { openSession, sleep, beat } from "./lib/session.mjs";
 import { Film } from "./lib/capture.mjs";
 import { renderClip, renderEndCard, finish, probe, XF } from "./lib/edit.mjs";
-import { Art, ACCENTS } from "./lib/art.mjs";
-import { toWall, panelInView, openPanel, setFilters, missingByPrice, safeDepth, findMissingWithOffer, cardToDeal } from "./lib/scenes.mjs";
+import { Art, ACCENTS, APP_Y, APP_H } from "./lib/art.mjs";
+import { toWall, panelInView, openPanel, openWithFlight, setFilters, missingByPrice, safeDepth, findMissingWithOffer, cardToDeal } from "./lib/scenes.mjs";
 import { log, Fail } from "./lib/log.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -37,33 +37,31 @@ function setOfTheDay() {
   return SETS[day % SETS.length];
 }
 
+// Pacing: every scroll is filmed at half speed and played at 2x (SLOW), so the video has a fresh frame for every frame
+// it shows; taps, the app's flights and the deal play at their own speed. The video builds to the deal: the set flies
+// open, the cards glide by dearest first, a missing card flies up close, and the deal lands with its stamp.
+const SLOW = 2;
+
 async function walkthrough(S, F) {
-  // 1. The Wall: a slow scroll through the set grids.
+  // 1. The Wall: one long glide down the set grids.
   const c1 = "Your whole collection on one wall";
   await toWall(S);
-  await F.begin("1 · The Wall", c1);
-  await sleep(900);
-  await S.glide(420, 3200);
-  await sleep(500);
+  await F.begin("1 · The Wall", c1, { speed: SLOW });
+  await sleep(1100);
+  await S.glide(460, 6800);
+  await sleep(700);
   await F.end();
 
-  // 2. The 30th Celebration: tap it open, then the finished set (owned filled in, missing ghosted).
+  // 2. The 30th Celebration flies open; the finished set (owned filled in, missing faded) glides by.
   const c2 = "See exactly what you're missing";
   await toWall(S);
-  const p30 = await panelInView(S, /^30th Celebration$/);
-  await F.begin("2 · 30th Celebration, the tap", c2);
-  await sleep(700);
-  await S.tapAt(p30.x + 30, p30.y + 34, { pause: false });
-  await sleep(280);
-  await F.end();
-  await S.page.waitForFunction(() => !document.getElementById("back").hidden, null, { timeout: 15000 }).catch(() => { throw new Fail("30th Celebration didn't open"); });
-  await S.settled("30th Celebration, open", { loadRest: true, timeout: 45000 });
+  await openWithFlight(F, S, /^30th Celebration$/, "30th Celebration", c2);
   if (!(await S.label(/^Have \d/)) || !(await S.label(/^(Missing|Chasing) \d/))) throw new Fail("30th Celebration: no Have / Missing (Chasing) counts on screen");
-  const d30 = await safeDepth(S, "30th Celebration", 420);
-  await F.begin("2 · 30th Celebration", c2);
-  await sleep(1000);
-  if (d30 > 60) await S.glide(d30, 2400); else await sleep(2000);
-  await sleep(700);
+  const d30 = await safeDepth(S, "30th Celebration", 460);
+  await F.begin("2 · 30th Celebration", c2, { speed: SLOW });
+  await sleep(500);
+  if (d30 > 60) await S.glide(d30, 5000); else await sleep(4000);
+  await sleep(900);
   await F.end();
 
   // 3. Build your own set: Add a set, Make your own set, Pikachu, ending on "Put it on the wall" (not tapped).
@@ -75,12 +73,12 @@ async function walkthrough(S, F) {
   await S.page.locator("#cs-own").waitFor({ state: "visible" }).catch(() => { throw new Fail("Add a set has no Make your own set"); });
   await S.settled("Add a set");
   await F.begin("3 · Make your own set", c3);
-  await sleep(600);
+  await sleep(450);
   await S.tapEl("#cs-own");
   await S.page.locator("#cs-q").waitFor({ state: "visible" }).catch(() => { throw new Fail("Make your own set has no Pokémon field (#cs-q)"); });
   await S.tapEl("#cs-q");
   // "Pika", then the Pikachu choice: typing the whole name picks it by itself (65-chases.js), and a tap would un-pick it.
-  await S.page.keyboard.type("Pika", { delay: 150 });
+  await S.page.keyboard.type("Pika", { delay: 120 });
   const chip = S.page.locator("#chase-sheet .cs-chip", { hasText: /^\s*Pikachu(?![A-Za-z])/ }).first();
   await chip.waitFor({ state: "visible", timeout: 8000 }).catch(() => { throw new Fail("No Pikachu choice under the Pokémon field"); });
   await S.settled("Pikachu typed", { quiet: 500, timeout: 10000 });
@@ -94,52 +92,51 @@ async function walkthrough(S, F) {
   await S.page.locator("#cs-save").scrollIntoViewIfNeeded();
   await S.settled("Make your own set, Pikachu picked");
   await F.begin("3 · Put it on the wall", c3);
-  await sleep(450);
+  await sleep(300);
   await S.spotlight(S.page.locator("#cs-save"));
-  await sleep(900);
+  await sleep(700);
   await F.end();
   // Not saved: the demo account already has its Pikachu set (sets.json). Closed without a tap on the button.
   await S.page.locator("#cs-close").click().catch(() => {});
 
-  // 4. The finished Pikachu set, fully loaded, scrolled.
+  // 4. The finished Pikachu set, dearest first, gliding by.
   const c4 = "Every Pikachu, one grid";
   const pika = SETS.find((s) => s.name === "Pikachu") || { name: "Pikachu" };
   await toWall(S);
   const pp = await panelInView(S, panelOf(pika));
   await openPanel(S, pp, "The Pikachu set");
   await setFilters(S, "The Pikachu set", { show: "all", order: "price" }); // dearest first: the best art leads
-  const d4 = await safeDepth(S, "The Pikachu set", 640);
-  await F.begin("4 · The Pikachu set", c4);
-  await sleep(900);
-  if (d4 > 60) await S.glide(d4, 3400); else await sleep(3000);
-  await sleep(500);
+  const d4 = await safeDepth(S, "The Pikachu set", 680);
+  await F.begin("4 · The Pikachu set", c4, { speed: SLOW });
+  await sleep(1100);
+  if (d4 > 60) await S.glide(d4, 7600); else await sleep(6000);
+  await sleep(700);
   await F.end();
 
-  // 5. A missing card, View offers in Find, its deal.
+  // 5. The climax: a missing card flies up close, View offers in Find, the deal lands with its stamp.
   const c5 = "Find fair prices for the gaps";
   await missingByPrice(S, "The Pikachu set");
   const card = await findMissingWithOffer(S, "The Pikachu set");
   await S.settled("The Pikachu set, a missing card in view");
-  await cardToDeal(F, S, card, "5", c5, { hold: 1300 });
+  await cardToDeal(F, S, card, "5", c5, { hold: 2300 });
 }
 
 async function short(S, F, set) {
   const name = set.name;
   const c1 = `Every ${name} card, on one wall`;
   await toWall(S);
-  const p = await panelInView(S, panelOf(set));
-  await openPanel(S, p, `The ${name} set`);
+  const flew = await openWithFlight(F, S, panelOf(set), `The ${name} set`, c1);
   await setFilters(S, `The ${name} set`, { show: "all", order: "price" }); // dearest first: the best art leads
-  const d1 = await safeDepth(S, `The ${name} set`, 680);
-  await F.begin(`1 · The ${name} set`, c1);
-  await sleep(1100);
-  if (d1 > 60) await S.glide(d1, 4000); else await sleep(3400);
-  await sleep(700);
+  const d1 = await safeDepth(S, `The ${name} set`, 690);
+  await F.begin(`1 · The ${name} set`, c1, { speed: SLOW });
+  await sleep(flew ? 600 : 1200);
+  if (d1 > 60) await S.glide(d1, 6400); else await sleep(5000);
+  await sleep(900);
   await F.end();
   await missingByPrice(S, `The ${name} set`);
   const card = await findMissingWithOffer(S, `The ${name} set`);
   await S.settled(`The ${name} set, a missing card in view`);
-  await cardToDeal(F, S, card, "2", "And the best price for the ones you're missing", { hold: 2500 });
+  await cardToDeal(F, S, card, "2", "And the best price for the ones you're missing", { hold: 2200 });
   return card;
 }
 
@@ -202,8 +199,11 @@ async function main() {
   const capFile = new Map();
   for (const [i, c] of captions.entries()) capFile.set(c, await art.caption(c, i, ACCENTS[i % ACCENTS.length]));
   const endFrames = await art.endCard();
+  const stamps = new Map();
+  // (a page's y on the screen to the video's: the screen is APP_H tall from APP_Y; the stamp's foot about 92 px above the row, clear of it and of the Buy button over it)
+  for (const c of F.clips) if (c.sticker) stamps.set(c, { pattern: await art.stamp(c.sticker.big, c.sticker.small, c.sticker.pageY != null ? { bottom: APP_Y + ((c.sticker.pageY - 92) * APP_H) / 844 } : {}), at: c.sticker.at });
+  const parts = F.clips.map((c, i) => renderClip(F.framesOf(c), { frame, caption: capFile.get(c.caption), fresh: i === 0 || F.clips[i - 1].caption !== c.caption, speed: c.speed || 1, sticker: stamps.get(c) || null }, path.join(WORK, `part-${String(i).padStart(2, "0")}.mp4`), WORK, i));
   await art.close();
-  const parts = F.clips.map((c, i) => renderClip(F.framesOf(c), { frame, caption: capFile.get(c.caption), fresh: i === 0 || F.clips[i - 1].caption !== c.caption }, path.join(WORK, `part-${String(i).padStart(2, "0")}.mp4`), WORK, i));
   parts.push(renderEndCard(endFrames, path.join(WORK, "end.mp4")));
   const joins = F.clips.slice(1).map((c, i) => (c.caption === F.clips[i].caption ? XF.within : XF.scene)).concat([XF.end]);
   const file = path.join(OUT, kind === "walkthrough" ? "walkthrough.mp4" : "daily-short.mp4");
@@ -217,7 +217,8 @@ async function main() {
   if (p.audio) problems.push("has audio");
   if (p.bytes >= 10 * 1024 * 1024) problems.push("over 10 MB");
   if (p.duration < want[0] - 0.05 || p.duration > want[1] + 0.05) problems.push(`${p.duration.toFixed(1)} s long (wanted ${want[0]} to ${want[1]})`);
-  fs.writeFileSync(path.join(WORK, "timeline.json"), JSON.stringify({ kind, set: set?.name || null, clips: F.clips.map((c) => ({ scene: c.scene, caption: c.caption, seconds: +(c.end - c.start).toFixed(3) })), output: p }, null, 2));
+  fs.writeFileSync(path.join(WORK, "timeline.json"), JSON.stringify({ kind, set: set?.name || null, clips: F.clips.map((c) => { const fr = F.framesOf(c), gaps = fr.map((f) => f.dur).sort((a, b) => a - b); return { scene: c.scene, caption: c.caption, seconds: +((c.end - c.start) / (c.speed || 1)).toFixed(3), speed: c.speed || 1, fps: +(fr.length / (c.end - c.start)).toFixed(1), worstGapMs: Math.round(gaps.at(-1) * 1000), p90GapMs: Math.round(gaps[Math.floor(gaps.length * 0.9)] * 1000) }; }), output: p }, null, 2));
+  if (opt("keep")) fs.writeFileSync(path.join(WORK, "frames.json"), JSON.stringify({ frames: F.frames.map((f) => f.t), clips: F.clips.map((c) => [c.scene, c.start, c.end]), marks: S.marks || [] }));
   if (problems.length) { fs.rmSync(file, { force: true }); console.error(`FAILED: the video came out wrong: ${problems.join(", ")}. No video was written.`); process.exit(1); }
   if (kind === "short") fs.writeFileSync(path.join(OUT, "caption.txt"), postCaption(set.name) + "\n");
   if (!opt("keep")) fs.rmSync(path.join(OUT, "work"), { recursive: true, force: true });

@@ -10,7 +10,7 @@ import { log, Fail } from "./log.mjs";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const ORIGIN = "https://cardchaser.app";
 export const VIEW = { width: 390, height: 844 };
-export const DPR = 3;
+export const DPR = Number(process.env.VIDEO_DPR) || 3;
 const IPHONE_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1";
 // Coaching overlays the app shows a first-time visitor (the rooms tip and its glow). Hidden for filming only.
 const FILM_CSS = "#maptip{display:none!important}#rooms.tipglow{animation:none!important;box-shadow:none!important}";
@@ -125,10 +125,11 @@ export class Session {
     await sleep(350);
   }
 
-  /** One long, unhurried scroll by dy (up to about 640 px in a single stroke; more in strokes that join smoothly). */
+  /** One scroll by dy in a single stroke (up to 700 px: the screen's height under the top bar), then still. */
   async glide(dy, ms = 2600) {
-    const strokes = Math.max(1, Math.ceil(dy / 640)), each = dy / strokes;
-    for (let i = 0; i < strokes; i++) { await this.T.drag(VIEW.width / 2, 790, VIEW.width / 2, 790 - each, ms / strokes); }
+    (this.marks ||= []).push(["glide", Date.now() / 1000, Date.now() / 1000 + ms / 1000]);
+    const d = Math.min(700, dy);
+    await this.T.drag(VIEW.width / 2, 815, VIEW.width / 2, 815 - d, ms);
     await sleep(250);
   }
 

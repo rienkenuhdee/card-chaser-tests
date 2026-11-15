@@ -14,12 +14,14 @@ export async function touchInput(page) {
     async tap(x, y, hold = 70) { await send("touchStart", [[x, y]]); await sleep(hold); await send("touchEnd", []); },
     /**
      * A drag from (x0,y0) to (x1,y1) over about ms: a gentle start that still clears the 8 px scroll threshold within
-     * 90 ms (so it's never read as a long press), an ease in and out through the middle, and a still moment before the
+     * 90 ms (so it's never read as a long press), a quick rise to speed, then a long slowing, and a still moment before the
      * finger lifts so nothing flings. Timed by the clock, so a busy page can't stretch it.
      */
     async drag(x0, y0, x1, y1, ms = 900) {
       const len = Math.hypot(x1 - x0, y1 - y0) || 1, ux = (x1 - x0) / len, uy = (y1 - y0) / len, kick = Math.min(12, len);
-      const at = (t) => { const k = kick * Math.min(1, t / 90); const p = Math.min(1, t / ms), e = 0.5 - Math.cos(Math.PI * p) / 2; return Math.max(k, kick + (len - kick) * e) };
+      // Speed rises over the first 12% and falls over the last 40%: a finger's flick, not a slow creep.
+      const ease = (p) => { const a = 0.12, b = 0.4, v = 1 / (1 - a / 2 - b / 2); return p < a ? (v * p * p) / (2 * a) : p < 1 - b ? v * (p - a / 2) : 1 - (v * (1 - p) * (1 - p)) / (2 * b); };
+      const at = (t) => { const k = kick * Math.min(1, t / 90); return Math.max(k, kick + (len - kick) * ease(Math.min(1, t / ms))); };
       await send("touchStart", [[x0, y0]]);
       const t0 = Date.now();
       for (;;) {

@@ -31,6 +31,29 @@ export async function openPanel(S, l, name) {
   if (!head) throw new Fail(`${name}: its heading isn't on screen`);
 }
 
+/**
+ * Films a set opening from the wall with the app's own flight (its tiles fly out and grow into the binder). The set is
+ * opened once off camera first, so its pictures are in and the flight is motion, not loading; the clip ends once it
+ * has landed. Skipped (returns false, the set left open) when its first screen would show a card with no picture.
+ */
+export async function openWithFlight(F, S, re, name, caption) {
+  let l = await panelInView(S, re);
+  await openPanel(S, l, name);
+  const blank = await S.blankCards(await binderTop(S));
+  await S.page.locator("#back").click();
+  await S.page.waitForFunction(() => document.getElementById("back")?.hidden, null, { timeout: 10000 }).catch(() => { throw new Fail(`${name}: Back didn't close it`); });
+  l = await panelInView(S, re);
+  if (blank.length) { log(`${name}: its first screen has a card with no picture; opening it off camera`); await openPanel(S, l, name); return false; }
+  await F.begin(`${name} opens`, caption);
+  await sleep(550);
+  await S.tapAt(l.x + Math.min(30, l.w / 2), l.y + 34, { pause: false });
+  await S.page.waitForFunction(() => !document.getElementById("back").hidden, null, { timeout: 15000 }).catch(() => { throw new Fail(`${name} didn't open`); });
+  await sleep(1100);
+  await F.end();
+  await S.settled(name, { loadRest: true, timeout: 45000 });
+  return true;
+}
+
 /** Scrolls an open set back to its head. */
 export async function setTop(S, setName) {
   for (let i = 0; i < 12; i++) {
@@ -189,9 +212,11 @@ export async function cardToDeal(F, S, card, scene, caption, { hold = 1300 } = {
   if (!again || again.y < 120 || again.y > VIEW.height - 60) throw new Fail(`${scene}: lost sight of ${card.name}`);
   Object.assign(card, again);
   await F.begin(`${scene} · the card`, caption);
-  await sleep(600);
+  await sleep(500);
   await S.T.tap(card.x, card.y);
-  await sleep(260);
+  // The card flies up close (its picture is already in: it was opened once while choosing it).
+  await S.page.waitForFunction(() => document.body.classList.contains("focused"), null, { timeout: 8000 }).catch(() => {});
+  await sleep(750);
   await F.end();
   await S.page.waitForFunction(() => { const e = document.getElementById("p-buy"), r = e?.getBoundingClientRect(); return document.body.classList.contains("focused") && r && r.height > 0 && r.bottom < innerHeight && /View offers in Find/.test(e.textContent); }, null, { timeout: 10000 }).catch(() => { throw new Fail(`${scene}: the card's sheet has no "View offers in Find"`); });
   await S.settled(`${scene}: ${card.name} up close`);
@@ -219,7 +244,23 @@ export async function cardToDeal(F, S, card, scene, caption, { hold = 1300 } = {
     return { x: x - 6, y: y - 6, width: r - x + 12, height: b - y + 12 };
   });
   if (!box) throw new Fail(`${scene}: the deal's price isn't on screen`);
-  await S.spotlight(box, { zoom: 1.12 });
+  // The payoff: what it saves against the card's worth, stamped in as the spotlight lands.
+  const say = await S.page.evaluate(() => {
+    const fa = document.getElementById("fa"), worth = /Worth about\s*\$([\d,]+(?:\.\d+)?)/.exec(fa.innerText)?.[1];
+    const u = fa.querySelector(".fa-under"), row = u?.closest("button") || u?.parentElement, price = /\$([\d,]+(?:\.\d+)?)/.exec(row?.querySelector("em")?.textContent || "")?.[1];
+    return { worth: worth && Number(worth.replace(/,/g, "")), price: price && Number(price.replace(/,/g, "")), pct: /(\d+)%/.exec(u?.textContent || "")?.[1] };
+  });
+  const zoom = 1.12, spot = S.spotlight(box, { zoom });
+  await sleep(380);
+  // A big saving leads with dollars; a small one with the percentage (a "SAVE $1" is no payoff).
+  const save = say.worth && say.price ? say.worth - say.price : 0;
+  const money = (v) => `$${v >= 100 ? Math.round(v).toLocaleString("en-US") : v.toFixed(2).replace(/\.00$/, "")}`;
+  const [big, small] = save >= 10 ? [`SAVE ${money(save)}`, say.pct ? `${say.pct}% under market` : ""] : [`${say.pct}% UNDER`, save > 0 ? `Save ${money(save)} vs market` : "market price"];
+  // Where the spotlit row's top lands once the page has leaned in (the zoom is about the row's middle): the stamp sits
+  // just above it, never over it.
+  const cy = box.y + box.height / 2;
+  F.stamp(big, small, { pageY: cy - (cy - box.y) * zoom });
+  await spot;
   await sleep(hold);
   await F.end();
   const deal = await S.page.locator("#fa .fa-under").first().textContent();

@@ -74,13 +74,36 @@ export class Art {
     return this.shot(html, path.join(this.dir, `caption-${i}.png`), { transparent: true });
   }
 
+  /**
+   * The deal's stamp, "SAVE $234" over "26% under market": yellow, a black rule, a hard shadow, tipped, slammed in from
+   * nearly twice its size with a little overshoot. Frames of a transparent full picture (0.6 s; the last one holds),
+   * placed at the right with its foot at `bottom` (just above the deal's own row, never over it). Returns the frames' pattern.
+   */
+  async stamp(big, small, { bottom = H - 120 } = {}) {
+    const html = `<style>
+      .s{position:absolute;right:46px;bottom:${Math.round(H - bottom)}px;white-space:nowrap;padding:20px 34px 26px;background:${C.yellow};border:8px solid ${C.ink};box-shadow:16px 16px 0 ${C.ink};
+         text-align:center;color:${C.ink};transform-origin:50% 50%;animation:slam .6s linear both}
+      .b{font-weight:900;font-size:84px;line-height:1;letter-spacing:-0.02em}
+      .m{margin-top:8px;font-weight:800;font-size:34px}
+      @keyframes slam{0%{transform:rotate(-14deg) scale(1.9);opacity:0}12%{opacity:1}36%{transform:rotate(-6deg) scale(.94)}52%{transform:rotate(-8deg) scale(1.04)}70%,100%{transform:rotate(-7deg) scale(1)}}
+    </style><div class="s"><div class="b">${esc(big)}</div>${small ? `<div class="m">${esc(small)}</div>` : ""}</div>`;
+    await this.page.setContent(`<!doctype html><html><head><meta charset="utf-8"><style>${this.css}</style></head><body>${html}</body></html>`);
+    await this.page.evaluate(() => document.fonts.ready);
+    const frames = Math.round(0.6 * FPS) + 1;
+    for (let f = 0; f < frames; f++) {
+      await this.page.evaluate((ms) => { for (const a of document.getAnimations()) { a.pause(); a.currentTime = ms; } }, Math.min(599, (f * 1000) / FPS));
+      await this.page.screenshot({ path: path.join(this.dir, `stamp-${String(f).padStart(3, "0")}.png`), omitBackground: true });
+    }
+    return path.join(this.dir, "stamp-%03d.png");
+  }
+
   /** The end card, 2 s at 30 fps: the colour blocks slide in, then "Card Chaser", "cardchaser.app" and "Free". */
   async endCard(frames = 2 * FPS) {
     const html = `<style>
-      .b{position:absolute;animation:in .5s cubic-bezier(.2,.8,.2,1) both}
+      .b{position:absolute;animation:in .32s cubic-bezier(.2,.9,.25,1) both}
       @keyframes in{from{transform:translate(var(--dx),var(--dy))}to{transform:none}}
-      .t{position:absolute;left:0;width:${W}px;text-align:center;color:${C.ink};animation:up .45s cubic-bezier(.2,.8,.2,1) both}
-      @keyframes up{from{opacity:0;transform:translateY(40px) scale(.96)}to{opacity:1;transform:none}}
+      .t{position:absolute;left:0;width:${W}px;text-align:center;color:${C.ink};animation:up .4s cubic-bezier(.3,1.5,.5,1) both}
+      @keyframes up{from{opacity:0;transform:scale(1.5)}30%{opacity:1}to{opacity:1;transform:none}}
       .free{animation:pop .5s cubic-bezier(.3,1.6,.5,1) both}
       @keyframes pop{from{opacity:0;transform:scale(.4) rotate(-6deg)}to{opacity:1;transform:rotate(-3deg)}}
     </style>
@@ -96,9 +119,9 @@ export class Art {
       <div class="b" style="left:700px;top:1456px;width:${RULE + 4}px;height:${H - 1456}px;background:${C.ink};--dx:0;--dy:480px;animation-delay:.06s"></div>
       <div class="b" style="left:0;top:1456px;width:180px;height:${H - 1456}px;background:${C.yellow};--dx:-200px;--dy:0;animation-delay:.14s"></div>
       <div class="b" style="left:180px;top:1456px;width:${RULE + 4}px;height:${H - 1456}px;background:${C.ink};--dx:-200px;--dy:0;animation-delay:.14s"></div>
-      <div class="t" style="top:730px;font-weight:900;font-size:150px;letter-spacing:-0.035em;animation-delay:.3s">Card Chaser</div>
-      <div class="t" style="top:930px;font-weight:700;font-size:74px;animation-delay:.45s">cardchaser.app</div>
-      <div class="t free" style="top:1110px;animation-delay:.65s"><span style="display:inline-block;background:${C.red};color:#fff;font-weight:900;font-size:92px;padding:6px 54px 12px;box-shadow:12px 12px 0 ${C.ink}">Free</span></div>
+      <div class="t" style="top:730px;font-weight:900;font-size:150px;letter-spacing:-0.035em;animation-delay:.22s">Card Chaser</div>
+      <div class="t" style="top:930px;font-weight:700;font-size:74px;animation-delay:.42s">cardchaser.app</div>
+      <div class="t free" style="top:1110px;animation-delay:.62s"><span style="display:inline-block;background:${C.red};color:#fff;font-weight:900;font-size:92px;padding:6px 54px 12px;box-shadow:12px 12px 0 ${C.ink}">Free</span></div>
     </div>`;
     await this.page.setContent(`<!doctype html><html><head><meta charset="utf-8"><style>${this.css}</style></head><body>${html}</body></html>`);
     await this.page.evaluate(() => document.fonts.ready);
