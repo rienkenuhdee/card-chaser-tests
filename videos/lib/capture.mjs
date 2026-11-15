@@ -22,14 +22,15 @@ export class Film {
   }
   /**
    * Starts keeping a clip from now. The screen must already be finished (Session.settled). `speed`: how much faster it
-   * plays than it was filmed; `join` "cut": it runs straight on from the clip before (no dissolve) (a scroll filmed at half speed and played at 2x has a fresh frame for every frame of the
+   * plays than it was filmed; `join` "cut": it runs straight on from the clip before (no flash); `ramp`: a
+   * speed ramp (lib/edit.mjs); `slam`: [words, field], the trailer's title slam just before it (a scroll filmed at half speed and played at 2x has a fresh frame for every frame of the
    * video, so it never judders).
    */
-  async begin(scene, caption, { speed = 1, join } = {}) {
+  async begin(scene, caption, { speed = 1, join, ramp = 0, slam = null } = {}) {
     if (this.open) throw new Error("clip already open");
     this.S.assertClean();
     await this.nudge();
-    this.open = { scene, caption, speed, join, start: Date.now() / 1000, marks: {}, overlays: [], captions: [{ text: caption, at: 0 }] };
+    this.open = { scene, caption, speed, join, ramp, slam, start: Date.now() / 1000, marks: {}, overlays: [], captions: [{ text: caption, at: 0 }] };
     this.S.clipOn = true;
     log(`  clip starts: ${scene}`);
   }

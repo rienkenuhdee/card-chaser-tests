@@ -35,16 +35,22 @@ const HQ = ["-an", "-c:v", "libx264", "-preset", "medium", "-crf", "14", "-pix_f
  *     frame from their moment; `hold` keeps the last frame up (a sticker), else it goes when its frames end (confetti).
  *   speed: how much faster it plays than it was filmed.
  */
-export function renderClip(frames, { frame, captions, fresh, speed = 1, overlays = [] }, file, work, id) {
+export function renderClip(frames, { frame, captions, fresh, speed = 1, overlays = [], ramp = 0, beat = 0 }, file, work, id) {
   // The clip as exactly 30 frames a second: for each output frame, the captured frame that was on screen at that moment
   // (hard links, so nothing is copied). Handing ffmpeg the captured frames with their own durations made it read them
   // as a 25 fps stream and repeat every sixth frame while things moved.
   const dir = path.join(work, `seq-${id}`);
   fs.rmSync(dir, { recursive: true, force: true }); fs.mkdirSync(dir, { recursive: true });
-  const total = frames.reduce((a, f) => a + f.dur, 0), n = Math.max(1, Math.round((total / speed) * FPS));
+  const total = frames.reduce((a, f) => a + f.dur, 0), natural = Math.max(1, Math.round((total / speed) * FPS));
+  // On the beat: a whole number of beats long (the nearest; at least one), the last moment held or trimmed to fit, so
+  // every cut lands on the grid and a sound added later lines up.
+  const n = beat ? Math.max(Math.round(beat * FPS), Math.round(natural / (beat * FPS)) * Math.round(beat * FPS)) : natural;
+  // A speed ramp: slow into the move, fast through the middle, slow out (the filmed time as a function of the video's:
+  // its pace runs from 1 - ramp to 1 + ramp of the clip's own speed). Same length as without it.
+  const timeOf = (k) => { const u = Math.min(1, (k + 0.5) / natural); return total * (ramp ? u - (ramp / (2 * Math.PI)) * Math.sin(2 * Math.PI * u) : u); };
   let i = 0, end = frames[0].dur;
   for (let k = 0; k < n; k++) {
-    const t = ((k + 0.5) / FPS) * speed; // (the moment filmed that this frame of the video shows)
+    const t = timeOf(k); // (the moment filmed that this frame of the video shows)
     while (t > end && i < frames.length - 1) end += frames[++i].dur;
     const to = path.join(dir, `${String(k).padStart(6, "0")}.jpg`);
     try { fs.linkSync(frames[i].file, to); } catch { fs.copyFileSync(frames[i].file, to); }
@@ -69,9 +75,9 @@ export function renderClip(frames, { frame, captions, fresh, speed = 1, overlays
   return file;
 }
 
-/** A finished sequence of frames (the hook, opaque) as a clip. */
+/** A finished sequence of frames (the hook, a title slam: opaque) as a clip. */
 export function renderSeq(pattern, file) {
-  ff(["-framerate", String(FPS), "-i", pattern, "-vf", `${COLOR},format=yuv420p`, ...HQ, file], "making the hook");
+  ff(["-framerate", String(FPS), "-i", pattern, "-vf", `${COLOR},format=yuv420p`, ...HQ, file], `making ${path.basename(file)}`);
   return file;
 }
 
@@ -92,7 +98,9 @@ export function finish(parts, joins, out, { maxBytes = 10 * 1024 * 1024 } = {}) 
   const inputs = parts.flatMap((p) => ["-i", p]);
   const g = parts.map((_, i) => `[${i}:v]settb=AVTB,fps=${FPS},format=yuv420p,setsar=1[p${i}]`);
   let prev = "p0", t = L[0];
-  for (let i = 1; i < parts.length; i++) {
+  // All straight cuts (the trailer's beat grid): the parts end to end, not a frame lost at each join.
+  if (joins.every((j) => j === XF.cut)) { g.push(`${parts.map((_, i) => `[p${i}]`).join("")}concat=n=${parts.length}:v=1:a=0[all]`); prev = "all"; t = L.reduce((a, b) => a + b, 0); }
+  else for (let i = 1; i < parts.length; i++) {
     const j = joins[i - 1], d = Math.min(j.d, L[i - 1] / 2, L[i] / 2);
     t -= d;
     g.push(`[${prev}][p${i}]xfade=transition=${j.kind}:duration=${d.toFixed(3)}:offset=${t.toFixed(3)}[x${i}]`);

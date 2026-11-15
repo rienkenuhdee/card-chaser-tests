@@ -36,7 +36,7 @@ export async function openPanel(S, l, name) {
  * opened once off camera first, so its pictures are in and the flight is motion, not loading; the clip ends once it
  * has landed. Skipped (returns false, the set left open) when its first screen would show a card with no picture.
  */
-export async function openWithFlight(F, S, re, name, caption) {
+export async function openWithFlight(F, S, re, name, caption, { slam = null } = {}) {
   let l = await panelInView(S, re);
   await openPanel(S, l, name);
   const blank = await S.blankCards(await binderTop(S));
@@ -44,7 +44,7 @@ export async function openWithFlight(F, S, re, name, caption) {
   await S.page.waitForFunction(() => document.getElementById("back")?.hidden, null, { timeout: 10000 }).catch(() => { throw new Fail(`${name}: Back didn't close it`); });
   l = await panelInView(S, re);
   if (blank.length) { log(`${name}: its first screen has a card with no picture; opening it off camera`); await openPanel(S, l, name); return false; }
-  await F.begin(`${name} opens`, caption);
+  await F.begin(`${name} opens`, caption, { slam });
   await sleep(380);
   await S.tapAt(l.x + Math.min(30, l.w / 2), l.y + 34, { pause: false });
   await S.page.waitForFunction(() => !document.getElementById("back").hidden, null, { timeout: 15000 }).catch(() => { throw new Fail(`${name} didn't open`); });
@@ -210,7 +210,7 @@ export async function dealInView(S) {
  * punchline caption. The whole path is run once off camera first (so the card's sheet and Find's answer for it are
  * loaded and kept), then filmed from the set with nothing left to load.
  */
-export async function cardToDeal(F, S, card, scene, caption, { hold = 1600, punch = "" } = {}) {
+export async function cardToDeal(F, S, card, scene, caption, { hold = 1600, punch = "", slam = null } = {}) {
   // Where the card is now (the page may have moved a little since it was chosen): its label nearest to where it was.
   const relocate = async () => {
     const at = (await S.labels()).filter((e) => e.t === card.label).map(cardPoint).filter((p) => p.y >= 120 && p.y <= VIEW.height - 60).sort((a, b) => Math.hypot(a.x - card.x, a.y - card.y) - Math.hypot(b.x - card.x, b.y - card.y))[0];
@@ -242,7 +242,7 @@ export async function cardToDeal(F, S, card, scene, caption, { hold = 1600, punc
   await relocate();
 
   // On camera: the card, then (past the app's in-between screens) the answer and the deal.
-  await F.begin(`${scene} · the card`, caption);
+  await F.begin(`${scene} · the card`, caption, { slam });
   await sleep(450);
   await S.T.tap(card.x, card.y);
   await S.page.waitForFunction(() => document.body.classList.contains("focused"), null, { timeout: 8000 }).catch(() => {});

@@ -8,11 +8,18 @@ videos from it. It only makes files; it posts nothing anywhere.
 | `npm run record:walkthrough` | `out/walkthrough.mp4`, about 27 s: the Wall, the 30th Celebration, making a set, the Pikachu set, a deal in Find |
 | `npm run record:short` | `out/daily-short.mp4`, 12 to 15 s, on today's set from `sets.json` with today's joke from `jokes.json`, and `out/caption.txt` (a post caption and 3 hashtags) |
 
-Both are cut meme-style: a hook on black ("POV: you said “just one more pack” 47 times"), collector jokes for captions
-("Nobody: / Me: a set of EVERY Pikachu"), reaction stickers with the app's own numbers ("237 cards and counting",
-"91 MISSING", a punch-in on the dearest card with "$900?!"), and the deal as the payoff: "wait for it…", a shake,
-confetti in the brand's squares, the stamp ("SAVE $234 / 26% under market") and the punchline ("sniped."). They're
-silent: add a sound when you post.
+Both are cut as a trailer with memes in it:
+
+- **Trailer:** title slams between scenes, each one beat on a brand colour with a white flash ("ONE WALL.", "EVERY
+  GAP.", "YOUR RULES.", "THE GRAILS.", "THE DEAL."; the short: "EVERY GENGAR.", "THE DEAL."), speed ramps on every
+  glide (slow in, whip through, slow out), three quick punch-ins on the dearest cards, and every cut on a 120 BPM grid
+  (each part a whole number of half-second beats, joined end to end), so a sound added when posting lines up.
+- **Memes:** a hook on black ("POV: you said “just one more pack” 47 times"), collector jokes for captions ("Nobody: /
+  Me: a set of EVERY Pikachu"), reaction stickers with the app's own numbers ("237 cards and counting", "91 MISSING",
+  "$900?!"), and the payoff: "wait for it…", a shake, confetti in the brand's squares, the stamp ("SAVE $234 / 26%
+  under market") and the punchline ("sniped.").
+
+They're silent: add a sound when you post.
 
 Each is 1080x1920, H.264, 30 fps, no audio, under 10 MB, with one caption per scene and a 2-second end card.
 

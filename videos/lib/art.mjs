@@ -88,6 +88,30 @@ export class Art {
     return path.join(this.dir, `${name}-%03d.png`);
   }
 
+  /**
+   * A trailer's title slam, one beat (0.5 s): a white flash, then the words punched in huge on one of the brand's fields
+   * (red, yellow, blue or ink; words white, or ink on yellow), with a small jolt as they land. Opaque.
+   */
+  async slam(name, text, field = "red") {
+    const bg = { red: C.red, yellow: C.yellow, blue: C.blue, ink: C.ink }[field] || C.red, ink = field === "yellow" ? C.ink : "#fff";
+    const long = Math.max(...String(text).split("\n").map((l) => l.length));
+    const size = long > 11 ? 150 : 190;
+    const html = `<style>
+      .f{position:absolute;inset:0;background:#fff;animation:fl .12s linear both}@keyframes fl{from{opacity:1}to{opacity:0}}
+      .t{animation:in .5s linear both}
+      @keyframes in{0%{transform:scale(1.6) rotate(-4deg);opacity:0}10%{opacity:1}22%{transform:scale(.96) rotate(1deg)}32%{transform:translate(8px,-6px) scale(1.01) rotate(-1deg)}42%,100%{transform:none}}
+    </style>
+    <div style="position:absolute;inset:0;background:${bg};display:flex;align-items:center;justify-content:center;padding:0 60px">
+      <div class="t" style="font-weight:900;font-size:${size}px;line-height:.95;letter-spacing:-0.04em;text-align:center;color:${ink};text-transform:uppercase">${String(text).split("\n").map(esc).join("<br>")}</div>
+    </div><div class="f"></div>`;
+    return this.seq(name, html, 0.5, { transparent: false });
+  }
+
+  /** A white flash over a cut, five frames fading out (transparent after). */
+  async flash(name) {
+    return this.seq(name, `<style>.f{position:absolute;inset:0;background:#fff;animation:f .17s ease-out both}@keyframes f{from{opacity:.95}to{opacity:0}}</style><div class="f"></div>`, 0.17);
+  }
+
   /** The hook: the meme line on black, words punching in one by one, then held (opaque, `seconds` long). */
   async hook(text, seconds = 1.25) {
     const words = String(text).split(" ");
