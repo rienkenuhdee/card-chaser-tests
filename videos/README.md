@@ -26,8 +26,8 @@ npm install
 npx playwright install --with-deps chromium
 ```
 
-On a Mac, `brew install ffmpeg`; on Ubuntu, `sudo apt-get install ffmpeg fonts-dejavu-core`. The captions use DejaVu
-Sans Bold; set `VIDEO_FONT` to any other `.ttf` to change it.
+On a Mac, `brew install ffmpeg`; on Ubuntu, `sudo apt-get install ffmpeg fonts-dejavu-core`. The captions and end card
+use Archivo, fetched from cardchaser.app (a bold system sans if it can't be).
 
 Then, with the demo account's sign-in in the environment (never typed into a file):
 
@@ -81,11 +81,27 @@ none that day, the run fails rather than film a set with nothing to show.
 - **The missing card with an offer** is chosen before the clip: the set's own Filters set to Missing, by Price (they
   last only while it's open and are never saved), then the likeliest cards (prices that match Find's deals) are opened
   until one says "View offers in Find · N".
-- **Taps** are real touch events with a fading circle drawn at each one (`lib/ripple.js`), and a 400 to 700 ms pause.
+- **Taps** are real touch events with a mark drawn at each one (a brand-yellow dot inside a black ring that opens
+  out, `lib/ripple.js`; scrolls get none), and a 400 to 700 ms pause.
+- **Scrolls** are one long, eased stroke per scene (no stop-and-go), and every finger is moving within 90 ms so the
+  Wall never reads it as a long press (which would pick a set up and reorder the demo account's wall).
+- **No blank cards on camera.** A few cards have no picture in the catalog at all (in production today: 6 of the 253
+  Pikachu cards and 1 of the 49 Umbreon; the other sets are complete), and the app shows those as empty pockets.
+  Custom sets are filmed dearest first (their own Filters, In a set by Price, never saved), which puts the best art up
+  front, and before each scroll the recorder looks down the set (the probe sees which cards were drawn with no
+  picture) and stops the scroll short of any. The card tapped for its deal is always one with a picture. The owner's
+  Missing pictures tool in Settings lists the cards to fix.
 - **Filming** is the browser's own screencast at 3x (1170x2532 frames), so the 1080x1920 video is downscaled, not
   blown up. Playwright's `recordVideo` films at the page's 1x size (390x844), which would have been scaled up about
   2x and looked soft, so it isn't used.
-- **Layout.** The phone's screen sits under a dark caption band at the top, so the captions never cover the app.
+- **Look.** In the brand (BRAND.md): the phone's screen held in a black rule with a hard block shadow, on cream with
+  red, yellow and blue fields in the margins, under a black caption band, so the captions never cover the app. Each
+  caption slides in with a colour stripe; clips dissolve into each other inside a scene and slide between scenes; the
+  deal gets a yellow spotlight and a slow push in; the end card's blocks slide in and "Free" pops. The artwork is
+  drawn as HTML in the browser (`lib/art.mjs`, Archivo from cardchaser.app) and put together by ffmpeg
+  (`lib/edit.mjs`). The spotlight and push in are film-only decoration on the page, never part of the app.
+- **Finished means still.** "Settled" allows a rare card's foil shimmer (under 1.5% of the screen changing), not a
+  move or a load.
 - **Read-only.** The recorder refuses any change the app tries to save to the demo account other than its own
   automatic bookkeeping (the day's value, set-open counts), and fails the run if one is tried. "Put it on the wall" is
   shown but never tapped.

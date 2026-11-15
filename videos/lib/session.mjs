@@ -1,7 +1,7 @@
 // The browser, the sign-in, and the checks every scene leans on: waiting for a screen to be finished, finding things on
 // the Wall's canvas by their words, and the privacy guard.
 import path from "node:path";
-import { createHash } from "node:crypto";
+import { decodePNG, changed } from "./pixels.mjs";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 import { touchInput } from "./touch.mjs";
@@ -125,6 +125,49 @@ export class Session {
     await sleep(350);
   }
 
+  /** One long, unhurried scroll by dy (up to about 640 px in a single stroke; more in strokes that join smoothly). */
+  async glide(dy, ms = 2600) {
+    const strokes = Math.max(1, Math.ceil(dy / 640)), each = dy / strokes;
+    for (let i = 0; i < strokes; i++) { await this.T.drag(VIEW.width / 2, 790, VIEW.width / 2, 790 - each, ms / strokes); }
+    await sleep(250);
+  }
+
+  /** The pictures and the card labels the Wall drew in its last frame. */
+  async pics() { return this.page.evaluate(() => (window.__ccPics ? window.__ccPics() : [])); }
+  /**
+   * Cards on screen (below `top`) drawn with no picture (the catalog has none that loads): each card's labels sit
+   * inside its picture's box when it has one. Returns their labels, highest first.
+   */
+  async blankCards(top = 120) {
+    const [L, P] = [await this.labels(), await this.pics()];
+    const inPic = (x, y) => P.some((p) => x >= p.x - 2 && x <= p.x + p.w + 2 && y >= p.y - 2 && y <= p.y + p.h + 2);
+    const cardText = (e) => e.y > top && e.y < VIEW.height + 40 && e.x >= 0 && e.x < VIEW.width && !/^[●★×—]|^\$|^×\d/.test(e.t) && e.h <= 16;
+    return L.filter(cardText).filter((e) => !inPic(e.x + 6, e.y - 34)).sort((a, b) => a.y - b.y);
+  }
+
+  /**
+   * A spotlight for the video on what matters on screen: a yellow frame that pulses round it and, with `zoom`, the
+   * page leaning in toward it. Film-only decoration (removed by the next load); returns when it has settled.
+   */
+  async spotlight(target, { zoom = 1 } = {}) {
+    const b = target && typeof target.boundingBox === "function" ? await target.boundingBox() : target; // (a locator, or a box)
+    if (!b) throw new Fail("Nothing to put a spotlight on");
+    await this.page.evaluate(([b, zoom]) => {
+      const s = document.createElement("div");
+      s.setAttribute("aria-hidden", "true");
+      s.style.cssText = `position:fixed;left:${b.x - 8}px;top:${b.y - 8}px;width:${b.width + 16}px;height:${b.height + 16}px;border:5px solid #F2C300;box-shadow:0 0 0 3px #121212;pointer-events:none;z-index:2147483646;opacity:0;transform:scale(1.12);transition:opacity 260ms ease-out,transform 420ms cubic-bezier(.3,1.5,.5,1)`;
+      document.documentElement.append(s);
+      requestAnimationFrame(() => requestAnimationFrame(() => { s.style.opacity = "1"; s.style.transform = "none"; }));
+      if (zoom !== 1) {
+        const h = document.documentElement;
+        h.style.transformOrigin = `${b.x + b.width / 2}px ${b.y + b.height / 2}px`;
+        h.style.transition = "transform 900ms cubic-bezier(.25,.8,.25,1)";
+        requestAnimationFrame(() => requestAnimationFrame(() => { h.style.transform = `scale(${zoom})`; }));
+      }
+    }, [b, zoom]);
+    await sleep(950);
+  }
+
   /** Scrolls the wall until a panel titled by `re` is in view; returns its label. */
   async findOnWall(re, { maxScrolls = 14 } = {}) {
     for (let dir of [1, -1]) {
@@ -138,10 +181,10 @@ export class Session {
     throw new Fail(`Couldn't find "${re.source}" on the wall`);
   }
 
-  /** A hash of what's on screen now (small and fast: for "has it stopped changing"). */
+  /** A picture of the screen now at 1x (390x844), for "has it stopped changing". */
   async look() {
-    const buf = await this.page.screenshot({ type: "jpeg", quality: 40, scale: "css", animations: "allow", caret: "hide" });
-    return createHash("sha1").update(buf).digest("hex");
+    const buf = await this.page.screenshot({ type: "png", scale: "css", clip: { x: 0, y: 0, width: VIEW.width, height: VIEW.height }, animations: "allow", caret: "hide" });
+    return decodePNG(buf);
   }
 
   /**
@@ -159,7 +202,8 @@ export class Session {
       const ready = await this.page.evaluate(() => document.fonts.status === "loaded" && [...document.images].every((i) => { const r = i.getBoundingClientRect(); return i.complete || r.bottom < 0 || r.top > innerHeight || !r.width; })).catch(() => false);
       const net = this.netBusy() || Date.now() - this.lastNet < 400;
       const h = await this.look();
-      same = h === prev && ready && !net ? same + 1 : 0;
+      // Still: under 1.5% of the screen's small cells changed (a foil card's shimmer is allowed; a move or a load isn't).
+      same = prev && changed(h, prev) < 0.015 && ready && !net ? same + 1 : 0;
       prev = h;
       if (same * 250 >= quiet) { log(`${label}: loaded and settled (${((Date.now() - t0) / 1000).toFixed(1)}s to settle)`); return; }
       await sleep(250);
@@ -213,3 +257,4 @@ export class Session {
   async failShot(file) { try { await this.page.screenshot({ path: file, scale: "device" }); return file; } catch { return null; } }
   async close() { this.stopped = true; clearTimeout(this.guardT); await this.browser.close().catch(() => {}); }
 }
+

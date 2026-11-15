@@ -65,14 +65,14 @@ async function closeCard(S) {
 }
 
 /**
- * In an open set: its Filters set to Show Missing, In a set by Price (the set's own filters: they last while it's open
- * and are never saved, 60-lenses.js), so the cards most worth an offer come first.
+ * In an open set: its own Filters (they last only while it's open and are never saved, 60-lenses.js): Show (all or
+ * missing) and In a set by Price, dearest first, so the best art and the cards most worth an offer lead.
  */
-export async function missingByPrice(S, setName) {
+export async function setFilters(S, setName, { show = "all", order = "price" } = {}) {
   await S.tapEl("#filter", { pause: false });
   const menu = S.page.locator("#filter-menu");
   await menu.waitFor({ state: "visible", timeout: 8000 }).catch(() => { throw new Fail(`${setName}: Filters didn't open`); });
-  for (const sel of ['#filter-menu [data-show="missing"]', '#filter-menu [data-order="price"]']) {
+  for (const sel of [`#filter-menu [data-show="${show}"]`, `#filter-menu [data-order="${order}"]`]) {
     const b = S.page.locator(sel);
     if (!(await b.isVisible().catch(() => false))) throw new Fail(`${setName}: Filters has no ${sel}`);
     await S.tapEl(b, { pause: false }); await sleep(350);
@@ -80,7 +80,41 @@ export async function missingByPrice(S, setName) {
   await S.tapEl("#f-done", { pause: false });
   await menu.waitFor({ state: "hidden", timeout: 8000 }).catch(() => {});
   await setTop(S, setName);
-  await S.settled(`${setName}, missing cards by price`);
+  await S.settled(`${setName}, ${show === "missing" ? "missing cards" : "every card"} by price`);
+}
+export const missingByPrice = (S, setName) => setFilters(S, setName, { show: "missing" });
+
+/**
+ * How far down an open set (from its top) can be filmed with every card on screen showing its picture: steps down the
+ * set looking for cards drawn with no picture, up to `want` px. Leaves the set back at its top, settled.
+ */
+export async function safeDepth(S, setName, want) {
+  const headY = async () => (await S.label(/^Have \d/, { inView: false }))?.y;
+  const y0 = await headY();
+  if (y0 == null) throw new Fail(`${setName}: no head to measure from`);
+  const first = await S.blankCards(await binderTop(S));
+  if (first.length) throw new Fail(`${setName}: a card with no picture (${first[0].t}) is on screen at the top of the set`);
+  let safe = want;
+  for (let o = 0; o < want; ) {
+    await S.T.drag(VIEW.width / 2, 700, VIEW.width / 2, 400, 420);
+    await sleep(450);
+    const y = await headY();
+    if (y == null) break;
+    const now = y0 - y;
+    if (now <= o + 5) break; // (the end of the set)
+    o = now;
+    const blank = await S.blankCards(120);
+    if (blank.length) {
+      // The blank card's top is about a card above its name; it may come no nearer than the screen's foot.
+      const cardTop = blank[0].y - 120;
+      safe = Math.max(0, Math.min(want, Math.round(o - (VIEW.height - cardTop) - 24)));
+      log(`${setName}: a card with no picture (${blank[0].t}) lies ${Math.round(o + cardTop)} px down; filming at most ${safe} px of scroll`);
+      break;
+    }
+  }
+  await setTop(S, setName);
+  await S.settled(`${setName}, back at its top`);
+  return safe;
 }
 
 /**
@@ -102,7 +136,10 @@ export async function findMissingWithOffer(S, setName, { views = 7, taps = 16 } 
       const near = /^\$/.test(e.t) && markets.some((m) => Math.abs(m - money(e.t)) <= Math.max(0.6, m * 0.03));
       return { e, score: near ? 0 : names.has(e.t) ? 1 : 2, price: /^\$/.test(e.t) ? money(e.t) : 0 };
     }).filter((c) => c.score < 2 || deals.length === 0 || n < 6).sort((a, b) => a.score - b.score || b.price - a.price);
+    const P = await S.pics();
+    const pictured = (e) => { const p = cardPoint(e); return P.some((r) => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h); };
     for (const { e } of cands) {
+      if (!pictured(e)) continue; // (a card with no picture: never the one filmed)
       const { x, y } = cardPoint(e), key = `${Math.round(x / 20)}|${Math.round(y / 20)}`;
       if (tried.has(key)) continue;
       tried.add(key);
@@ -168,6 +205,17 @@ export async function cardToDeal(F, S, card, scene, caption, { hold = 1300 } = {
   await F.begin(`${scene} · the deal`, caption);
   await sleep(700);
   await dealInView(S);
+  await sleep(350);
+  // The spotlight on the deal's "N% under" and its price together (the row itself runs the screen's width).
+  const box = await S.page.evaluate(() => {
+    const u = document.querySelector("#fa .fa-under"), row = u?.closest("button") || u?.parentElement;
+    const parts = [u, ...(row ? row.querySelectorAll("em") : [])].filter(Boolean).map((e) => e.getBoundingClientRect()).filter((r) => r.width);
+    if (!parts.length) return null;
+    const x = Math.min(...parts.map((r) => r.left)), y = Math.min(...parts.map((r) => r.top)), r = Math.max(...parts.map((r) => r.right)), b = Math.max(...parts.map((r) => r.bottom));
+    return { x: x - 6, y: y - 6, width: r - x + 12, height: b - y + 12 };
+  });
+  if (!box) throw new Fail(`${scene}: the deal's price isn't on screen`);
+  await S.spotlight(box, { zoom: 1.12 });
   await sleep(hold);
   await F.end();
   const deal = await S.page.locator("#fa .fa-under").first().textContent();

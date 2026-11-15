@@ -11,8 +11,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { openSession, sleep, beat } from "./lib/session.mjs";
 import { Film } from "./lib/capture.mjs";
-import { renderClip, renderEndCard, finish, probe } from "./lib/edit.mjs";
-import { toWall, panelInView, openPanel, missingByPrice, findMissingWithOffer, cardToDeal } from "./lib/scenes.mjs";
+import { renderClip, renderEndCard, finish, probe, XF } from "./lib/edit.mjs";
+import { Art, ACCENTS } from "./lib/art.mjs";
+import { toWall, panelInView, openPanel, setFilters, missingByPrice, safeDepth, findMissingWithOffer, cardToDeal } from "./lib/scenes.mjs";
 import { log, Fail } from "./lib/log.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -41,9 +42,9 @@ async function walkthrough(S, F) {
   const c1 = "Your whole collection on one wall";
   await toWall(S);
   await F.begin("1 · The Wall", c1);
-  await sleep(800);
-  for (let i = 0; i < 2; i++) { await S.scroll(330, { ms: 1300 }); await sleep(200); }
-  await sleep(300);
+  await sleep(700);
+  await S.glide(420, 3000);
+  await sleep(500);
   await F.end();
 
   // 2. The 30th Celebration: tap it open, then the finished set (owned filled in, missing ghosted).
@@ -58,10 +59,11 @@ async function walkthrough(S, F) {
   await S.page.waitForFunction(() => !document.getElementById("back").hidden, null, { timeout: 15000 }).catch(() => { throw new Fail("30th Celebration didn't open"); });
   await S.settled("30th Celebration, open", { loadRest: true, timeout: 45000 });
   if (!(await S.label(/^Have \d/)) || !(await S.label(/^(Missing|Chasing) \d/))) throw new Fail("30th Celebration: no Have / Missing (Chasing) counts on screen");
+  const d30 = await safeDepth(S, "30th Celebration", 420);
   await F.begin("2 · 30th Celebration", c2);
-  await sleep(1100);
-  await S.scroll(320, { ms: 1300 });
   await sleep(800);
+  if (d30 > 60) await S.glide(d30, 2200); else await sleep(1800);
+  await sleep(700);
   await F.end();
 
   // 3. Build your own set: Add a set, Make your own set, Pikachu, ending on "Put it on the wall" (not tapped).
@@ -92,7 +94,9 @@ async function walkthrough(S, F) {
   await S.page.locator("#cs-save").scrollIntoViewIfNeeded();
   await S.settled("Make your own set, Pikachu picked");
   await F.begin("3 · Put it on the wall", c3);
-  await sleep(1500);
+  await sleep(450);
+  await S.spotlight(S.page.locator("#cs-save"));
+  await sleep(900);
   await F.end();
   // Not saved: the demo account already has its Pikachu set (sets.json). Closed without a tap on the button.
   await S.page.locator("#cs-close").click().catch(() => {});
@@ -103,12 +107,12 @@ async function walkthrough(S, F) {
   await toWall(S);
   const pp = await panelInView(S, panelOf(pika));
   await openPanel(S, pp, "The Pikachu set");
+  await setFilters(S, "The Pikachu set", { show: "all", order: "price" }); // dearest first: the best art leads
+  const d4 = await safeDepth(S, "The Pikachu set", 640);
   await F.begin("4 · The Pikachu set", c4);
-  await sleep(800);
-  await S.scroll(300, { ms: 1200 });
-  await sleep(150);
-  await S.scroll(300, { ms: 1200 });
-  await sleep(300);
+  await sleep(700);
+  if (d4 > 60) await S.glide(d4, 3000); else await sleep(2600);
+  await sleep(500);
   await F.end();
 
   // 5. A missing card, View offers in Find, its deal.
@@ -116,7 +120,7 @@ async function walkthrough(S, F) {
   await missingByPrice(S, "The Pikachu set");
   const card = await findMissingWithOffer(S, "The Pikachu set");
   await S.settled("The Pikachu set, a missing card in view");
-  await cardToDeal(F, S, card, "5", c5);
+  await cardToDeal(F, S, card, "5", c5, { hold: 900 });
 }
 
 async function short(S, F, set) {
@@ -125,15 +129,17 @@ async function short(S, F, set) {
   await toWall(S);
   const p = await panelInView(S, panelOf(set));
   await openPanel(S, p, `The ${name} set`);
+  await setFilters(S, `The ${name} set`, { show: "all", order: "price" }); // dearest first: the best art leads
+  const d1 = await safeDepth(S, `The ${name} set`, 680);
   await F.begin(`1 · The ${name} set`, c1);
-  await sleep(900);
-  for (let i = 0; i < 2; i++) { await S.scroll(300, { ms: 1300 }); await sleep(250); }
-  await sleep(900);
+  await sleep(1100);
+  if (d1 > 60) await S.glide(d1, 4000); else await sleep(3400);
+  await sleep(700);
   await F.end();
   await missingByPrice(S, `The ${name} set`);
   const card = await findMissingWithOffer(S, `The ${name} set`);
   await S.settled(`The ${name} set, a missing card in view`);
-  await cardToDeal(F, S, card, "2", "And the best price for the ones you're missing", { hold: 2000 });
+  await cardToDeal(F, S, card, "2", "And the best price for the ones you're missing", { hold: 2500 });
   return card;
 }
 
@@ -183,10 +189,18 @@ async function main() {
 
   // Cut and encode.
   log(`Cutting ${F.clips.length} clips from ${F.frames.length} frames`);
-  const parts = F.clips.map((c, i) => renderClip(F.framesOf(c), c.caption, path.join(WORK, `part-${String(i).padStart(2, "0")}.mp4`), WORK, i, { fadeIn: i === 0 || F.clips[i - 1].caption !== c.caption }));
-  parts.push(renderEndCard(path.join(WORK, "end.mp4"), WORK));
+  const art = await Art.open(path.join(WORK, "art"));
+  const frame = await art.frame();
+  const captions = [...new Set(F.clips.map((c) => c.caption))];
+  const capFile = new Map();
+  for (const [i, c] of captions.entries()) capFile.set(c, await art.caption(c, i, ACCENTS[i % ACCENTS.length]));
+  const endFrames = await art.endCard();
+  await art.close();
+  const parts = F.clips.map((c, i) => renderClip(F.framesOf(c), { frame, caption: capFile.get(c.caption), fresh: i === 0 || F.clips[i - 1].caption !== c.caption }, path.join(WORK, `part-${String(i).padStart(2, "0")}.mp4`), WORK, i));
+  parts.push(renderEndCard(endFrames, path.join(WORK, "end.mp4")));
+  const joins = F.clips.slice(1).map((c, i) => (c.caption === F.clips[i].caption ? XF.within : XF.scene)).concat([XF.end]);
   const file = path.join(OUT, kind === "walkthrough" ? "walkthrough.mp4" : "daily-short.mp4");
-  finish(parts, file, WORK);
+  finish(parts, joins, file);
   const p = probe(file);
   const want = kind === "walkthrough" ? [22, 32] : [12, 15];
   const problems = [];
