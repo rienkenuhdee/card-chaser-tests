@@ -18,11 +18,22 @@ export async function rehearsal(repoDir, opts = {}) {
   await seed(server, opts);
   const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
   const pub = (p) => { const f = path.join(repo, "public", p); return fs.existsSync(f) && fs.statSync(f).isFile() ? f : null; };
+  // Card pictures come from their real hosts, so the cards look as they do on the site (the made-up deals' eBay
+  // photos, which don't exist, get a blank stand-in). Fetched through Playwright and handed back with CORS, which the
+  // Wall asks for to draw them on its canvas.
+  const CARD_HOSTS = new Set(["images.scrydex.com", "images.pokemontcg.io", "tcgplayer-cdn.tcgplayer.com", "assets.tcgdex.net"]);
+  const real = async (route) => {
+    try {
+      const r = await route.fetch({ timeout: 20000 });
+      return route.fulfill({ status: r.status(), body: await r.body(), headers: { "content-type": r.headers()["content-type"] || "image/png", "access-control-allow-origin": "*", "cache-control": "public, max-age=86400" } });
+    } catch { return route.fulfill({ status: 404, headers: { "access-control-allow-origin": "*" }, body: "" }); }
+  };
   /** Installs the routes on a Playwright context. */
   async function install(context) {
     await context.route("**/*", async (route) => {
       const req = route.request(), u = new URL(req.url());
       if (u.hostname !== "cardchaser.app") {
+        if (CARD_HOSTS.has(u.hostname)) return real(route);
         if (req.resourceType() === "image") return route.fulfill({ status: 200, contentType: "image/png", headers: { "access-control-allow-origin": "*" }, body: PNG });
         if (/fonts\.(googleapis|gstatic)\.com$/.test(u.hostname)) return route.continue();
         return route.abort();
@@ -33,7 +44,7 @@ export async function rehearsal(repoDir, opts = {}) {
         return route.fulfill({ status: res.status, contentType: type, body: res.body });
       }
       if (u.pathname === "/" || u.pathname === "/wall/" || u.pathname === "/index.html") return route.fulfill({ status: 200, contentType: "text/html", body: html });
-      if (/^\/img\/[sl]\//.test(u.pathname)) return route.fulfill({ status: 200, contentType: "image/png", headers: { "access-control-allow-origin": "*" }, body: PNG });
+      if (/^\/img\/[sl]\//.test(u.pathname)) return real(route); // (the site's own copies of card pictures: public, read-only)
       const asset = assetFile(u.pathname);
       if (asset) return route.fulfill({ status: 200, contentType: asset.type, body: asset.body });
       const f = pub(u.pathname.replace(/^\//, ""));

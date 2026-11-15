@@ -104,7 +104,8 @@ Any of these stops the run with a screenshot in `out/failure-*.png` and no video
 
 `--rehearse` serves a local checkout of the app repo (`Card-Chaser`) inside the browser at cardchaser.app: its own
 live build and its own server code on an in-memory store, with the app's made-up test account, the `sets.json` sets
-added and a few made-up deals. It's for trying changes to the recorder without touching production.
+added and a few made-up deals. It's for trying changes to the recorder without the demo account or any write to production (the only requests
+that leave the machine are for public card pictures).
 
 ```bash
 cd ../../Card-Chaser && npm install && npm run catalog
@@ -114,4 +115,5 @@ cd ../../Card-Chaser && npm install && npm run catalog
 cd videos && node record.mjs walkthrough --rehearse=/path/to/Card-Chaser
 ```
 
-Card pictures are blank stand-ins there, so the look isn't the real one.
+Card pictures load from their real public hosts (the same ones the site uses, and the site's own `/img/` copies), so
+the cards look as they do live. Only the made-up deals' eBay photos are blank.
